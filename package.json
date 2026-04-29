@@ -1,0 +1,15 @@
+{
+  "name": "excel-ai-assistant",
+  "version": "1.0.0",
+  "description": "Private local AI assistant for Excel",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "dotenv": "^17.4.2",
+    "express": "^4.18.2",
+    "https": "^1.0.0",
+    "node-fetch": "^2.7.0",
+    "selfsigned": "^2.4.1"
+  }
+}

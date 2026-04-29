@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Excel AI Assistant</title>
+  <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --bg: #0f0f0f; --surface: #1a1a1a; --border: #2a2a2a;
+      --accent: #10b981; --accent-dim: #065f46;
+      --text: #e5e5e5; --text-dim: #737373;
+      --user-bubble: #1e3a2f; --ai-bubble: #1a1a1a;
+      --error: #ef4444; --warning: #f59e0b;
+    }
+    body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; font-size: 13px; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+    .header { padding: 10px 14px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+    .header-left { display: flex; align-items: center; gap: 8px; }
+    .status-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 6px var(--accent); animation: pulse 2s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1}50%{opacity:.4} }
+    .header-title { font-weight: 600; font-size: 13px; }
+    .header-model { font-size: 10px; color: var(--text-dim); background: var(--border); padding: 2px 7px; border-radius: 10px; }
+    .btn-sm { background: none; border: 1px solid var(--border); color: var(--text-dim); padding: 3px 9px; border-radius: 5px; cursor: pointer; font-size: 11px; transition: all .15s; }
+    .btn-sm:hover { border-color: var(--accent); color: var(--accent); }
+    .status-bar { padding: 6px 14px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+    .sync-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--text-dim); flex-shrink: 0; transition: background .3s; }
+    .sync-dot.synced { background: var(--accent); }
+    .sync-dot.syncing { background: var(--warning); animation: pulse 1s infinite; }
+    .sync-dot.error { background: var(--error); }
+    .status-text { font-size: 11px; color: var(--text-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+    .status-text.synced { color: var(--accent); }
+    .btn-force { background: none; border: 1px solid var(--border); color: var(--text-dim); padding: 2px 8px; border-radius: 4px; cursor: pointer; font-size: 10px; transition: all .15s; flex-shrink: 0; }
+    .btn-force:hover { border-color: var(--accent); color: var(--accent); }
+    .messages { flex: 1; overflow-y: auto; padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; scroll-behavior: smooth; }
+    .messages::-webkit-scrollbar { width: 3px; }
+    .messages::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+    .message { display: flex; flex-direction: column; gap: 3px; animation: fadeIn .2s ease; }
+    @keyframes fadeIn { from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)} }
+    .message.user { align-items: flex-end; }
+    .message.assistant { align-items: flex-start; }
+    .bubble { max-width: 92%; padding: 8px 12px; border-radius: 10px; line-height: 1.55; white-space: pre-wrap; word-break: break-word; }
+    .message.user .bubble { background: var(--user-bubble); border: 1px solid var(--accent-dim); border-bottom-right-radius: 3px; }
+    .message.assistant .bubble { background: var(--ai-bubble); border: 1px solid var(--border); border-bottom-left-radius: 3px; }
+    .message.assistant .bubble.error { border-color: var(--error) !important; color: var(--error); }
+    .message-label { font-size: 10px; color: var(--text-dim); padding: 0 4px; display: flex; align-items: center; gap: 6px; }
+    .message-meta { font-size: 10px; color: var(--text-dim); opacity: 0.5; }
+    .feedback-row { display: flex; align-items: center; gap: 6px; padding: 2px 4px; }
+    .btn-feedback { background: none; border: 1px solid var(--border); color: var(--text-dim); padding: 2px 7px; border-radius: 4px; cursor: pointer; font-size: 10px; transition: all .15s; }
+    .btn-feedback:hover { border-color: var(--error); color: var(--error); }
+    .btn-feedback.reported { border-color: var(--error); color: var(--error); opacity: 0.5; cursor: default; }
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 100; align-items: center; justify-content: center; }
+    .modal-overlay.open { display: flex; }
+    .modal { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px; width: 280px; display: flex; flex-direction: column; gap: 10px; }
+    .modal h3 { font-size: 13px; font-weight: 600; }
+    .modal p { font-size: 11px; color: var(--text-dim); }
+    .modal textarea { background: var(--bg); border: 1px solid var(--border); border-radius: 6px; color: var(--text); font-family: inherit; font-size: 12px; padding: 8px; resize: none; height: 80px; width: 100%; }
+    .modal textarea:focus { outline: none; border-color: var(--accent); }
+    .modal-buttons { display: flex; gap: 8px; justify-content: flex-end; }
+    .btn-modal { padding: 5px 12px; border-radius: 5px; font-size: 11px; cursor: pointer; border: 1px solid var(--border); background: none; color: var(--text-dim); transition: all .15s; }
+    .btn-modal.primary { background: var(--accent); color: #000; border-color: var(--accent); }
+    .btn-modal.primary:hover { background: #34d399; }
+    .typing { display: flex; align-items: center; gap: 4px; padding: 10px 12px; background: var(--ai-bubble); border: 1px solid var(--border); border-radius: 10px; border-bottom-left-radius: 3px; width: fit-content; }
+    .typing span { width: 5px; height: 5px; background: var(--accent); border-radius: 50%; animation: bounce 1.2s infinite; }
+    .typing span:nth-child(2){animation-delay:.2s} .typing span:nth-child(3){animation-delay:.4s}
+    @keyframes bounce{0%,60%,100%{transform:translateY(0);opacity:.4}30%{transform:translateY(-4px);opacity:1}}
+    pre { background: #0a0a0a; border: 1px solid var(--border); border-radius: 6px; padding: 10px; overflow-x: auto; margin: 6px 0; position: relative; }
+    pre code { font-family: 'Consolas','Courier New',monospace; font-size: 11px; color: #86efac; background: none; border: none; padding: 0; }
+    .copy-btn { position: absolute; top: 6px; right: 6px; background: var(--border); border: none; color: var(--text-dim); padding: 2px 8px; border-radius: 4px; cursor: pointer; font-size: 10px; transition: all .15s; }
+    .copy-btn:hover { background: var(--accent); color: #000; }
+    code { background: #0a0a0a; border: 1px solid var(--border); border-radius: 3px; padding: 1px 5px; font-family: 'Consolas',monospace; font-size: 11px; color: #86efac; }
+    .empty-state { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; color: var(--text-dim); text-align: center; padding: 16px; }
+    .empty-icon { font-size: 26px; opacity: .4; }
+    .empty-title { font-size: 13px; font-weight: 500; }
+    .empty-sub { font-size: 11px; opacity: .7; line-height: 1.5; }
+    .suggestions { display: flex; flex-direction: column; gap: 5px; width: 100%; margin-top: 8px; }
+    .suggestion { background: var(--surface); border: 1px solid var(--border); border-radius: 7px; padding: 7px 11px; cursor: pointer; font-size: 11px; color: var(--text-dim); text-align: left; transition: all .15s; }
+    .suggestion:hover { border-color: var(--accent); color: var(--text); }
+    .input-area { padding: 9px 14px 13px; background: var(--surface); border-top: 1px solid var(--border); flex-shrink: 0; }
+    .input-row { display: flex; gap: 8px; align-items: flex-end; }
+    textarea { flex: 1; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-family: inherit; font-size: 13px; padding: 8px 11px; resize: none; min-height: 36px; max-height: 120px; line-height: 1.4; transition: border-color .15s; overflow-y: auto; }
+    textarea:focus { outline: none; border-color: var(--accent); }
+    textarea::placeholder { color: var(--text-dim); }
+    .btn-send { background: var(--accent); border: none; border-radius: 8px; color: #000; cursor: pointer; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: all .15s; font-size: 16px; }
+    .btn-send:hover { background: #34d399; }
+    .btn-send:disabled { background: var(--border); cursor: not-allowed; color: var(--text-dim); }
+    .input-hint { font-size: 10px; color: var(--text-dim); margin-top: 5px; text-align: center; }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <div class="status-dot"></div>
+    <span class="header-title">AI Assistant</span>
+    <span class="header-model">gemini-2.0-flash · OpenRouter</span>
+  </div>
+  <button class="btn-sm" onclick="clearChat()">Clear</button>
+</div>
+
+<div class="status-bar">
+  <div class="sync-dot" id="syncDot"></div>
+  <span class="status-text" id="statusText">Connecting to workbook…</span>
+  <button class="btn-force" onclick="readWorkbook(true)">↻</button>
+</div>
+
+<div class="messages" id="messages">
+  <div class="empty-state" id="emptyState">
+    <div class="empty-icon">⬡</div>
+    <div class="empty-title">Private AI Assistant</div>
+    <div class="empty-sub">Reading your workbook automatically…<br/>Your data never leaves this machine.</div>
+    <div class="suggestions">
+      <button class="suggestion" onclick="useSuggestion('Format my headers with a dark green background, white bold text, and add borders to the whole table')">Format headers and add borders</button>
+      <button class="suggestion" onclick="useSuggestion('Add a totals row at the bottom and create a column chart of the data')">Add totals row and chart</button>
+      <button class="suggestion" onclick="useSuggestion('Add filter dropdowns and highlight the highest values in green and lowest in red')">Filters and conditional formatting</button>
+      <button class="suggestion" onclick="useSuggestion('Clean and professionally style all my data')">Clean and style everything</button>
+      <button class="suggestion" onclick="useSuggestion('Write Python pandas code to analyse this data')">Write Python code</button>
+      <button class="suggestion" onclick="useSuggestion('Write a VBA macro to automate a task on this sheet')">Write a VBA macro</button>
+    </div>
+  </div>
+</div>
+
+<!-- Feedback modal -->
+<div class="modal-overlay" id="feedbackModal">
+  <div class="modal">
+    <h3>👎 Report bad response</h3>
+    <p>Optionally describe what the AI should have done instead:</p>
+    <textarea id="feedbackText" placeholder="e.g. It should have used =SUM(F2:F100) instead of calculating in JS…"></textarea>
+    <div class="modal-buttons">
+      <button class="btn-modal" onclick="closeFeedbackModal()">Cancel</button>
+      <button class="btn-modal primary" onclick="submitFeedback()">Submit</button>
+    </div>
+  </div>
+</div>
+
+<div class="input-area">
+  <div class="input-row">
+    <textarea id="userInput" placeholder="Tell the AI what to do with your spreadsheet…" rows="1" onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
+    <button class="btn-send" id="sendBtn" onclick="sendMessage()">↑</button>
+  </div>
+  <div class="input-hint">Enter to send · Shift+Enter for new line</div>
+</div>
+
+<script>
+  let conversationHistory  = [];
+  let conversationSummary  = null;
+  let workbookData         = null;
+  let activeSheetName      = '';
+  let isLoading            = false;
+  let refreshTimer         = null;
+  let changeHandlerReady   = false;
+  let lastUserPrompt       = '';
+  let lastAIResponse       = '';
+  let lastGeneratedCode    = '';
+  let pendingFeedbackBtn   = null;
+
+  const SUMMARY_THRESHOLD  = 8;
+  const KEEP_RECENT        = 6;
+  const DEBOUNCE_MS        = 1500;
+  const MAX_ROWS_PER_SHEET = 300;
+
+  function colIdxToLetter(idx) {
+    let letter = '';
+    while (idx >= 0) {
+      letter = String.fromCharCode((idx % 26) + 65) + letter;
+      idx = Math.floor(idx / 26) - 1;
+    }
+    return letter;
+  }
+
+  function setSyncStatus(state, text) {
+    const dot  = document.getElementById('syncDot');
+    const span = document.getElementById('statusText');
+    dot.className  = 'sync-dot ' + state;
+    span.className = 'status-text' + (state === 'synced' ? ' synced' : '');
+    span.textContent = text;
+  }
+
+  function autoResize(el) {
+    el.style.height = 'auto';
+    el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+  }
+
+  function handleKey(e) {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+  }
+
+  function useSuggestion(text) {
+    document.getElementById('userInput').value = text;
+    sendMessage();
+  }
+
+  async function readWorkbook(manual = false) {
+    if (manual) setSyncStatus('syncing', 'Reading workbook…');
+    try {
+      await Excel.run(async (context) => {
+        const workbook = context.workbook;
+        const sheets   = workbook.worksheets;
+        const active   = workbook.worksheets.getActiveWorksheet();
+        sheets.load('items/name');
+        active.load('name');
+        await context.sync();
+        activeSheetName = active.name;
+        let output = '';
+        for (const sheet of sheets.items) {
+          try {
+            const usedRange = sheet.getUsedRangeOrNullObject();
+            usedRange.load('values, rowCount, columnCount, isNullObject');
+            await context.sync();
+            if (usedRange.isNullObject) { output += `\n══ Sheet: ${sheet.name} (empty) ══\n`; continue; }
+            const values = usedRange.values;
+            const rowCount = Math.min(values.length, MAX_ROWS_PER_SHEET);
+            const truncated = values.length > MAX_ROWS_PER_SHEET;
+            output += `\n══ Sheet: ${sheet.name}${sheet.name === activeSheetName ? ' [ACTIVE]' : ''} ══\n`;
+            if (rowCount > 0) {
+              output += `Headers: ${values[0].map((h, i) => `${colIdxToLetter(i)}1=${h !== '' ? h : '(empty)'}`).join(' | ')}\n`;
+              if (rowCount > 1) {
+                output += 'Data:\n';
+                for (let r = 1; r < rowCount; r++) {
+                  output += values[r].map((cell, c) => `${colIdxToLetter(c)}${r+1}:${cell === '' ? '(empty)' : cell}`).join(' | ') + '\n';
+                }
+              }
+              if (truncated) output += `… (${values.length - MAX_ROWS_PER_SHEET} more rows not shown)\n`;
+            }
+          } catch (e) { output += `\n══ Sheet: ${sheet.name} (could not read) ══\n`; }
+        }
+        workbookData = output.trim();
+        const sheetCount = sheets.items.length;
+        setSyncStatus('synced', `✓ ${sheetCount} sheet${sheetCount !== 1 ? 's' : ''} · active: ${activeSheetName} · live sync on`);
+      });
+    } catch (err) { setSyncStatus('error', 'Could not read workbook'); }
+  }
+
+  function scheduleRefresh() {
+    setSyncStatus('syncing', 'Updating…');
+    clearTimeout(refreshTimer);
+    refreshTimer = setTimeout(() => readWorkbook(false), DEBOUNCE_MS);
+  }
+
+  async function registerChangeListeners() {
+    if (changeHandlerReady) return;
+    try {
+      await Excel.run(async (context) => {
+        context.workbook.worksheets.onChanged.add(() => { scheduleRefresh(); });
+        context.workbook.worksheets.onActivated.add(async () => { await readWorkbook(false); });
+        await context.sync();
+        changeHandlerReady = true;
+      });
+    } catch (err) { setInterval(() => readWorkbook(false), 5000); }
+  }
+
+  Office.onReady(async () => {
+    await readWorkbook(true);
+    await registerChangeListeners();
+  });
+
+  async function executeCode(code) {
+    code = code
+      .replace(/\.getCell\s*\(\s*["']([A-Z]+\d+)["']\s*\)/g, '.getRange("$1")')
+      .replace(/\.getCell\s*\(\s*(\d+)\s*,\s*(\d+)\s*\)/g, '.getRangeByIndexes($1, $2, 1, 1)')
+      .replace(/\.values\s*=\s*"([^"]+)"/g, '.values = [["$1"]]')
+      .replace(/\.values\s*=\s*'([^']+)'/g, ".values = [['$1']]")
+      .replace(/\.formula\s*=\s*"([^"]+)"/g, '.formulas = [["$1"]]')
+      .replace(/\.formula\s*=\s*'([^']+)'/g, ".formulas = [['$1']]");
+    try {
+      await Excel.run(async (context) => {
+        const workbook = context.workbook;
+
+        // Filter by column name — handles column lookup, type coercion, everything
+        async function applyColumnFilter(columnName, filterValues) {
+          const sheet = workbook.worksheets.getActiveWorksheet();
+          const used = sheet.getUsedRange();
+          used.load('values');
+          await context.sync();
+          const headers = used.values[0];
+          const colIdx = headers.findIndex(h => String(h).toLowerCase().trim() === String(columnName).toLowerCase().trim());
+          if (colIdx === -1) throw new Error(`Column "${columnName}" not found. Available: ${headers.filter(Boolean).join(', ')}`);
+          const vals = (Array.isArray(filterValues) ? filterValues : [filterValues]).map(v => String(v));
+          sheet.autoFilter.apply(used, colIdx, { filterOn: Excel.FilterOn.values, values: vals });
+          await context.sync();
+        }
+
+        // Remove all active filters
+        async function clearFilters() {
+          const sheet = workbook.worksheets.getActiveWorksheet();
+          try { sheet.autoFilter.clearFilters(); await context.sync(); } catch (e) {}
+        }
+
+        // Sort by column name
+        async function sortByColumn(columnName, ascending = true) {
+          const sheet = workbook.worksheets.getActiveWorksheet();
+          const used = sheet.getUsedRange();
+          used.load('values');
+          await context.sync();
+          const headers = used.values[0];
+          const colIdx = headers.findIndex(h => String(h).toLowerCase().trim() === String(columnName).toLowerCase().trim());
+          if (colIdx === -1) throw new Error(`Column "${columnName}" not found. Available: ${headers.filter(Boolean).join(', ')}`);
+          used.sort.apply([{ key: colIdx, ascending }]);
+          await context.sync();
+        }
+
+        const fn = new Function('context', 'workbook', 'Excel', 'applyColumnFilter', 'clearFilters', 'sortByColumn',
+          `return (async () => { ${code} })();`
+        );
+        await fn(context, workbook, Excel, applyColumnFilter, clearFilters, sortByColumn);
+      });
+      await readWorkbook(false);
+      return { success: true, error: null };
+    } catch (err) {
+      console.error('Code execution failed:', err);
+      return { success: false, error: err.message };
+    }
+  }
+
+  function openFeedbackModal(btn) {
+    pendingFeedbackBtn = btn;
+    document.getElementById('feedbackText').value = '';
+    document.getElementById('feedbackModal').classList.add('open');
+  }
+
+  function closeFeedbackModal() {
+    document.getElementById('feedbackModal').classList.remove('open');
+    pendingFeedbackBtn = null;
+  }
+
+  async function submitFeedback() {
+    const correction = document.getElementById('feedbackText').value.trim();
+    const entry = {
+      timestamp: new Date().toISOString(),
+      prompt: lastUserPrompt,
+      bad_response: lastAIResponse,
+      bad_code: lastGeneratedCode,
+      correction: correction || null,
+      finetune: {
+        messages: [
+          { role: 'user', content: lastUserPrompt },
+          { role: 'assistant', content: correction ? correction : '// NEEDS CORRECT ANSWER' }
+        ]
+      }
+    };
+    try {
+      await fetch('/api/feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(entry)
+      });
+      if (pendingFeedbackBtn) {
+        pendingFeedbackBtn.textContent = '👎 Reported';
+        pendingFeedbackBtn.classList.add('reported');
+        pendingFeedbackBtn.disabled = true;
+      }
+    } catch (err) { console.error('Feedback failed:', err); }
+    closeFeedbackModal();
+  }
+
+  async function maybeSummarize() {
+    if (conversationHistory.length <= SUMMARY_THRESHOLD) return;
+    const toSummarize = conversationHistory.slice(0, -KEEP_RECENT);
+    if (toSummarize.length < 2) return;
+    try {
+      const res  = await fetch('/api/summarize', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ messages: toSummarize }) });
+      const data = await res.json();
+      if (data.summary) {
+        conversationSummary = conversationSummary ? conversationSummary + ' Later: ' + data.summary : data.summary;
+        conversationHistory = conversationHistory.slice(-KEEP_RECENT);
+      }
+    } catch (err) { /* ignore */ }
+  }
+
+  function renderContent(text) {
+    const div   = document.createElement('div');
+    const parts = text.split(/(```[\w]*\n[\s\S]*?```)/g);
+    parts.forEach(part => {
+      const codeMatch = part.match(/```([\w]*)\n([\s\S]*?)```/);
+      if (codeMatch) {
+        const pre = document.createElement('pre');
+        const el  = document.createElement('code');
+        el.textContent = codeMatch[2];
+        pre.appendChild(el);
+        const btn = document.createElement('button');
+        btn.className = 'copy-btn';
+        btn.textContent = 'Copy';
+        btn.onclick = () => navigator.clipboard.writeText(codeMatch[2]).then(() => { btn.textContent = 'Copied!'; setTimeout(() => btn.textContent = 'Copy', 1500); });
+        pre.appendChild(btn);
+        div.appendChild(pre);
+      } else {
+        const span = document.createElement('span');
+        span.innerHTML = part.replace(/`([^`]+)`/g, '<code>$1</code>').replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+        div.appendChild(span);
+      }
+    });
+    return div;
+  }
+
+  function addMessage(role, content, isError, timeMeta) {
+    const messagesEl = document.getElementById('messages');
+    const emptyState = document.getElementById('emptyState');
+    if (emptyState) emptyState.remove();
+    const msgEl  = document.createElement('div');
+    msgEl.className = `message ${role}`;
+    const label  = document.createElement('div');
+    label.className = 'message-label';
+    label.textContent = role === 'user' ? 'You' : 'AI';
+    if (timeMeta) {
+      const meta = document.createElement('span');
+      meta.className = 'message-meta';
+      meta.textContent = timeMeta;
+      label.appendChild(meta);
+    }
+    const bubble = document.createElement('div');
+    bubble.className = 'bubble' + (isError ? ' error' : '');
+    role === 'assistant' ? bubble.appendChild(renderContent(content)) : (bubble.textContent = content);
+    msgEl.appendChild(label);
+    msgEl.appendChild(bubble);
+    if (role === 'assistant' && !isError) {
+      const feedbackRow = document.createElement('div');
+      feedbackRow.className = 'feedback-row';
+      const thumbsBtn = document.createElement('button');
+      thumbsBtn.className = 'btn-feedback';
+      thumbsBtn.textContent = '👎 Wrong';
+      thumbsBtn.onclick = () => openFeedbackModal(thumbsBtn);
+      feedbackRow.appendChild(thumbsBtn);
+      msgEl.appendChild(feedbackRow);
+    }
+    messagesEl.appendChild(msgEl);
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+    return msgEl;
+  }
+
+  function addCodeDisplay(code) {
+    const messagesEl = document.getElementById('messages');
+    const wrap = document.createElement('div');
+    wrap.style.cssText = 'padding: 0 4px 2px 4px;';
+    const details = document.createElement('details');
+    details.style.cssText = 'font-size:10px; color:var(--text-dim);';
+    const summary = document.createElement('summary');
+    summary.style.cssText = 'cursor:pointer; user-select:none; padding:2px 0;';
+    summary.textContent = 'view code';
+    const pre = document.createElement('pre');
+    pre.style.cssText = 'margin:4px 0 0 0; max-height:180px; overflow-y:auto;';
+    const code_el = document.createElement('code');
+    code_el.textContent = code;
+    pre.appendChild(code_el);
+    details.appendChild(summary);
+    details.appendChild(pre);
+    wrap.appendChild(details);
+    messagesEl.appendChild(wrap);
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+  }
+
+  function addTypingIndicator() {
+    const messagesEl = document.getElementById('messages');
+    const emptyState = document.getElementById('emptyState');
+    if (emptyState) emptyState.remove();
+    const msgEl = document.createElement('div');
+    msgEl.className = 'message assistant';
+    msgEl.id = 'typingIndicator';
+    const t = document.createElement('div');
+    t.className = 'typing';
+    t.innerHTML = '<span></span><span></span><span></span>';
+    msgEl.appendChild(t);
+    messagesEl.appendChild(msgEl);
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+  }
+
+  function removeTypingIndicator() {
+    const el = document.getElementById('typingIndicator');
+    if (el) el.remove();
+  }
+
+  async function sendMessage() {
+    if (isLoading) return;
+    const input = document.getElementById('userInput');
+    const text  = input.value.trim();
+    if (!text) return;
+
+    isLoading = true;
+    document.getElementById('sendBtn').disabled = true;
+    input.value = '';
+    input.style.height = 'auto';
+
+    lastUserPrompt    = text;
+    lastAIResponse    = '';
+    lastGeneratedCode = '';
+
+    addMessage('user', text);
+    conversationHistory.push({ role: 'user', content: text });
+    await maybeSummarize();
+    addTypingIndicator();
+
+    const startTime = Date.now();
+
+    try {
+      const res  = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messages: conversationHistory, workbookData, activeSheet: activeSheetName, summary: conversationSummary })
+      });
+      const data = await res.json();
+      removeTypingIndicator();
+
+      const elapsed  = ((Date.now() - startTime) / 1000).toFixed(1) + 's';
+
+      if (data.error) {
+        addMessage('assistant', '⚠ ' + data.error, true, elapsed);
+      } else {
+        const reply = data.response;
+        const code  = data.code;
+        lastAIResponse    = reply || '';
+        lastGeneratedCode = code  || '';
+        if (reply) {
+          conversationHistory.push({ role: 'assistant', content: reply });
+          addMessage('assistant', reply, false, elapsed);
+        }
+
+        if (code) {
+          const result = await executeCode(code);
+          addCodeDisplay(code);
+          if (result.success) {
+            addMessage('assistant', '✓ Done.');
+          } else {
+            addMessage('assistant', `⚠ Error: ${result.error}`, true);
+            conversationHistory.push({ role: 'user', content: `The code failed with: "${result.error}". Fix it and output a corrected CODE_JS block.` });
+            const retryRes  = await fetch('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ messages: conversationHistory, workbookData, activeSheet: activeSheetName, summary: conversationSummary }) });
+            const retryData = await retryRes.json();
+            if (retryData.code) {
+              lastGeneratedCode = retryData.code;
+              const retryResult = await executeCode(retryData.code);
+              addCodeDisplay(retryData.code);
+              if (retryData.response) conversationHistory.push({ role: 'assistant', content: retryData.response });
+              addMessage('assistant', retryResult.success ? '✓ Fixed.' : `⚠ Retry failed: ${retryResult.error}`, !retryResult.success);
+            }
+          }
+        }
+      }
+    } catch (err) {
+      removeTypingIndicator();
+      addMessage('assistant', '⚠ Could not reach the AI server.', true);
+    }
+
+    isLoading = false;
+    document.getElementById('sendBtn').disabled = false;
+    input.focus();
+  }
+
+  function clearChat() {
+    conversationHistory = [];
+    conversationSummary = null;
+    document.getElementById('messages').innerHTML = `
+      <div class="empty-state" id="emptyState">
+        <div class="empty-icon">⬡</div>
+        <div class="empty-title">Private AI Assistant</div>
+        <div class="empty-sub">Workbook is live — just start talking.</div>
+        <div class="suggestions">
+          <button class="suggestion" onclick="useSuggestion('Format my headers with a dark green background, white bold text, and add borders to the whole table')">Format headers and add borders</button>
+          <button class="suggestion" onclick="useSuggestion('Add a totals row at the bottom and create a column chart of the data')">Add totals row and chart</button>
+          <button class="suggestion" onclick="useSuggestion('Add filter dropdowns and highlight the highest values in green and lowest in red')">Filters and conditional formatting</button>
+          <button class="suggestion" onclick="useSuggestion('Clean and professionally style all my data')">Clean and style everything</button>
+          <button class="suggestion" onclick="useSuggestion('Write Python pandas code to analyse this data')">Write Python code</button>
+          <button class="suggestion" onclick="useSuggestion('Write a VBA macro to automate a task on this sheet')">Write a VBA macro</button>
+        </div>
+      </div>`;
+  }
+</script>
+</body>
+</html>
