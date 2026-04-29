@@ -26,7 +26,7 @@ const OPENROUTER_KEY = process.env.OPENROUTER_KEY;
 const GROQ_KEY       = process.env.GROQ_KEY;
 
 const MODEL = USE_OPENROUTER
-  ? 'google/gemini-2.0-flash-001'
+  ? 'meta-llama/llama-3.3-70b-instruct'
   : USE_MLX
     ? 'mlx-community/Qwen3-32B-4bit'
     : 'qwen3:32b';
