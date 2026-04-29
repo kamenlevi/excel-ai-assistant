@@ -276,6 +276,8 @@
           const colIdx = headers.findIndex(h => String(h).toLowerCase().trim() === String(columnName).toLowerCase().trim());
           if (colIdx === -1) throw new Error(`Column "${columnName}" not found. Available: ${headers.filter(Boolean).join(', ')}`);
           const vals = (Array.isArray(filterValues) ? filterValues : [filterValues]).map(v => String(v));
+          // Always clear existing filter before applying — second+ calls fail without this
+          try { sheet.autoFilter.clearFilters(); await context.sync(); } catch (e) {}
           sheet.autoFilter.apply(used, colIdx, { filterOn: Excel.FilterOn.values, values: vals });
           await context.sync();
         }
