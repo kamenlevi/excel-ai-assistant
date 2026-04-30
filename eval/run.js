@@ -118,10 +118,10 @@ function checkPatterns(code, required, forbidden) {
 async function judge(tc, aiResponse, code) {
   const isQuestion = tc.mustHaveCode === false;
   const resp = await callLLM([
-    { role: 'system', content: 'You are a strict expert evaluator of Office JavaScript API code for Excel Online.' },
+    { role: 'system', content: 'You are a strict expert evaluator of Office JavaScript API code for Excel Online. You score precisely — never give round multiples of 10 unless exactly right.' },
     {
       role: 'user',
-      content: `Rate this AI assistant response from 0 to 100.
+      content: `Score this AI assistant response on FOUR dimensions, each out of 25 points.
 
 USER REQUEST: "${tc.prompt}"
 WORKBOOK CONTEXT: ${tc.workbook}
@@ -132,27 +132,107 @@ ${aiResponse}
 
 ${code ? `GENERATED CODE:\n${code}` : 'NO CODE WAS GENERATED.'}
 
-Scoring guide:
-100   — Perfect. Correct Office JS, best-practice API usage, handles edge cases.
-85–99 — Good. Functionally correct, minor style issues only.
-60–84 — Partial. Code present but has bugs, wrong API, or would likely fail.
-30–59 — Poor. Significant errors, wrong approach, or missing code for an action.
-0–29  — Failure. Lied about doing something, ignored the request, or harmful.
+${isQuestion
+  ? `This is a QUESTION — no code expected. Score:
+A) ACCURACY (0-25): Is the answer factually correct and complete?
+B) CLARITY (0-25): Is it clear and easy to understand?
+C) RELEVANCE (0-25): Does it directly address the question without padding?
+D) BONUS (0-25): Extra credit for examples, useful context, or noting Excel-specific caveats.`
+  : `Score each dimension carefully. Deduct proportionally for each flaw:
+A) API_CORRECTNESS (0-25): Does the code use real Office JS APIs? Penalise hallucinated methods (e.g. worksheet.autoFilter.add, Range.sort, context.workbook.styles).
+B) COMPLETENESS (0-25): Does the code fully address the request? Partial solutions lose points.
+C) WOULD_IT_WORK (0-25): Would this code actually execute in Excel Online without runtime errors? Check load/sync order, variable scope, correct method signatures.
+D) APPROACH (0-25): Does it use best practices and the available helpers (applyColumnFilter, clearFilters, sortByColumn) instead of re-implementing them manually?`}
 
-${isQuestion ? 'This is a QUESTION — code is NOT expected. Score based purely on answer accuracy.' : ''}
+Deduct points specifically for each issue you identify. Do NOT round to multiples of 5 — use precise values like 18, 22, 7.
 
-Reply with exactly:
-SCORE: <0-100>
-REASON: <one sentence>`,
+Reply with exactly this format:
+A: <number>
+B: <number>
+C: <number>
+D: <number>
+REASON: <one sentence summarising the main flaw or strength>`,
     },
-  ], JUDGE_MODEL, 120);
+  ], JUDGE_MODEL, 150);
 
-  const scoreM  = resp.match(/SCORE:\s*(\d+)/i);
+  const aM = resp.match(/^A:\s*(\d+)/im);
+  const bM = resp.match(/^B:\s*(\d+)/im);
+  const cM = resp.match(/^C:\s*(\d+)/im);
+  const dM = resp.match(/^D:\s*(\d+)/im);
   const reasonM = resp.match(/REASON:\s*(.+)/i);
+
+  const a = aM ? Math.min(25, parseInt(aM[1])) : 0;
+  const b = bM ? Math.min(25, parseInt(bM[1])) : 0;
+  const c = cM ? Math.min(25, parseInt(cM[1])) : 0;
+  const d = dM ? Math.min(25, parseInt(dM[1])) : 0;
+
   return {
-    score:  scoreM  ? Math.min(100, parseInt(scoreM[1]))  : 0,
+    score:  a + b + c + d,
     reason: reasonM ? reasonM[1].trim() : resp.slice(0, 120),
+    breakdown: { a, b, c, d },
   };
+}
+
+// ── Auto-patch: generate system prompt improvements for failing categories ────
+async function generateFix(failingResults, currentImprovements) {
+  const cases = failingResults.map(r =>
+    `  [${r.id}] score=${r.score}/100\n  prompt: "${r.prompt}"\n  reason: ${r.reason}\n  code:\n${(r.generatedCode || 'NONE').split('\n').map(l => '    ' + l).join('\n')}`
+  ).join('\n\n');
+
+  const resp = await callLLM([
+    { role: 'system', content: 'You are an expert at improving system prompts for an Excel AI assistant that generates Office JavaScript code.' },
+    {
+      role: 'user',
+      content: `The following test cases are FAILING (score < 70). Analyse the errors and generate new rules or examples to add to the system prompt so the AI handles these cases correctly.
+
+FAILING CASES:
+${cases}
+
+EXISTING IMPROVEMENTS ALREADY IN PROMPT:
+${currentImprovements || '(none)'}
+
+Constraints:
+- Only add rules or examples that would fix the specific failures above
+- Use the same format as the existing prompt (plain text rules or CODE_JS examples)
+- Be concise — 3–8 lines max
+- Do NOT duplicate existing rules
+
+Return ONLY the new text to add. No explanation, no preamble.`,
+    },
+  ], MODEL, 512);
+
+  return resp.trim();
+}
+
+// ── Apply improvements to server.js between the marker comments ───────────────
+function applyImprovements(newText) {
+  const src       = fs.readFileSync(path.join(__dirname, '../server.js'), 'utf8');
+  const startMark = '// EVAL-IMPROVEMENTS-START';
+  const endMark   = '// EVAL-IMPROVEMENTS-END';
+  const startIdx  = src.indexOf(startMark);
+  const endIdx    = src.indexOf(endMark);
+  if (startIdx === -1 || endIdx === -1) throw new Error('Improvement markers not found in server.js');
+
+  const before  = src.slice(0, startIdx + startMark.length);
+  const after   = src.slice(endIdx);
+  const oldBlock = src.slice(startIdx + startMark.length, endIdx).trim();
+
+  const updated = `${before}\n${newText}\n${after}`;
+  fs.writeFileSync(path.join(__dirname, '../server.js'), updated);
+
+  // Print visible diff
+  console.log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  console.log('  SYSTEM PROMPT PATCHED');
+  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  if (oldBlock) {
+    console.log('BEFORE:');
+    for (const line of oldBlock.split('\n')) console.log(`  - ${line}`);
+  } else {
+    console.log('BEFORE: (empty)');
+  }
+  console.log('AFTER:');
+  for (const line of newText.split('\n')) console.log(`  + ${line}`);
+  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
 }
 
 // ── Run one test ──────────────────────────────────────────────────────────────
@@ -383,6 +463,34 @@ async function main() {
   }
 
   saveProgress(progress);
+
+  // ── Auto-patch server.js when categories are failing ───────────────────────
+  const failingResults = results.filter(r => r.score < 70);
+  if (failingResults.length > 0) {
+    console.log(`\n⚡ ${failingResults.length} test(s) failed (<70) — generating system prompt patch...`);
+    try {
+      const src         = fs.readFileSync(path.join(__dirname, '../server.js'), 'utf8');
+      const startMark   = '// EVAL-IMPROVEMENTS-START';
+      const endMark     = '// EVAL-IMPROVEMENTS-END';
+      const startIdx    = src.indexOf(startMark);
+      const endIdx      = src.indexOf(endMark);
+      const currentImprovements = startIdx !== -1 && endIdx !== -1
+        ? src.slice(startIdx + startMark.length, endIdx).trim()
+        : '';
+
+      const fix = await generateFix(failingResults, currentImprovements);
+      applyImprovements(fix);
+    } catch (err) {
+      if (err.message.startsWith('BUDGET_EXCEEDED')) {
+        console.log('Budget hit — skipping auto-patch.');
+      } else {
+        console.warn(`Auto-patch failed: ${err.message}`);
+      }
+    }
+  } else {
+    console.log('\n✓ All tests passed (>=70) — no system prompt patch needed.');
+  }
+
   console.log(`\nResults → eval/results/${timestamp}.json`);
   console.log(`Total cost: $${totalCostUSD.toFixed(4)}\n`);
 }

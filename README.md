@@ -15,17 +15,18 @@ Type a message like _"filter the Status column to Active"_ or _"make the headers
 - Copy/move data
 - Conditional formatting
 - VBA macro generation (shown as code, run with Alt+F11)
+- and so much more...
 
 ## Requirements
 
 - Node.js 18+
 - Microsoft Excel (desktop or online)
-- An [OpenRouter](https://openrouter.ai) API key (free tier works)
+- (not really a requirement) An [OpenRouter](https://openrouter.ai) API key (free tier works)
 
 ## Installation
 
 ```bash
-git clone https://github.com/your-username/excel-ai-assistant
+git clone https://github.com/kamenlevi/excel-ai-assistant
 cd excel-ai-assistant
 npm install
 ```
@@ -98,32 +99,6 @@ const MODEL = USE_OPENROUTER
 3. The AI responds with a plain-English sentence and a `CODE_JS::...::END_CODE` block
 4. The frontend executes that code directly inside `Excel.run()` — changes appear instantly
 5. If execution fails, it automatically retries with the error message
-
-## Automated eval & improvement
-
-An LLM-based test suite lives in `eval/`. It sends realistic prompts to the live API, scores the responses 0–10, and compares against the previous run.
-
-```bash
-npm run eval
-```
-
-Results are saved to `eval/results/<timestamp>.json`. A scheduled Claude Code session reads these, finds regressions, improves the system prompt or helpers, and commits the changes automatically. See [`eval/ROUTINE.md`](eval/ROUTINE.md) for the full routine prompt.
-
-### Latest eval scores
-
-| Category | Score |
-|---|---|
-| Filtering | — |
-| Sorting | — |
-| Formatting | — |
-| Formulas | — |
-| Question handling | — |
-| Charts | — |
-| Data manipulation | — |
-| Conditional formatting | — |
-| Edge cases | — |
-
-*Run `npm run eval` to populate.*
 
 ## License
 
