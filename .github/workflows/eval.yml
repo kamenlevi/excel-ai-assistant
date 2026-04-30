@@ -1,0 +1,39 @@
+name: Eval & Improve
+
+on:
+  schedule:
+    - cron: '0 */8 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  eval:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Create .env
+        run: echo "OPENROUTER_KEY=${{ secrets.OPENROUTER_KEY }}" > .env
+
+      - name: Run eval
+        run: npm run eval
+
+      - name: Commit and push changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add server.js eval/progress.json eval/generated-cases.json README.md
+          git diff --staged --quiet || git commit -m "eval: $(date -u +%Y-%m-%d) — auto-improvement run"
+          git push
