@@ -1,1 +1,26 @@
-[]
+[
+  {
+    "id": "gen-L1-hyperlinks-001",
+    "level": 1,
+    "category": "Hyperlinks",
+    "prompt": "Create a hyperlink in cell A1 to https://www.example.com",
+    "workbook": "Headers: A1=Link\nData:\nA2:",
+    "mustHaveCode": true,
+    "requiredPatterns": [
+      "addHyperlink"
+    ],
+    "forbiddenPatterns": []
+  },
+  {
+    "id": "gen-L1-hyperlinks-002",
+    "level": 1,
+    "category": "Hyperlinks",
+    "prompt": "Remove the hyperlink from cell A1",
+    "workbook": "Headers: A1=Link\nData:\nA2: https://www.example.com",
+    "mustHaveCode": true,
+    "requiredPatterns": [
+      "removeHyperlink"
+    ],
+    "forbiddenPatterns": []
+  }
+]

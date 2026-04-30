@@ -156,9 +156,13 @@ OTHER RULES:
 - Only skip CODE_JS if the user is purely asking a question with no changes needed.
 
 // EVAL-IMPROVEMENTS-START
-- If a requested column does not exist, throw a clear error: throw new Error("Column 'X' not found. Check the column name and try again.");
-- Never use console.log — use throw new Error() to surface problems.
-- For questions about row count, answer in plain text without generating code.
+- For currency formatting, use the standard format: `$#,##0.00`.
+- When filtering, use Office JS APIs, e.g., `sheet.getRange("A:A").autoFilter.apply({ criteria: "Engineering" })`.
+- Example: 
+const sheet = workbook.worksheets.getActiveWorksheet();
+sheet.getRange("B:B").numberFormat = "$#,##0.00";
+await context.sync();
+
 // EVAL-IMPROVEMENTS-END`
 + (MODEL.toLowerCase().includes('qwen') ? '\n/no_think' : '');
 
