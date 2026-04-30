@@ -201,7 +201,8 @@ Return ONLY the new text to add. No explanation, no preamble.`,
     },
   ], MODEL, 512);
 
-  return resp.trim();
+  // Strip markdown code fences — backticks inside the template literal would break server.js
+  return resp.trim().replace(/```[a-z]*\n?/g, '').replace(/```/g, '');
 }
 
 // ── Apply improvements to server.js between the marker comments ───────────────
@@ -438,12 +439,17 @@ async function main() {
   });
 
   for (const { cat, avg, currentLevel, mastered } of categoryStatus) {
+    if (!progress[cat]) progress[cat] = { level: 1, masteredAt: null };
+    progress[cat].lastScore = Math.round(avg * 10) / 10;
+    progress[cat].lastRun   = timestamp;
+
     if (mastered) {
       console.log(`✓ "${cat}" mastered at level ${currentLevel} (avg ${avg.toFixed(1)}) — generating level ${currentLevel + 1} cases`);
       try {
         const newCases = await generateHarderCases(cat, currentLevel, allCases, categoryStatus);
         newCasesGenerated = [...newCasesGenerated, ...newCases];
-        progress[cat] = { level: currentLevel + 1, masteredAt: timestamp };
+        progress[cat].level      = currentLevel + 1;
+        progress[cat].masteredAt = timestamp;
       } catch (err) {
         if (err.message.startsWith('BUDGET_EXCEEDED')) {
           console.log('Budget hit during generation — skipping remaining generations.');

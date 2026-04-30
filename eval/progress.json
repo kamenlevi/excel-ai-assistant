@@ -39,5 +39,17 @@
   "edge cases": {
     "level": 1,
     "masteredAt": null
+  },
+  "data validation": {
+    "level": 1,
+    "masteredAt": null
+  },
+  "tables": {
+    "level": 1,
+    "masteredAt": null
+  },
+  "named ranges": {
+    "level": 1,
+    "masteredAt": null
   }
 }

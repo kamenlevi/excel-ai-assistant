@@ -199,5 +199,55 @@
     "requiredPatterns": ["applyColumnFilter"],
     "forbiddenPatterns": [],
     "note": "Column does not exist — model should throw a helpful error, not crash silently or hallucinate a result"
+  },
+  {
+    "id": "L1-validation-001",
+    "level": 1,
+    "category": "data validation",
+    "prompt": "add a dropdown list to column C that only allows Low, Medium, or High",
+    "workbook": "Headers: A1=Task | B1=Assignee | C1=Priority\nData:\nA2:Fix bug | B2:Alice | C2:(empty)\nA3:Write docs | B3:Bob | C3:(empty)",
+    "mustHaveCode": true,
+    "requiredPatterns": ["dataValidation"],
+    "forbiddenPatterns": []
+  },
+  {
+    "id": "L1-validation-002",
+    "level": 1,
+    "category": "data validation",
+    "prompt": "make sure column B only accepts whole numbers between 1 and 100",
+    "workbook": "Headers: A1=Name | B1=Score\nData:\nA2:Alice | B2:(empty)\nA3:Bob | B3:(empty)",
+    "mustHaveCode": true,
+    "requiredPatterns": ["dataValidation"],
+    "forbiddenPatterns": []
+  },
+  {
+    "id": "L1-tables-001",
+    "level": 1,
+    "category": "tables",
+    "prompt": "convert the data in A1:C4 into an Excel table",
+    "workbook": "Headers: A1=Product | B1=Units | C1=Revenue\nData:\nA2:Widget | B2:100 | C2:5000\nA3:Gadget | B3:200 | C3:8000\nA4:Donut | B4:50 | C4:1500",
+    "mustHaveCode": true,
+    "requiredPatterns": ["tables.add"],
+    "forbiddenPatterns": []
+  },
+  {
+    "id": "L1-tables-002",
+    "level": 1,
+    "category": "tables",
+    "prompt": "add a total row to the existing table",
+    "workbook": "Headers: A1=Product | B1=Units | C1=Revenue\nData:\nA2:Widget | B2:100 | C2:5000\nA3:Gadget | B3:200 | C3:8000\n(Table named 'Table1' already exists covering A1:C3)",
+    "mustHaveCode": true,
+    "requiredPatterns": ["showTotals"],
+    "forbiddenPatterns": []
+  },
+  {
+    "id": "L1-namedranges-001",
+    "level": 1,
+    "category": "named ranges",
+    "prompt": "create a named range called SalesData covering A2:B10",
+    "workbook": "Headers: A1=Month | B1=Sales\nData:\nA2:Jan | B2:4000\nA3:Feb | B3:5500",
+    "mustHaveCode": true,
+    "requiredPatterns": ["names.add"],
+    "forbiddenPatterns": []
   }
 ]
