@@ -201,35 +201,23 @@ Return ONLY the new text to add. No explanation, no preamble.`,
     },
   ], MODEL, 512);
 
-  // Strip ALL backticks — they break the template literal in server.js
-  return resp.trim().replace(/```[a-z]*\n?/g, '').replace(/`/g, "'");
+  return resp.trim();
 }
 
-// ── Apply improvements to server.js between the marker comments ───────────────
+// ── Apply improvements to eval/improvements.txt (safe — no template literals) ─
 function applyImprovements(newText) {
-  const src       = fs.readFileSync(path.join(__dirname, '../server.js'), 'utf8');
-  const startMark = '// EVAL-IMPROVEMENTS-START';
-  const endMark   = '// EVAL-IMPROVEMENTS-END';
-  const startIdx  = src.indexOf(startMark);
-  const endIdx    = src.indexOf(endMark);
-  if (startIdx === -1 || endIdx === -1) throw new Error('Improvement markers not found in server.js');
+  const impFile = path.join(__dirname, 'improvements.txt');
+  const oldText = fs.existsSync(impFile) ? fs.readFileSync(impFile, 'utf8').trim() : '';
 
-  const before  = src.slice(0, startIdx + startMark.length);
-  const after   = src.slice(endIdx);
-  const oldBlock = src.slice(startIdx + startMark.length, endIdx).trim();
+  fs.writeFileSync(impFile, newText + '\n');
 
-  const updated = `${before}\n${newText}\n${after}`;
-  fs.writeFileSync(path.join(__dirname, '../server.js'), updated);
-
-  // Print visible diff
   console.log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-  console.log('  SYSTEM PROMPT PATCHED');
+  console.log('  SYSTEM PROMPT PATCHED (eval/improvements.txt)');
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-  if (oldBlock) {
-    console.log('BEFORE:');
-    for (const line of oldBlock.split('\n')) console.log(`  - ${line}`);
+  if (oldText) {
+    for (const line of oldText.split('\n')) console.log(`  - ${line}`);
   } else {
-    console.log('BEFORE: (empty)');
+    console.log('  BEFORE: (empty)');
   }
   console.log('AFTER:');
   for (const line of newText.split('\n')) console.log(`  + ${line}`);

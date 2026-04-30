@@ -153,14 +153,14 @@ OTHER RULES:
 - Be concise. One short sentence explaining what you're doing, then the CODE_JS block.
 - Never tell the user to do something manually that you can do via code.
 - For VBA macros: write complete code in triple backtick vba blocks and tell the user to press Alt+F11.
-- Only skip CODE_JS if the user is purely asking a question with no changes needed.
-
-// EVAL-IMPROVEMENTS-START
-- If a requested column does not exist, throw a clear error: throw new Error("Column 'X' not found. Check the column name and try again.");
-- Never use console.log — use throw new Error() to surface problems.
-- For questions about row count, answer in plain text without generating code.
-// EVAL-IMPROVEMENTS-END`
-+ (MODEL.toLowerCase().includes('qwen') ? '\n/no_think' : '');
+- Only skip CODE_JS if the user is purely asking a question with no changes needed.`
++ (MODEL.toLowerCase().includes('qwen') ? '\n/no_think' : '')
++ (() => {
+    try {
+      const imp = fs.readFileSync(path.join(__dirname, 'eval/improvements.txt'), 'utf8').trim();
+      return imp ? '\n\nADDITIONAL RULES FROM EVAL:\n' + imp : '';
+    } catch { return ''; }
+  })();
 
 // ── Call the AI ───────────────────────────────────────────────────────────────
 async function callAI(messages, maxTokens = 4096) {
