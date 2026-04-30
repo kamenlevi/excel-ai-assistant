@@ -162,7 +162,7 @@ await context.sync();
 const rows = used.values.slice(1);
 const deposits = rows.filter(r => String(r[2]).toLowerCase().includes("deposit"));
 const total = deposits.reduce((sum, r) => sum + (Number(r[3]) || 0), 0);
-return `Found ${deposits.length} deposits totalling $${total.toFixed(2)}.`;
+return "Found " + deposits.length + " deposits totalling $" + total.toFixed(2) + ".";
 ::END_CODE
 
 OTHER RULES:
@@ -269,8 +269,12 @@ function parseResponse(text) {
 // ── Detect if model forgot to include code for an action request ─────────────
 function isQuestion(userMessage) {
   const s = userMessage.toLowerCase().trim();
+  // Data queries always need code — never treat them as pure questions
+  const dataQueryWords = ['how many', 'how much', 'what is the total', 'what is the sum', 'what is the average', 'count', 'sum of', 'total of', 'list all', 'show me', 'find all', 'find the', 'which rows', 'how often'];
+  if (dataQueryWords.some(q => s.includes(q))) return false;
+  // Pure knowledge questions don't need code
   if (s.endsWith('?')) return true;
-  const starters = ['what ', 'why ', 'how ', 'when ', 'where ', 'which ', 'who ', 'explain', 'tell me', 'describe', 'can you explain', 'can you tell', 'what is', 'what are'];
+  const starters = ['why ', 'explain', 'tell me', 'describe', 'can you explain', 'can you tell', 'what does', 'what is a ', 'what are the', 'how do i', 'how does', 'what is vlookup', 'what is pivot'];
   return starters.some(q => s.startsWith(q));
 }
 
