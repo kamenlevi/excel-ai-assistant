@@ -34,6 +34,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add server.js eval/progress.json eval/generated-cases.json README.md
+          echo "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > eval/last-run.txt
+          git add server.js eval/progress.json eval/generated-cases.json README.md eval/last-run.txt
           git diff --staged --quiet || git commit -m "eval: $(date -u +%Y-%m-%d) — auto-improvement run"
           git push
