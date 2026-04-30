@@ -262,6 +262,7 @@
       .replace(/\.values\s*=\s*'([^']+)'/g, ".values = [['$1']]")
       .replace(/\.formula\s*=\s*"([^"]+)"/g, '.formulas = [["$1"]]')
       .replace(/\.formula\s*=\s*'([^']+)'/g, ".formulas = [['$1']]");
+    let returnValue = null;
     try {
       await Excel.run(async (context) => {
         const workbook = context.workbook;
@@ -304,13 +305,16 @@
         const fn = new Function('context', 'workbook', 'Excel', 'applyColumnFilter', 'clearFilters', 'sortByColumn',
           `return (async () => { ${code} })();`
         );
-        await fn(context, workbook, Excel, applyColumnFilter, clearFilters, sortByColumn);
+        const codeReturn = await fn(context, workbook, Excel, applyColumnFilter, clearFilters, sortByColumn);
+        if (codeReturn !== undefined && codeReturn !== null) {
+          returnValue = String(codeReturn);
+        }
       });
       await readWorkbook(false);
-      return { success: true, error: null };
+      return { success: true, error: null, result: returnValue };
     } catch (err) {
       console.error('Code execution failed:', err);
-      return { success: false, error: err.message };
+      return { success: false, error: err.message, result: null };
     }
   }
 
@@ -519,7 +523,12 @@
           const result = await executeCode(code);
           addCodeDisplay(code);
           if (result.success) {
-            addMessage('assistant', '✓ Done.');
+            if (result.result) {
+              conversationHistory.push({ role: 'assistant', content: result.result });
+              addMessage('assistant', result.result);
+            } else {
+              addMessage('assistant', '✓ Done.');
+            }
           } else {
             addMessage('assistant', `⚠ Error: ${result.error}`, true);
             conversationHistory.push({ role: 'user', content: `The code failed with: "${result.error}". Fix it and output a corrected CODE_JS block.` });
