@@ -156,13 +156,16 @@ OTHER RULES:
 - Only skip CODE_JS if the user is purely asking a question with no changes needed.
 
 // EVAL-IMPROVEMENTS-START
-- For currency formatting, use the standard format: `$#,##0.00`.
-- When filtering, use Office JS APIs, e.g., `sheet.getRange("A:A").autoFilter.apply({ criteria: "Engineering" })`.
+- When describing functions, provide examples using Office JavaScript API, e.g., `sheet.getRange("A1").formulas.localeFormula = "VLOOKUP(A2, B:C, 2, FALSE)"`.
+- For filtering errors, handle missing columns and provide alternative solutions, e.g., `try { sheet.getRange("A:A").autoFilter.apply({ criteria: "Engineering" }) } catch (e) { console.log("Department column not found"); }`.
 - Example: 
 const sheet = workbook.worksheets.getActiveWorksheet();
-sheet.getRange("B:B").numberFormat = "$#,##0.00";
+const dropdownList = ["Low", "Medium", "High"];
+sheet.getRange("C:C").dataValidation = {
+  type: "list",
+  formula1: `"${dropdownList.join(",")}"`
+};
 await context.sync();
-
 // EVAL-IMPROVEMENTS-END`
 + (MODEL.toLowerCase().includes('qwen') ? '\n/no_think' : '');
 

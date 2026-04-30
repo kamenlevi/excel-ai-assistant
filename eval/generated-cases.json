@@ -22,5 +22,29 @@
       "removeHyperlink"
     ],
     "forbiddenPatterns": []
+  },
+  {
+    "id": "gen-L1-comments-001",
+    "level": 1,
+    "category": "Comments",
+    "prompt": "Add a comment to cell A1 with the text 'This is a comment'",
+    "workbook": "Headers: A1=X | B1=Y\nData:\nA2:val | B2:val",
+    "mustHaveCode": true,
+    "requiredPatterns": [
+      "comments.add"
+    ],
+    "forbiddenPatterns": []
+  },
+  {
+    "id": "gen-L1-comments-002",
+    "level": 1,
+    "category": "Comments",
+    "prompt": "Delete the comment from cell A1",
+    "workbook": "Headers: A1=X | B1=Y\nData:\nA2:val | B2:val",
+    "mustHaveCode": true,
+    "requiredPatterns": [
+      "comments.delete"
+    ],
+    "forbiddenPatterns": []
   }
 ]

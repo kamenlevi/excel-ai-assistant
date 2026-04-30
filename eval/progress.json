@@ -3,82 +3,88 @@
   "filtering": {
     "level": 1,
     "masteredAt": null,
-    "lastScore": 79.3,
-    "lastRun": "2026-04-30T08-39-54"
+    "lastScore": 83.3,
+    "lastRun": "2026-04-30T17-20-51"
   },
   "sorting": {
     "level": 1,
     "masteredAt": null,
-    "lastScore": 72.5,
-    "lastRun": "2026-04-30T08-39-54"
+    "lastScore": 70,
+    "lastRun": "2026-04-30T17-20-51"
   },
   "formatting": {
     "level": 1,
     "masteredAt": null,
-    "lastScore": 79.3,
-    "lastRun": "2026-04-30T08-39-54"
+    "lastScore": 89.3,
+    "lastRun": "2026-04-30T17-20-51"
   },
   "formulas": {
     "level": 1,
     "masteredAt": null,
     "lastScore": 83.3,
-    "lastRun": "2026-04-30T08-39-54"
+    "lastRun": "2026-04-30T17-20-51"
   },
   "conditional formatting": {
     "level": 1,
     "masteredAt": null,
-    "lastScore": 83,
-    "lastRun": "2026-04-30T08-39-54"
+    "lastScore": 70,
+    "lastRun": "2026-04-30T17-20-51"
   },
   "charts": {
     "level": 1,
     "masteredAt": null,
     "lastScore": 83,
-    "lastRun": "2026-04-30T08-39-54"
+    "lastRun": "2026-04-30T17-20-51"
   },
   "data manipulation": {
     "level": 1,
     "masteredAt": null,
-    "lastScore": 82,
-    "lastRun": "2026-04-30T08-39-54"
+    "lastScore": 82.5,
+    "lastRun": "2026-04-30T17-20-51"
   },
   "sheet operations": {
     "level": 1,
     "masteredAt": null,
-    "lastScore": 89,
-    "lastRun": "2026-04-30T08-39-54"
+    "lastScore": 77.5,
+    "lastRun": "2026-04-30T17-20-51"
   },
   "question handling": {
     "level": 1,
     "masteredAt": null,
-    "lastScore": 76.5,
-    "lastRun": "2026-04-30T08-39-54"
+    "lastScore": 66.5,
+    "lastRun": "2026-04-30T17-20-51"
   },
   "edge cases": {
     "level": 1,
     "masteredAt": null,
-    "lastScore": 45,
-    "lastRun": "2026-04-30T08-39-54"
+    "lastScore": 50,
+    "lastRun": "2026-04-30T17-20-51"
   },
   "data validation": {
     "level": 1,
     "masteredAt": null,
-    "lastScore": 86,
-    "lastRun": "2026-04-30T08-39-54"
+    "lastScore": 41.5,
+    "lastRun": "2026-04-30T17-20-51"
   },
   "tables": {
     "level": 1,
     "masteredAt": null,
-    "lastScore": 93,
-    "lastRun": "2026-04-30T08-39-54"
+    "lastScore": 87.5,
+    "lastRun": "2026-04-30T17-20-51"
   },
   "named ranges": {
     "level": 1,
     "masteredAt": null,
     "lastScore": 90,
-    "lastRun": "2026-04-30T08-39-54"
+    "lastRun": "2026-04-30T17-20-51"
   },
   "Hyperlinks": {
+    "level": 1,
+    "masteredAt": null,
+    "lastScore": 82,
+    "lastRun": "2026-04-30T17-20-51"
+  },
+  "Comments": {
     "level": 1,
     "masteredAt": null
   }
