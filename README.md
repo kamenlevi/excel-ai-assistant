@@ -14,7 +14,7 @@ Type a message like _"filter the Status column to Active"_ or _"make the headers
 - Write formulas
 - Copy/move data
 - Conditional formatting
-- VBA macro generation (shown as code, run with Alt+F11)
+- VBA macro generation
 - and so much more...
 
 ## Requirements
