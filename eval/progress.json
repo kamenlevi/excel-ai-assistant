@@ -1,0 +1,13 @@
+{
+  "_note": "Tracks the current mastered level per category. Auto-updated by eval/run.js when a category averages 95+/100.",
+  "filtering":              { "level": 1, "masteredAt": null },
+  "sorting":                { "level": 1, "masteredAt": null },
+  "formatting":             { "level": 1, "masteredAt": null },
+  "formulas":               { "level": 1, "masteredAt": null },
+  "conditional formatting": { "level": 1, "masteredAt": null },
+  "charts":                 { "level": 1, "masteredAt": null },
+  "data manipulation":      { "level": 1, "masteredAt": null },
+  "sheet operations":       { "level": 1, "masteredAt": null },
+  "question handling":      { "level": 1, "masteredAt": null },
+  "edge cases":             { "level": 1, "masteredAt": null }
+}

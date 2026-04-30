@@ -1,182 +1,257 @@
 #!/usr/bin/env node
+/**
+ * ExcelAI Eval Runner
+ *
+ * - Scores AI responses 0–100 using an LLM judge
+ * - Tracks per-category levels in progress.json
+ * - When a category averages >= 95, auto-generates harder cases for it
+ * - When ALL categories hit 95, also generates cases for brand-new Excel domains
+ * - Hard budget limit: $0.50 per session
+ */
 require('dotenv').config({ path: require('path').join(__dirname, '../.env') });
 
 const fs   = require('fs');
 const path = require('path');
 const fetch = require('node-fetch');
 
-const OPENROUTER_KEY = process.env.OPENROUTER_KEY;
-const MODEL          = 'meta-llama/llama-3.3-70b-instruct';
-const JUDGE_MODEL    = 'meta-llama/llama-3.3-70b-instruct';
-const COST_PER_1M_IN  = 0.07;  // $ per 1M input tokens  (llama 3.3 70b on OpenRouter)
-const COST_PER_1M_OUT = 0.30;  // $ per 1M output tokens
-const BUDGET_LIMIT    = 0.50;  // hard stop
+const OPENROUTER_KEY   = process.env.OPENROUTER_KEY;
+const MODEL            = 'meta-llama/llama-3.3-70b-instruct';
+const JUDGE_MODEL      = 'meta-llama/llama-3.3-70b-instruct';
+const COST_PER_1M_IN   = 0.07;
+const COST_PER_1M_OUT  = 0.30;
+const BUDGET_USD       = 0.50;
+const MASTERY_THRESHOLD = 95;
 
-const cases      = JSON.parse(fs.readFileSync(path.join(__dirname, 'cases.json'), 'utf8'));
-const resultsDir = path.join(__dirname, 'results');
-if (!fs.existsSync(resultsDir)) fs.mkdirSync(resultsDir);
+const PATHS = {
+  cases:     path.join(__dirname, 'cases.json'),
+  generated: path.join(__dirname, 'generated-cases.json'),
+  progress:  path.join(__dirname, 'progress.json'),
+  results:   path.join(__dirname, 'results'),
+};
 
-// ── Load system prompt from server.js ─────────────────────────────────────────
+if (!fs.existsSync(PATHS.results)) fs.mkdirSync(PATHS.results, { recursive: true });
+
+// ── Cost tracking ─────────────────────────────────────────────────────────────
+let totalCostUSD = 0;
+function trackCost(inTok, outTok) {
+  const c = (inTok / 1e6) * COST_PER_1M_IN + (outTok / 1e6) * COST_PER_1M_OUT;
+  totalCostUSD += c;
+  if (totalCostUSD > BUDGET_USD) throw new Error(`BUDGET_EXCEEDED: $${totalCostUSD.toFixed(4)} > $${BUDGET_USD}`);
+}
+
+// ── OpenRouter call ───────────────────────────────────────────────────────────
+async function callLLM(messages, model = MODEL, maxTokens = 1024) {
+  const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type':  'application/json',
+      'Authorization': `Bearer ${OPENROUTER_KEY}`,
+      'HTTP-Referer':  'https://localhost:3000',
+      'X-Title':       'ExcelAI Eval',
+    },
+    body: JSON.stringify({ model, messages, max_tokens: maxTokens, temperature: 0.1 }),
+  });
+  const data = await res.json();
+  if (data.error) throw new Error(JSON.stringify(data.error));
+  const u = data.usage || {};
+  trackCost(u.prompt_tokens || 600, u.completion_tokens || 250);
+  return data.choices[0].message.content;
+}
+
+// ── Load files ────────────────────────────────────────────────────────────────
+function loadCases() {
+  const base = JSON.parse(fs.readFileSync(PATHS.cases, 'utf8'));
+  const gen  = fs.existsSync(PATHS.generated)
+    ? JSON.parse(fs.readFileSync(PATHS.generated, 'utf8'))
+    : [];
+  return [...base, ...gen];
+}
+
+function loadProgress() {
+  if (!fs.existsSync(PATHS.progress)) return {};
+  return JSON.parse(fs.readFileSync(PATHS.progress, 'utf8'));
+}
+
+function saveProgress(p) {
+  fs.writeFileSync(PATHS.progress, JSON.stringify(p, null, 2));
+}
+
+function loadLastResults() {
+  const files = fs.readdirSync(PATHS.results).filter(f => f.endsWith('.json')).sort();
+  if (!files.length) return null;
+  return JSON.parse(fs.readFileSync(path.join(PATHS.results, files[files.length - 1]), 'utf8'));
+}
+
+// ── System prompt extractor ───────────────────────────────────────────────────
 function loadSystemPrompt() {
   const src       = fs.readFileSync(path.join(__dirname, '../server.js'), 'utf8');
   const startMark = 'const SYSTEM_PROMPT = `';
   const startIdx  = src.indexOf(startMark);
-  if (startIdx === -1) throw new Error('Could not find SYSTEM_PROMPT in server.js');
-  const contentStart = startIdx + startMark.length;
-  // Find closing backtick — the one directly followed by whitespace then + or ;
-  let i = contentStart;
+  if (startIdx === -1) throw new Error('Cannot find SYSTEM_PROMPT in server.js');
+  const from = startIdx + startMark.length;
+  let i = from;
   while (i < src.length) {
     i = src.indexOf('`', i);
-    if (i === -1) throw new Error('Could not find end of SYSTEM_PROMPT');
+    if (i === -1) throw new Error('Cannot find end of SYSTEM_PROMPT');
     const after = src.slice(i + 1).trimStart();
     if (after.startsWith('+') || after.startsWith(';')) break;
     i++;
   }
-  return src.slice(contentStart, i);
+  return src.slice(from, i);
 }
 
-// ── Estimate token cost ────────────────────────────────────────────────────────
-let totalCostUSD = 0;
-function trackCost(inputTokens, outputTokens) {
-  const cost = (inputTokens / 1_000_000) * COST_PER_1M_IN + (outputTokens / 1_000_000) * COST_PER_1M_OUT;
-  totalCostUSD += cost;
-  if (totalCostUSD > BUDGET_LIMIT) throw new Error(`Budget limit $${BUDGET_LIMIT} exceeded — stopping.`);
-  return cost;
-}
-
-// ── Call OpenRouter ────────────────────────────────────────────────────────────
-async function callLLM(messages, model = MODEL) {
-  const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${OPENROUTER_KEY}`,
-      'HTTP-Referer': 'https://localhost:3000',
-      'X-Title': 'ExcelAI Eval'
-    },
-    body: JSON.stringify({ model, messages, max_tokens: 1024, temperature: 0.1 })
-  });
-  const data = await res.json();
-  if (data.error) throw new Error(JSON.stringify(data.error));
-  const usage = data.usage || {};
-  trackCost(usage.prompt_tokens || 500, usage.completion_tokens || 200);
-  return data.choices[0].message.content;
-}
-
-// ── Parse CODE_JS block ────────────────────────────────────────────────────────
+// ── Extract CODE_JS block ─────────────────────────────────────────────────────
 function extractCode(text) {
   const m = text.match(/CODE_JS::([\s\S]*?)::END_CODE/);
   return m ? m[1].trim() : null;
 }
 
-// ── Pattern checks ─────────────────────────────────────────────────────────────
+// ── Pattern checks ────────────────────────────────────────────────────────────
 function checkPatterns(code, required, forbidden) {
-  if (!code) return { passed: false, missing: required, forbidden: [] };
-  const missing   = required.filter(p => !code.includes(p));
-  const foundBad  = forbidden.filter(p => code.includes(p));
-  return { passed: missing.length === 0 && foundBad.length === 0, missing, forbidden: foundBad };
+  if (!code) return { passed: false, missing: required, badFound: [] };
+  const missing  = required.filter(p => !code.includes(p));
+  const badFound = forbidden.filter(p => code.includes(p));
+  return { passed: !missing.length && !badFound.length, missing, badFound };
 }
 
-// ── LLM judge: rate the generated code ─────────────────────────────────────────
-async function judgeCode(testCase, aiResponse, generatedCode) {
-  const prompt = `You are an expert in Office JavaScript API for Excel Online. Rate this AI assistant response.
+// ── LLM judge ────────────────────────────────────────────────────────────────
+async function judge(tc, aiResponse, code) {
+  const isQuestion = tc.mustHaveCode === false;
+  const resp = await callLLM([
+    { role: 'system', content: 'You are a strict expert evaluator of Office JavaScript API code for Excel Online.' },
+    {
+      role: 'user',
+      content: `Rate this AI assistant response from 0 to 100.
 
-USER ASKED: "${testCase.prompt}"
-WORKBOOK STATE: ${testCase.workbook}
+USER REQUEST: "${tc.prompt}"
+WORKBOOK CONTEXT: ${tc.workbook}
+${tc.note ? `SPECIAL NOTE: ${tc.note}` : ''}
 
 AI RESPONSE:
 ${aiResponse}
 
-${generatedCode ? `GENERATED CODE:\n${generatedCode}` : 'NO CODE WAS GENERATED.'}
+${code ? `GENERATED CODE:\n${code}` : 'NO CODE WAS GENERATED.'}
 
-Rate this response from 0 to 10:
-- 10: Perfect. Correct code, uses the right APIs, would work in Excel.
-- 7-9: Good. Minor issues but fundamentally correct.
-- 4-6: Partial. Code generated but has bugs or wrong approach.
-- 1-3: Poor. Wrong approach or missing code when it was needed.
-- 0: Complete failure. Lied about doing something, no code, or harmful code.
+Scoring guide:
+100   — Perfect. Correct Office JS, best-practice API usage, handles edge cases.
+85–99 — Good. Functionally correct, minor style issues only.
+60–84 — Partial. Code present but has bugs, wrong API, or would likely fail.
+30–59 — Poor. Significant errors, wrong approach, or missing code for an action.
+0–29  — Failure. Lied about doing something, ignored the request, or harmful.
 
-${testCase.mustHaveCode === false ? 'NOTE: This is a question — code is NOT required. Score based on answer quality.' : ''}
-${testCase.note ? `CONTEXT: ${testCase.note}` : ''}
+${isQuestion ? 'This is a QUESTION — code is NOT expected. Score based purely on answer accuracy.' : ''}
 
-Reply with ONLY: SCORE: <number>\nREASON: <one sentence>`;
+Reply with exactly:
+SCORE: <0-100>
+REASON: <one sentence>`,
+    },
+  ], JUDGE_MODEL, 120);
 
-  const judgeResp = await callLLM([
-    { role: 'system', content: 'You are a code quality evaluator. Be strict and objective.' },
-    { role: 'user', content: prompt }
-  ], JUDGE_MODEL);
-
-  const scoreMatch = judgeResp.match(/SCORE:\s*(\d+)/i);
-  const reasonMatch = judgeResp.match(/REASON:\s*(.+)/i);
+  const scoreM  = resp.match(/SCORE:\s*(\d+)/i);
+  const reasonM = resp.match(/REASON:\s*(.+)/i);
   return {
-    score:  scoreMatch  ? parseInt(scoreMatch[1])       : 0,
-    reason: reasonMatch ? reasonMatch[1].trim()         : judgeResp.trim()
+    score:  scoreM  ? Math.min(100, parseInt(scoreM[1]))  : 0,
+    reason: reasonM ? reasonM[1].trim() : resp.slice(0, 120),
   };
 }
 
-// ── Run one test case ──────────────────────────────────────────────────────────
-async function runCase(testCase, systemPrompt) {
+// ── Run one test ──────────────────────────────────────────────────────────────
+async function runCase(tc, systemPrompt) {
   const messages = [
     { role: 'system', content: systemPrompt },
-    {
-      role: 'user',
-      content: `Here is the current state of the workbook.\n\nActive sheet: Sheet1\n\n${testCase.workbook}`
-    },
+    { role: 'user',      content: `Workbook state:\n\n${tc.workbook}` },
     { role: 'assistant', content: 'I can see the workbook. What would you like me to do?' },
-    {
-      role: 'user',
-      content: testCase.prompt + '\n\n[REMINDER: If making changes, output a CODE_JS block with Office JS code. Do not skip it.]'
-    }
+    { role: 'user',      content: tc.prompt + '\n\n[REMINDER: If making changes, output a CODE_JS block. Do not skip it.]' },
   ];
 
-  let aiResponse, generatedCode, patternResult, judgeResult;
+  let aiResponse, code, patterns, verdict;
   try {
-    aiResponse    = await callLLM(messages);
-    generatedCode = extractCode(aiResponse);
-    patternResult = checkPatterns(generatedCode, testCase.requiredPatterns, testCase.forbiddenPatterns);
-    judgeResult   = await judgeCode(testCase, aiResponse, generatedCode);
+    aiResponse = await callLLM(messages, MODEL, 1024);
+    code       = extractCode(aiResponse);
+    patterns   = checkPatterns(code, tc.requiredPatterns, tc.forbiddenPatterns);
+    verdict    = await judge(tc, aiResponse, code);
   } catch (err) {
-    if (err.message.includes('Budget limit')) throw err;
-    aiResponse    = `ERROR: ${err.message}`;
-    generatedCode = null;
-    patternResult = { passed: false, missing: testCase.requiredPatterns, forbidden: [] };
-    judgeResult   = { score: 0, reason: `Execution error: ${err.message}` };
+    if (err.message.startsWith('BUDGET_EXCEEDED')) throw err;
+    aiResponse = `ERROR: ${err.message}`;
+    code       = null;
+    patterns   = { passed: false, missing: tc.requiredPatterns, badFound: [] };
+    verdict    = { score: 0, reason: `Runtime error: ${err.message}` };
   }
 
-  const hasCode      = generatedCode !== null;
-  const codeExpected = testCase.mustHaveCode !== false;
-  const codePass     = codeExpected ? hasCode : true;
-
   return {
-    id:            testCase.id,
-    tier:          testCase.tier,
-    category:      testCase.category,
-    prompt:        testCase.prompt,
-    hasCode,
-    codeExpected,
-    codePass,
-    patternPass:   patternResult.passed,
-    missingPatterns: patternResult.missing,
-    score:         judgeResult.score,
-    reason:        judgeResult.reason,
-    generatedCode: generatedCode || null
+    id:              tc.id,
+    level:           tc.level,
+    category:        tc.category,
+    prompt:          tc.prompt,
+    score:           verdict.score,
+    reason:          verdict.reason,
+    hasCode:         code !== null,
+    codeExpected:    tc.mustHaveCode !== false,
+    patternPass:     patterns.passed,
+    missingPatterns: patterns.missing,
+    generatedCode:   code,
   };
 }
 
-// ── Load last results for comparison ──────────────────────────────────────────
-function loadLastResults() {
-  const files = fs.readdirSync(resultsDir)
-    .filter(f => f.endsWith('.json'))
-    .sort();
-  if (files.length === 0) return null;
-  return JSON.parse(fs.readFileSync(path.join(resultsDir, files[files.length - 1]), 'utf8'));
+// ── Generate harder cases for a category ─────────────────────────────────────
+async function generateHarderCases(category, currentLevel, existingCases, allCategories) {
+  const nextLevel     = currentLevel + 1;
+  const masteredCases = existingCases
+    .filter(c => c.category === category)
+    .map(c => `  - [${c.id}] "${c.prompt}"`)
+    .join('\n');
+
+  const isAllMastered = allCategories.every(cat => cat.mastered);
+  const newCatHint    = isAllMastered
+    ? `\nSince ALL categories are mastered, also include 1–2 cases for brand-new Excel domains not yet tested (e.g. data validation, named ranges, table objects, workbook protection, sparklines, custom number formats, etc.)`
+    : '';
+
+  const prompt = `You generate test cases for an Excel AI assistant evaluation suite.
+
+The AI just scored 95+/100 on ALL these level ${currentLevel} "${category}" cases:
+${masteredCases}
+
+Generate exactly 4 NEW test cases at level ${nextLevel} for the "${category}" category that are SIGNIFICANTLY HARDER. They must:
+1. Be in the same category but test more complex, realistic, or edge-case scenarios
+2. Not repeat any existing test idea
+3. Be solvable via Office JavaScript API (no VBA, no pivot tables)
+4. Include realistic workbook data
+${newCatHint}
+
+Return ONLY a valid JSON array, no explanation. Each object must have:
+{
+  "id": "gen-L${nextLevel}-${category.replace(/\s+/g, '-')}-NNN",
+  "level": ${nextLevel},
+  "category": "${category}",
+  "prompt": "...",
+  "workbook": "Headers: A1=X | B1=Y\\nData:\\nA2:val | B2:val",
+  "mustHaveCode": true,
+  "requiredPatterns": ["pattern1"],
+  "forbiddenPatterns": []
+}`;
+
+  console.log(`\n  Generating level ${nextLevel} cases for "${category}"...`);
+  const raw = await callLLM([
+    { role: 'system', content: 'You generate JSON test cases. Return only valid JSON arrays.' },
+    { role: 'user',   content: prompt },
+  ], MODEL, 2048);
+
+  try {
+    const jsonMatch = raw.match(/\[[\s\S]*\]/);
+    if (!jsonMatch) throw new Error('No JSON array found in response');
+    const newCases = JSON.parse(jsonMatch[0]);
+    console.log(`  Generated ${newCases.length} new cases for "${category}" at level ${nextLevel}`);
+    return newCases;
+  } catch (err) {
+    console.warn(`  Failed to parse generated cases for "${category}": ${err.message}`);
+    return [];
+  }
 }
 
-// ── Print summary ──────────────────────────────────────────────────────────────
-function printSummary(results, prev) {
-  console.log('\n════════════════════════════════════════');
-  console.log('  EVAL RESULTS');
-  console.log('════════════════════════════════════════\n');
+// ── Print results ─────────────────────────────────────────────────────────────
+function printResults(results, prev) {
+  const prevById = {};
+  if (prev) for (const r of prev.results) prevById[r.id] = r;
 
   const byCategory = {};
   for (const r of results) {
@@ -184,26 +259,27 @@ function printSummary(results, prev) {
     byCategory[r.category].push(r);
   }
 
-  const prevById = {};
-  if (prev) {
-    for (const r of prev.results) prevById[r.id] = r;
-  }
+  console.log('\n════════════════════════════════════════════════════');
+  console.log('  EVAL RESULTS');
+  console.log('════════════════════════════════════════════════════\n');
 
   for (const [cat, items] of Object.entries(byCategory)) {
-    const avg    = items.reduce((s, r) => s + r.score, 0) / items.length;
+    const avg     = items.reduce((s, r) => s + r.score, 0) / items.length;
     const prevAvg = prev
-      ? items.reduce((s, r) => s + (prevById[r.id]?.score ?? r.score), 0) / items.length
+      ? items.map(r => prevById[r.id]?.score ?? r.score).reduce((a, b) => a + b, 0) / items.length
       : null;
-    const delta  = prevAvg !== null ? avg - prevAvg : null;
-    const arrow  = delta === null ? '' : delta > 0.4 ? ' ↑' : delta < -0.4 ? ' ↓' : ' →';
-    console.log(`${cat.toUpperCase()} — avg ${avg.toFixed(1)}/10${arrow}`);
+    const delta   = prevAvg !== null ? avg - prevAvg : null;
+    const trend   = delta === null ? '' : delta > 2 ? ' ↑' : delta < -2 ? ' ↓' : ' →';
+    const mastMark = avg >= MASTERY_THRESHOLD ? ' ✓ MASTERED' : '';
+    console.log(`${cat.toUpperCase()} — ${avg.toFixed(1)}/100${trend}${mastMark}`);
     for (const r of items) {
-      const prev_ = prevById[r.id];
-      const d     = prev_ ? r.score - prev_.score : null;
-      const flag  = r.score < 6 ? ' ⚠' : '';
-      const diff  = d !== null && Math.abs(d) > 0 ? ` (${d > 0 ? '+' : ''}${d})` : '';
-      console.log(`  ${r.id}  ${r.score}/10${diff}${flag}  ${r.reason}`);
-      if (r.missingPatterns.length > 0) console.log(`    missing: ${r.missingPatterns.join(', ')}`);
+      const d    = prevById[r.id] ? r.score - prevById[r.id].score : null;
+      const diff = d !== null && Math.abs(d) >= 1 ? ` (${d > 0 ? '+' : ''}${d})` : '';
+      const warn = r.score < 60 ? ' ⚠' : '';
+      const bar  = '█'.repeat(Math.round(r.score / 10)) + '░'.repeat(10 - Math.round(r.score / 10));
+      console.log(`  ${r.id.padEnd(28)} ${bar} ${String(r.score).padStart(3)}${diff}${warn}`);
+      if (r.score < 70) console.log(`    → ${r.reason}`);
+      if (r.missingPatterns.length) console.log(`    missing: ${r.missingPatterns.join(', ')}`);
     }
     console.log();
   }
@@ -213,58 +289,102 @@ function printSummary(results, prev) {
     ? prev.results.reduce((s, r) => s + r.score, 0) / prev.results.length
     : null;
 
-  console.log(`OVERALL: ${overall.toFixed(2)}/10${prevOverall !== null ? ` (prev ${prevOverall.toFixed(2)})` : ''}`);
-  console.log(`COST THIS SESSION: $${totalCostUSD.toFixed(4)}`);
-  console.log('════════════════════════════════════════\n');
+  console.log(`OVERALL: ${overall.toFixed(1)}/100${prevOverall !== null ? `  (prev: ${prevOverall.toFixed(1)})` : ''}`);
+  console.log(`SESSION COST: $${totalCostUSD.toFixed(4)}`);
+  console.log('════════════════════════════════════════════════════\n');
 
-  // Flag worst performers
-  const failing = results.filter(r => r.score < 6).sort((a, b) => a.score - b.score);
-  if (failing.length > 0) {
-    console.log('NEEDS IMPROVEMENT:');
+  const failing = results.filter(r => r.score < 60).sort((a, b) => a.score - b.score);
+  if (failing.length) {
+    console.log('NEEDS IMMEDIATE ATTENTION:');
     for (const r of failing) {
-      console.log(`  [${r.id}] ${r.prompt}`);
-      console.log(`    → ${r.reason}`);
+      console.log(`  [${r.id}]  score=${r.score}  "${r.prompt}"`);
+      console.log(`    ${r.reason}`);
     }
     console.log();
   }
 }
 
-// ── Main ───────────────────────────────────────────────────────────────────────
+// ── Main ──────────────────────────────────────────────────────────────────────
 async function main() {
-  if (!OPENROUTER_KEY) {
-    console.error('ERROR: OPENROUTER_KEY not set in .env');
-    process.exit(1);
-  }
+  if (!OPENROUTER_KEY) { console.error('OPENROUTER_KEY not set'); process.exit(1); }
 
-  console.log(`Running ${cases.length} eval cases with ${MODEL}...`);
-  console.log(`Budget limit: $${BUDGET_LIMIT}\n`);
-
+  const allCases     = loadCases();
   const systemPrompt = loadSystemPrompt();
   const prev         = loadLastResults();
-  const results      = [];
+  const progress     = loadProgress();
 
-  for (const testCase of cases) {
-    process.stdout.write(`  ${testCase.id.padEnd(20)} `);
+  console.log(`\nRunning ${allCases.length} eval cases  |  model: ${MODEL}  |  budget: $${BUDGET_USD}\n`);
+
+  const results = [];
+  for (const tc of allCases) {
+    process.stdout.write(`  ${tc.id.padEnd(30)} `);
     try {
-      const result = await runCase(testCase, systemPrompt);
-      results.push(result);
-      const bar = '█'.repeat(Math.round(result.score)) + '░'.repeat(10 - Math.round(result.score));
-      console.log(`${bar} ${result.score}/10`);
+      const r = await runCase(tc, systemPrompt);
+      results.push(r);
+      const bar = '█'.repeat(Math.round(r.score / 10)) + '░'.repeat(10 - Math.round(r.score / 10));
+      console.log(`${bar} ${r.score}/100`);
     } catch (err) {
-      if (err.message.includes('Budget limit')) {
-        console.log('\n⚠ Budget limit hit — saving partial results.');
+      if (err.message.startsWith('BUDGET_EXCEEDED')) {
+        console.log('\n⚠ Budget limit hit — saving partial results and stopping.');
         break;
       }
       console.log(`ERROR: ${err.message}`);
     }
   }
 
+  // ── Save results ────────────────────────────────────────────────────────────
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-  const outFile   = path.join(resultsDir, `${timestamp}.json`);
-  fs.writeFileSync(outFile, JSON.stringify({ timestamp, model: MODEL, totalCostUSD, results }, null, 2));
+  const outPath   = path.join(PATHS.results, `${timestamp}.json`);
+  fs.writeFileSync(outPath, JSON.stringify({ timestamp, model: MODEL, totalCostUSD, results }, null, 2));
 
-  printSummary(results, prev);
-  console.log(`Results saved → eval/results/${timestamp}.json`);
+  printResults(results, prev);
+
+  // ── Per-category mastery check & generation ─────────────────────────────────
+  const byCategory = {};
+  for (const r of results) {
+    if (!byCategory[r.category]) byCategory[r.category] = [];
+    byCategory[r.category].push(r);
+  }
+
+  let newCasesGenerated = [];
+  const categoryStatus  = Object.entries(byCategory).map(([cat, items]) => {
+    const currentLevel = progress[cat]?.level ?? 1;
+    // Only look at cases at the current level for this category
+    const currentItems = items.filter(r => r.level === currentLevel);
+    const avg          = currentItems.length
+      ? currentItems.reduce((s, r) => s + r.score, 0) / currentItems.length
+      : 0;
+    return { cat, avg, currentLevel, mastered: avg >= MASTERY_THRESHOLD };
+  });
+
+  for (const { cat, avg, currentLevel, mastered } of categoryStatus) {
+    if (mastered) {
+      console.log(`✓ "${cat}" mastered at level ${currentLevel} (avg ${avg.toFixed(1)}) — generating level ${currentLevel + 1} cases`);
+      try {
+        const newCases = await generateHarderCases(cat, currentLevel, allCases, categoryStatus);
+        newCasesGenerated = [...newCasesGenerated, ...newCases];
+        progress[cat] = { level: currentLevel + 1, masteredAt: timestamp };
+      } catch (err) {
+        if (err.message.startsWith('BUDGET_EXCEEDED')) {
+          console.log('Budget hit during generation — skipping remaining generations.');
+          break;
+        }
+        console.warn(`Generation failed for "${cat}": ${err.message}`);
+      }
+    }
+  }
+
+  if (newCasesGenerated.length > 0) {
+    const existing  = fs.existsSync(PATHS.generated)
+      ? JSON.parse(fs.readFileSync(PATHS.generated, 'utf8'))
+      : [];
+    fs.writeFileSync(PATHS.generated, JSON.stringify([...existing, ...newCasesGenerated], null, 2));
+    console.log(`\nSaved ${newCasesGenerated.length} new generated cases to eval/generated-cases.json`);
+  }
+
+  saveProgress(progress);
+  console.log(`\nResults → eval/results/${timestamp}.json`);
+  console.log(`Total cost: $${totalCostUSD.toFixed(4)}\n`);
 }
 
 main().catch(err => { console.error(err.message); process.exit(1); });
