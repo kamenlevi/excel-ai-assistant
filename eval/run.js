@@ -375,6 +375,68 @@ Return ONLY a valid JSON array, no explanation. Each object must have:
   }
 }
 
+// ── Write markdown summary to eval/RESULTS.md ────────────────────────────────
+function writeMarkdownSummary(results, prev, timestamp) {
+  const prevById = {};
+  if (prev) for (const r of prev.results) prevById[r.id] = r;
+
+  const byCategory = {};
+  for (const r of results) {
+    if (!byCategory[r.category]) byCategory[r.category] = [];
+    byCategory[r.category].push(r);
+  }
+
+  const overall = results.reduce((s, r) => s + r.score, 0) / results.length;
+  const prevOverall = prev
+    ? prev.results.reduce((s, r) => s + r.score, 0) / prev.results.length
+    : null;
+
+  const lines = [];
+  lines.push(`# Eval Results`);
+  lines.push(`**Last run:** ${timestamp.replace('T', ' ').replace(/-/g, (m, o) => o < 10 ? '-' : ':')}  `);
+  lines.push(`**Overall: ${overall.toFixed(1)}/100**${prevOverall !== null ? `  (prev: ${prevOverall.toFixed(1)})` : ''}  `);
+  lines.push(`**Model:** ${MODEL}\n`);
+
+  lines.push(`## Scores by category\n`);
+  lines.push(`| Category | Score | Trend | Cases |`);
+  lines.push(`|---|---|---|---|`);
+
+  for (const [cat, items] of Object.entries(byCategory)) {
+    const avg = items.reduce((s, r) => s + r.score, 0) / items.length;
+    const prevAvg = prev
+      ? items.map(r => prevById[r.id]?.score ?? r.score).reduce((a, b) => a + b, 0) / items.length
+      : null;
+    const delta = prevAvg !== null ? avg - prevAvg : null;
+    const trend = delta === null ? '—' : delta > 2 ? `↑ +${delta.toFixed(1)}` : delta < -2 ? `↓ ${delta.toFixed(1)}` : `→`;
+    const mastMark = avg >= MASTERY_THRESHOLD ? ' ✓' : '';
+    lines.push(`| ${cat}${mastMark} | ${avg.toFixed(1)}/100 | ${trend} | ${items.length} |`);
+  }
+
+  lines.push(`\n## All test cases\n`);
+  lines.push(`| ID | Score | Pass | Reason |`);
+  lines.push(`|---|---|---|---|`);
+
+  for (const r of results) {
+    const prev = prevById[r.id];
+    const delta = prev ? r.score - prev.score : null;
+    const deltaStr = delta !== null && Math.abs(delta) >= 1 ? ` (${delta > 0 ? '+' : ''}${delta})` : '';
+    const warn = r.score < 60 ? ' ⚠️' : r.score >= 95 ? ' ✅' : '';
+    lines.push(`| ${r.id} | ${r.score}${deltaStr}${warn} | ${r.patternPass ? '✓' : '✗'} | ${r.reason} |`);
+  }
+
+  const failing = results.filter(r => r.score < 60);
+  if (failing.length) {
+    lines.push(`\n## ⚠️ Needs attention\n`);
+    for (const r of failing) {
+      lines.push(`**[${r.id}]** score=${r.score} — ${r.reason}`);
+      if (r.missingPatterns.length) lines.push(`- missing patterns: \`${r.missingPatterns.join('`, `')}\``);
+      lines.push('');
+    }
+  }
+
+  fs.writeFileSync(path.join(__dirname, 'RESULTS.md'), lines.join('\n'));
+}
+
 // ── Print results ─────────────────────────────────────────────────────────────
 function printResults(results, prev) {
   const prevById = {};
@@ -465,6 +527,7 @@ async function main() {
   fs.writeFileSync(outPath, JSON.stringify({ timestamp, model: MODEL, totalCostUSD, results }, null, 2));
 
   printResults(results, prev);
+  writeMarkdownSummary(results, prev, timestamp);
 
   // ── Per-category mastery check & generation ─────────────────────────────────
   const byCategory = {};
