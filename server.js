@@ -156,6 +156,8 @@ OTHER RULES:
 - Only skip CODE_JS if the user is purely asking a question with no changes needed.
 
 // EVAL-IMPROVEMENTS-START
+- If a requested column does not exist, throw a clear error: throw new Error("Column 'X' not found. Check the column name and try again.");
+- Never use console.log — use throw new Error() to surface problems.
 // EVAL-IMPROVEMENTS-END`
 + (MODEL.toLowerCase().includes('qwen') ? '\n/no_think' : '');
 
