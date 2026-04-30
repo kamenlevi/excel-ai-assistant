@@ -236,6 +236,52 @@ function applyImprovements(newText) {
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
 }
 
+// ── Auto-generate a brand new category when existing ones are doing well ───────
+async function generateNewCategory(existingCategories) {
+  const knownList = existingCategories.join(', ');
+
+  const resp = await callLLM([
+    { role: 'system', content: 'You generate JSON test cases for an Excel AI assistant evaluation suite. Return only valid JSON.' },
+    {
+      role: 'user',
+      content: `The eval suite already covers: ${knownList}.
+
+Pick ONE new Excel feature category not in that list (e.g. data validation, sparklines, comments, hyperlinks, workbook protection, page layout, conditional formatting rules, custom number formats, shapes, etc.).
+
+Generate exactly 2 level-1 test cases for it — simple, realistic prompts a real user would ask.
+Each case must be solvable via Office JavaScript API (ExcelApi 1.1–1.17). No VBA, no pivot tables.
+
+Return ONLY a valid JSON object with this shape:
+{
+  "category": "<new category name>",
+  "cases": [
+    {
+      "id": "gen-L1-<category-slug>-001",
+      "level": 1,
+      "category": "<new category name>",
+      "prompt": "...",
+      "workbook": "Headers: A1=X | B1=Y\\nData:\\nA2:val | B2:val",
+      "mustHaveCode": true,
+      "requiredPatterns": ["someRealOfficeJsMethod"],
+      "forbiddenPatterns": []
+    }
+  ]
+}`,
+    },
+  ], MODEL, 1024);
+
+  try {
+    const jsonMatch = resp.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) throw new Error('No JSON found');
+    const parsed = JSON.parse(jsonMatch[0]);
+    if (!parsed.category || !Array.isArray(parsed.cases)) throw new Error('Bad shape');
+    return parsed;
+  } catch (err) {
+    console.warn(`  Failed to parse new category: ${err.message}`);
+    return null;
+  }
+}
+
 // ── Run one test ──────────────────────────────────────────────────────────────
 async function runCase(tc, systemPrompt) {
   const messages = [
@@ -456,6 +502,29 @@ async function main() {
           break;
         }
         console.warn(`Generation failed for "${cat}": ${err.message}`);
+      }
+    }
+  }
+
+  // ── Auto-generate a new category when overall avg > 75 ─────────────────────
+  const overallAvg = results.reduce((s, r) => s + r.score, 0) / results.length;
+  const existingCategories = Object.keys(byCategory);
+  if (overallAvg >= 75) {
+    console.log(`\n📂 Overall avg ${overallAvg.toFixed(1)} >= 75 — generating a new category...`);
+    try {
+      const newCat = await generateNewCategory(existingCategories);
+      if (newCat) {
+        newCasesGenerated = [...newCasesGenerated, ...newCat.cases];
+        if (!progress[newCat.category]) {
+          progress[newCat.category] = { level: 1, masteredAt: null };
+        }
+        console.log(`  Added new category: "${newCat.category}" (${newCat.cases.length} cases)`);
+      }
+    } catch (err) {
+      if (err.message.startsWith('BUDGET_EXCEEDED')) {
+        console.log('Budget hit — skipping new category generation.');
+      } else {
+        console.warn(`New category generation failed: ${err.message}`);
       }
     }
   }

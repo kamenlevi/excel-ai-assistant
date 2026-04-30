@@ -156,10 +156,9 @@ OTHER RULES:
 - Only skip CODE_JS if the user is purely asking a question with no changes needed.
 
 // EVAL-IMPROVEMENTS-START
-- When answering questions about row count, return the exact count without subtracting 1: 
-  CODE_JS: throw new Error(`You have ${used.rowCount} rows of data.`);
-- Implement filtering using Office JS APIs, such as addFilter() on a column:
-  CODE_JS: const filter = sheet.getRange("Department").addFilter(); filter.applyValuesFilter(["Engineering"]);
+- If a requested column does not exist, throw a clear error: throw new Error("Column 'X' not found. Check the column name and try again.");
+- Never use console.log — use throw new Error() to surface problems.
+- For questions about row count, answer in plain text without generating code.
 // EVAL-IMPROVEMENTS-END`
 + (MODEL.toLowerCase().includes('qwen') ? '\n/no_think' : '');
 
