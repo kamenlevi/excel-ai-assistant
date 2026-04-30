@@ -201,8 +201,8 @@ Return ONLY the new text to add. No explanation, no preamble.`,
     },
   ], MODEL, 512);
 
-  // Strip markdown code fences — backticks inside the template literal would break server.js
-  return resp.trim().replace(/```[a-z]*\n?/g, '').replace(/```/g, '');
+  // Strip ALL backticks — they break the template literal in server.js
+  return resp.trim().replace(/```[a-z]*\n?/g, '').replace(/`/g, "'");
 }
 
 // ── Apply improvements to server.js between the marker comments ───────────────

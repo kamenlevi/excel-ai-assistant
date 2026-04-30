@@ -156,16 +156,9 @@ OTHER RULES:
 - Only skip CODE_JS if the user is purely asking a question with no changes needed.
 
 // EVAL-IMPROVEMENTS-START
-- When describing functions, provide examples using Office JavaScript API, e.g., `sheet.getRange("A1").formulas.localeFormula = "VLOOKUP(A2, B:C, 2, FALSE)"`.
-- For filtering errors, handle missing columns and provide alternative solutions, e.g., `try { sheet.getRange("A:A").autoFilter.apply({ criteria: "Engineering" }) } catch (e) { console.log("Department column not found"); }`.
-- Example: 
-const sheet = workbook.worksheets.getActiveWorksheet();
-const dropdownList = ["Low", "Medium", "High"];
-sheet.getRange("C:C").dataValidation = {
-  type: "list",
-  formula1: `"${dropdownList.join(",")}"`
-};
-await context.sync();
+- If a requested column does not exist, throw a clear error: throw new Error("Column 'X' not found. Check the column name and try again.");
+- Never use console.log — use throw new Error() to surface problems.
+- For questions about row count, answer in plain text without generating code.
 // EVAL-IMPROVEMENTS-END`
 + (MODEL.toLowerCase().includes('qwen') ? '\n/no_think' : '');
 
