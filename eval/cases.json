@@ -1,0 +1,163 @@
+[
+  {
+    "id": "filter-001",
+    "tier": 1,
+    "category": "filtering",
+    "prompt": "filter the Name column to only show Rossen",
+    "workbook": "Headers: A1=Name | B1=Age | C1=City\nData:\nA2:Rossen | B2:30 | C2:Sofia\nA3:Ivan | B3:25 | C3:London\nA4:Maria | B4:28 | C4:Paris",
+    "mustHaveCode": true,
+    "requiredPatterns": ["applyColumnFilter", "Rossen"],
+    "forbiddenPatterns": []
+  },
+  {
+    "id": "filter-002",
+    "tier": 1,
+    "category": "filtering",
+    "prompt": "show only rows where Status is Active",
+    "workbook": "Headers: A1=ID | B1=Name | C1=Status | D1=Amount\nData:\nA2:1 | B2:Alice | C2:Active | D2:500\nA3:2 | B3:Bob | C3:Inactive | D3:300\nA4:3 | B4:Carol | C4:Active | D4:750",
+    "mustHaveCode": true,
+    "requiredPatterns": ["applyColumnFilter", "Status", "Active"],
+    "forbiddenPatterns": []
+  },
+  {
+    "id": "filter-003",
+    "tier": 1,
+    "category": "filtering",
+    "prompt": "filter to show only London and Paris in the City column",
+    "workbook": "Headers: A1=Name | B1=Age | C1=City\nData:\nA2:Rossen | B2:30 | C2:Sofia\nA3:Ivan | B3:25 | C3:London\nA4:Maria | B4:28 | C4:Paris",
+    "mustHaveCode": true,
+    "requiredPatterns": ["applyColumnFilter", "City"],
+    "forbiddenPatterns": []
+  },
+  {
+    "id": "filter-004",
+    "tier": 1,
+    "category": "filtering",
+    "prompt": "clear all filters",
+    "workbook": "Headers: A1=Name | B1=Status\nData:\nA2:Alice | B2:Active",
+    "mustHaveCode": true,
+    "requiredPatterns": ["clearFilters"],
+    "forbiddenPatterns": []
+  },
+  {
+    "id": "sort-001",
+    "tier": 1,
+    "category": "sorting",
+    "prompt": "sort by the Name column A to Z",
+    "workbook": "Headers: A1=Name | B1=Age | C1=City\nData:\nA2:Rossen | B2:30 | C2:Sofia\nA3:Ivan | B3:25 | C3:London",
+    "mustHaveCode": true,
+    "requiredPatterns": ["sortByColumn", "Name"],
+    "forbiddenPatterns": []
+  },
+  {
+    "id": "sort-002",
+    "tier": 1,
+    "category": "sorting",
+    "prompt": "sort by Amount from highest to lowest",
+    "workbook": "Headers: A1=Product | B1=Amount | C1=Date\nData:\nA2:Widget | B2:500 | C2:2024-01\nA3:Gadget | B3:200 | C3:2024-02",
+    "mustHaveCode": true,
+    "requiredPatterns": ["sortByColumn", "Amount"],
+    "forbiddenPatterns": []
+  },
+  {
+    "id": "format-001",
+    "tier": 1,
+    "category": "formatting",
+    "prompt": "make the header row bold with a dark green background and white text",
+    "workbook": "Headers: A1=Name | B1=Age | C1=City\nData:\nA2:Rossen | B2:30 | C2:Sofia",
+    "mustHaveCode": true,
+    "requiredPatterns": ["format.font.bold", "format.fill.color"],
+    "forbiddenPatterns": []
+  },
+  {
+    "id": "format-002",
+    "tier": 1,
+    "category": "formatting",
+    "prompt": "highlight all cells in column C with a light blue background",
+    "workbook": "Headers: A1=Name | B1=Score | C1=Grade\nData:\nA2:Alice | B2:95 | C2:A\nA3:Bob | B3:70 | C3:B",
+    "mustHaveCode": true,
+    "requiredPatterns": ["format.fill.color"],
+    "forbiddenPatterns": []
+  },
+  {
+    "id": "formula-001",
+    "tier": 1,
+    "category": "formulas",
+    "prompt": "add a SUM formula in cell B10 for the range B2:B9",
+    "workbook": "Headers: A1=Name | B1=Sales\nData:\nA2:Alice | B2:100\nA3:Bob | B3:200",
+    "mustHaveCode": true,
+    "requiredPatterns": ["SUM", "B10"],
+    "forbiddenPatterns": []
+  },
+  {
+    "id": "formula-002",
+    "tier": 1,
+    "category": "formulas",
+    "prompt": "add a totals row at the bottom summing each numeric column",
+    "workbook": "Headers: A1=Name | B1=Q1 | C1=Q2 | D1=Q3\nData:\nA2:Alice | B2:100 | C2:150 | D2:200\nA3:Bob | B3:80 | C3:120 | D3:160",
+    "mustHaveCode": true,
+    "requiredPatterns": ["SUM"],
+    "forbiddenPatterns": []
+  },
+  {
+    "id": "chart-001",
+    "tier": 2,
+    "category": "charts",
+    "prompt": "create a column chart from the data in A1:B5",
+    "workbook": "Headers: A1=Month | B1=Sales\nData:\nA2:Jan | B2:1000\nA3:Feb | B3:1500\nA4:Mar | B4:1200\nA5:Apr | B5:1800",
+    "mustHaveCode": true,
+    "requiredPatterns": ["charts.add"],
+    "forbiddenPatterns": []
+  },
+  {
+    "id": "data-001",
+    "tier": 2,
+    "category": "data manipulation",
+    "prompt": "copy column A to column E",
+    "workbook": "Headers: A1=Name | B1=Age | C1=City\nData:\nA2:Rossen | B2:30 | C2:Sofia",
+    "mustHaveCode": true,
+    "requiredPatterns": ["copyFrom"],
+    "forbiddenPatterns": []
+  },
+  {
+    "id": "question-001",
+    "tier": 1,
+    "category": "question handling",
+    "prompt": "what does the VLOOKUP function do?",
+    "workbook": "Headers: A1=Name | B1=Age\nData:\nA2:Alice | B2:25",
+    "mustHaveCode": false,
+    "requiredPatterns": ["VLOOKUP"],
+    "forbiddenPatterns": []
+  },
+  {
+    "id": "question-002",
+    "tier": 1,
+    "category": "question handling",
+    "prompt": "how many rows does my data have?",
+    "workbook": "Headers: A1=Name | B1=Score\nData:\nA2:Alice | B2:90\nA3:Bob | B3:85\nA4:Carol | B4:78",
+    "mustHaveCode": false,
+    "requiredPatterns": [],
+    "forbiddenPatterns": []
+  },
+  {
+    "id": "conditional-001",
+    "tier": 2,
+    "category": "conditional formatting",
+    "prompt": "highlight cells in the Score column red if below 60 and green if above 90",
+    "workbook": "Headers: A1=Name | B1=Score\nData:\nA2:Alice | B2:95\nA3:Bob | B3:55\nA4:Carol | B4:75",
+    "mustHaveCode": true,
+    "requiredPatterns": ["conditionalFormats"],
+    "forbiddenPatterns": []
+  },
+  {
+    "id": "edge-001",
+    "tier": 2,
+    "category": "edge cases",
+    "prompt": "filter the Department column to show only Engineering",
+    "workbook": "Headers: A1=Name | B1=Age | C1=City\nData:\nA2:Rossen | B2:30 | C2:Sofia",
+    "mustHaveCode": true,
+    "requiredPatterns": ["applyColumnFilter"],
+    "forbiddenPatterns": [],
+    "note": "Column does not exist — model should throw a helpful error, not crash silently"
+  }
+]

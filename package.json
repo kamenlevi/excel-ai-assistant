@@ -3,7 +3,8 @@
   "version": "1.0.0",
   "description": "Private local AI assistant for Excel",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "eval": "node eval/run.js"
   },
   "dependencies": {
     "dotenv": "^17.4.2",
