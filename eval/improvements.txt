@@ -1,10 +1,11 @@
-When answering questions about Excel functions, provide a clear description and relevant examples, but avoid including unnecessary code.
-For filtering operations, attempt to create the filter or provide an alternative solution if the specified column does not exist.
-CODE_JS:
+When describing a function, provide a brief explanation and relevant examples without unnecessary code.
+For VLOOKUP, explain it looks up a value in a table and returns a corresponding value from another column.
+If a column does not exist, throw an error instead of creating a new column.
+Example: 
 ```javascript
-if (!sheet.getRange("A1").getValue() === "Department") {
-  sheet.getRange("A1").setValue("Department");
-  const filter = sheet.getAutoFilter();
-  filter.apply(filter.getRange(), "Engineering");
+try { 
+  const filter = sheet.getRange("Department").autoFilter;
+} catch (e) { 
+  throw new Error("Department column not found");
 }
 ```

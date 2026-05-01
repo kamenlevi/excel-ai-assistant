@@ -94,5 +94,29 @@
       "pageSetup.margins"
     ],
     "forbiddenPatterns": []
+  },
+  {
+    "id": "gen-L1-shapes-001",
+    "level": 1,
+    "category": "Shapes",
+    "prompt": "Add a rectangle shape to cell A1",
+    "workbook": "Headers: A1=X | B1=Y\nData:\nA2:val | B2:val",
+    "mustHaveCode": true,
+    "requiredPatterns": [
+      "addShape"
+    ],
+    "forbiddenPatterns": []
+  },
+  {
+    "id": "gen-L1-shapes-002",
+    "level": 1,
+    "category": "Shapes",
+    "prompt": "Insert a circle shape in the top-right corner of the worksheet",
+    "workbook": "Headers: A1=X | B1=Y\nData:\nA2:val | B2:val",
+    "mustHaveCode": true,
+    "requiredPatterns": [
+      "addShape"
+    ],
+    "forbiddenPatterns": []
   }
 ]
