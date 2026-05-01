@@ -557,11 +557,11 @@ async function main() {
     }
   }
 
-  // ── Auto-generate a new category when overall avg > 75 ─────────────────────
+  // ── Auto-generate a new category when overall avg > 90 ─────────────────────
   const overallAvg = results.reduce((s, r) => s + r.score, 0) / results.length;
   const existingCategories = Object.keys(byCategory);
-  if (overallAvg >= 75) {
-    console.log(`\n📂 Overall avg ${overallAvg.toFixed(1)} >= 75 — generating a new category...`);
+  if (overallAvg >= 90) {
+    console.log(`\n📂 Overall avg ${overallAvg.toFixed(1)} >= 90 — generating a new category...`);
     try {
       const newCat = await generateNewCategory(existingCategories);
       if (newCat) {
