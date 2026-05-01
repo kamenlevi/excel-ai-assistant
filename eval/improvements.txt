@@ -1,3 +1,12 @@
-- If a requested column does not exist, throw a clear error: throw new Error("Column 'X' not found. Check the column name and try again.");
-- Never use console.log — use throw new Error() to surface problems.
-- For questions about row count, answer in plain text without generating code.
+To handle column references, use `sheet.getRange("A1").getColumnIndex()` to get the actual column index.
+When freezing panes, use `sheet.freezePanes("A1")` to freeze the top row.
+When filtering, check if the column exists before applying the filter using `sheet.getRange().getColumnIndex()` and handle errors with try-catch blocks.
+Example:
+```javascript
+try {
+  const departmentColumn = sheet.getRange("Department").getColumn();
+  await applyColumnFilter(departmentColumn, "Engineering");
+} catch (error) {
+  console.log("Department column not found");
+}
+```

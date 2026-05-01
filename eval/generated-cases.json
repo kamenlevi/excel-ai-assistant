@@ -46,5 +46,29 @@
       "comments.delete"
     ],
     "forbiddenPatterns": []
+  },
+  {
+    "id": "gen-L1-sparklines-001",
+    "level": 1,
+    "category": "Sparklines",
+    "prompt": "Create a sparkline in cell C2 to show the trend of values in cells A2:A10",
+    "workbook": "Headers: A1=Values\nData:\nA2:10 | A3:20 | A4:30 | A5:40 | A6:50 | A7:60 | A8:70 | A9:80 | A10:90",
+    "mustHaveCode": true,
+    "requiredPatterns": [
+      "addSparkline"
+    ],
+    "forbiddenPatterns": []
+  },
+  {
+    "id": "gen-L1-sparklines-002",
+    "level": 1,
+    "category": "Sparklines",
+    "prompt": "Add a sparkline to cell D2 to display the high and low points of the data in cells B2:B10",
+    "workbook": "Headers: B1=Data\nData:\nB2:5 | B3:10 | B4:3 | B5:7 | B6:12 | B7:2 | B8:9 | B9:1 | B10:8",
+    "mustHaveCode": true,
+    "requiredPatterns": [
+      "SparklineGroup"
+    ],
+    "forbiddenPatterns": []
   }
 ]
