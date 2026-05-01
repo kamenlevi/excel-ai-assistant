@@ -70,5 +70,29 @@
       "SparklineGroup"
     ],
     "forbiddenPatterns": []
+  },
+  {
+    "id": "gen-L1-page-layout-001",
+    "level": 1,
+    "category": "Page Layout",
+    "prompt": "Set the page orientation to landscape for the current worksheet.",
+    "workbook": "",
+    "mustHaveCode": true,
+    "requiredPatterns": [
+      "pageSetup.orientation"
+    ],
+    "forbiddenPatterns": []
+  },
+  {
+    "id": "gen-L1-page-layout-002",
+    "level": 1,
+    "category": "Page Layout",
+    "prompt": "Set the top margin to 1 inch for the current worksheet.",
+    "workbook": "",
+    "mustHaveCode": true,
+    "requiredPatterns": [
+      "pageSetup.margins"
+    ],
+    "forbiddenPatterns": []
   }
 ]
