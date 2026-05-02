@@ -1,8 +1,53 @@
-To handle conditional formatting, add examples like:
-CODE_JS: const range = sheet.getRange("A1:A10"); range.format.conditions.add(Excel.ConditionalFormatType.cellValue, "<50", "#FF0000");
+To dynamically calculate ranges, use `sheet.getUsedRange()` and `getAddress()` to get the actual data range.
+Example: `const usedRange = sheet.getUsedRange(); const address = usedRange.getAddress();`
 
-For questions about functions, provide definitions:
-The VLOOKUP function looks up a value in a table and returns a value from another column.
+When accessing columns, use `hdr.indexOf()` with case-insensitive comparison and error handling.
+Example: 
+```javascript
+const hdr = rows[0].map(h => String(h).toLowerCase().trim());
+const col = hdr.indexOf("score");
+if (col === -1) throw new Error(`Column 'Score' not found.`);
+```
 
-To filter data, use Office JS APIs like:
-CODE_JS: const table = sheet.tables.getItem("Table1"); table.columns.getItem("Department").filter.apply(Excel.FilterType.topItems, 1, ["Engineering"]);
+For error handling, use try-catch blocks and check for specific Office JS API errors.
+Example: 
+```javascript
+try {
+  // Office JS API code
+} catch (error) {
+  if (error instanceof OfficeExtension.Error) {
+    // Handle Office JS API error
+  } else {
+    // Handle other errors
+  }
+}
+```
+
+When explaining functions, provide clear descriptions of parameters and potential caveats.
+Example: 
+```javascript
+// VLOOKUP function: searches for a value in the first column and returns a value in the same row from another column
+// Parameters: lookup value, table array, column index, [range lookup]
+```
+
+To filter data, use `sheet.getRange().filter()` with the correct API parameters.
+Example: 
+```javascript
+const filter = sheet.getRange("A1").filter.apply({
+  criteria: { filterOn: Excel.FilterOn.values, values: ["Engineering"] }
+});
+```
+
+When adding shapes, consider size, position, and error handling.
+Example: 
+```javascript
+try {
+  const shape = sheet.shapes.addShape(Excel.ShapeType.rectangle, 
+    sheet.getRange("A1").getAbsolutePosition().left, 
+    sheet.getRange("A1").getAbsolutePosition().top, 
+    100, 20);
+  await context.sync();
+} catch (error) {
+  // Handle shape addition errors
+}
+```
