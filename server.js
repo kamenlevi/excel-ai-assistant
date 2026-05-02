@@ -542,18 +542,19 @@ app.post('/api/title', async (req, res) => {
 
 // ── Summarize endpoint ───────────────────────────────────────────────────────
 app.post('/api/summarize', async (req, res) => {
-  const { messages, apiKey } = req.body;
+  const { messages, previousSummary, apiKey } = req.body;
   try {
+    const prevContext = previousSummary ? `Previous context (already summarised):\n${previousSummary}\n\nNew messages to incorporate:\n` : 'Summarise:\n';
     const { text } = await callAI([
       {
         role: 'system',
-        content: 'You summarise Excel assistant conversations. Write one short paragraph (max 80 words) covering: what sheets exist, what data they contain, what changes were made, any important cell ranges or values. Be specific. No fluff.'
+        content: 'You summarise Excel assistant conversations. Write one short paragraph (max 100 words) covering: what sheets exist, what data they contain, what changes were made, any important cell ranges or values. If given a previous summary, merge it with the new messages into one updated summary. Be specific. No fluff.'
       },
       {
         role: 'user',
-        content: `Summarise:\n\n${messages.map(m => `${m.role}: ${m.content}`).join('\n\n')}`
+        content: `${prevContext}\n${messages.map(m => `${m.role}: ${m.content}`).join('\n\n')}`
       }
-    ], 200, null, false, false, apiKey || null);
+    ], 250, null, false, false, apiKey || null);
     res.json({ summary: text.replace(/<think>[\s\S]*?<\/think>/g, '').trim() });
   } catch (err) {
     res.status(500).json({ error: 'Summarization failed' });
@@ -616,7 +617,7 @@ app.post('/api/chat', async (req, res) => {
         const orig = recentMessages[lastUserIdx].content;
         const { text: enhanced } = await callAI([
           { role: 'system', content: 'You are a prompt engineer for an Excel AI assistant. Rewrite the user\'s request to be maximally clear, precise, and complete. Preserve intent exactly. Add explicit handling for edge cases (empty cells, merged cells, missing columns). Reference specific column names if visible in context. Output ONLY the rewritten prompt.' },
-          { role: 'user', content: `Workbook context (brief):\n${(workbookData||'').slice(0,500)}\n\nOriginal request: ${orig}` }
+          { role: 'user', content: `Workbook context (headers + first rows):\n${(workbookData||'').slice(0,2000)}\n\nOriginal request: ${orig}` }
         ], 700, null, false, false, apiKey || null, groqKey || null);
         const enhancedText = enhanced.replace(/<think>[\s\S]*?<\/think>/g,'').trim();
         recentMessages[lastUserIdx] = { ...recentMessages[lastUserIdx], content: enhancedText };

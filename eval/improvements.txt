@@ -1,5 +1,5 @@
-To dynamically calculate ranges, use `sheet.getUsedRange()` and `getAddress()` to get the actual data range.
-Example: `const usedRange = sheet.getUsedRange(); const address = usedRange.getAddress();`
+To dynamically calculate ranges, use `sheet.getUsedRange()` and load the `address` property.
+Example: `const usedRange = sheet.getUsedRange(); usedRange.load('address'); await context.sync(); const address = usedRange.address;`
 
 When accessing columns, use `hdr.indexOf()` with case-insensitive comparison and error handling.
 Example: 
@@ -30,16 +30,14 @@ Example:
 // Parameters: lookup value, table array, column index, [range lookup]
 ```
 
-When adding shapes, consider size, position, and error handling.
-Example: 
+When adding shapes, use explicit pixel coordinates (left, top, width, height) — Range does not have a getAbsolutePosition() method.
+Example:
 ```javascript
 try {
-  const shape = sheet.shapes.addShape(Excel.ShapeType.rectangle, 
-    sheet.getRange("A1").getAbsolutePosition().left, 
-    sheet.getRange("A1").getAbsolutePosition().top, 
-    100, 20);
+  const shape = sheet.shapes.addGeometricShape("Rectangle");
+  shape.left = 100; shape.top = 50; shape.width = 200; shape.height = 40;
   await context.sync();
 } catch (error) {
-  // Handle shape addition errors
+  throw new Error("Failed to add shape: " + error.message);
 }
 ```

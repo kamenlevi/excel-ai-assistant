@@ -1086,7 +1086,7 @@ async function readWorkbook() {
     const wb=ctx.workbook,sheets=wb.worksheets,act=wb.worksheets.getActiveWorksheet();
     sheets.load('items/name');act.load('name');await ctx.sync();
     activeSheet=act.name;const parts=[];
-    for(const sh of sheets.items){try{const u=sh.getUsedRange();u.load('values');await ctx.sync();if(!u.values?.length)continue;const hdrs=u.values[0];const hLine='Headers: '+hdrs.map((h,i)=>colLetter(i)+'1='+h).join(' | ');const dLines=u.values.slice(1).map((r,ri)=>r.map((v,ci)=>colLetter(ci)+(ri+2)+':'+v).join(' | ')).join('\n');parts.push('Sheet: '+sh.name+'\n'+hLine+'\nData:\n'+dLines);}catch{}}
+    for(const sh of sheets.items){try{const u=sh.getUsedRange();u.load('values');await ctx.sync();if(!u.values?.length)continue;const hdrs=u.values[0];const hLine='Headers: '+hdrs.map((h,i)=>colLetter(i)+'1='+h).join(' | ');const rows=u.values.slice(1);const MAX_ROWS=500;const truncated=rows.length>MAX_ROWS;const dLines=rows.slice(0,MAX_ROWS).map((r,ri)=>r.map((v,ci)=>colLetter(ci)+(ri+2)+':'+v).join(' | ')).join('\n');parts.push('Sheet: '+sh.name+'\n'+hLine+'\nData:\n'+dLines+(truncated?'\n[...'+( rows.length-MAX_ROWS)+' more rows not shown]':''));}catch{}}
     workbookData=parts.join('\n\n---\n\n');setSyncStatus('ok','Synced — '+activeSheet);
   });}catch(e){setSyncStatus('err','Sync failed');console.error('readWorkbook error',e);}
 }
@@ -1133,7 +1133,7 @@ function clearAttach(){attached=null;document.getElementById('attachBadge').inne
 // ── Summarise ────────────────────────────────────────────────────────────────
 async function maybeSummarize() {
   if(history.length<10)return;
-  try{const k=localStorage.getItem('apiKey');const r=await fetch('/api/summarize',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:history.slice(0,-4),apiKey:k||undefined})});const d=await r.json();if(d.summary){summary=d.summary;history=history.slice(-4);}}catch{}
+  try{const k=localStorage.getItem('apiKey');const r=await fetch('/api/summarize',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:history.slice(0,-4),previousSummary:summary||undefined,apiKey:k||undefined})});const d=await r.json();if(d.summary){summary=d.summary;history=history.slice(-4);}}catch{}
 }
 
 // ── Stop ──────────────────────────────────────────────────────────────────────
