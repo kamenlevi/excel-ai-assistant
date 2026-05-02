@@ -367,9 +367,10 @@ function isQuestion(userMessage) {
   const s = userMessage.toLowerCase().trim();
   const dataQueryWords = ['how many', 'how much', 'what is the total', 'what is the sum', 'what is the average', 'count', 'sum of', 'total of', 'list all', 'show me', 'find all', 'find the', 'which rows', 'how often'];
   if (dataQueryWords.some(q => s.includes(q))) return false;
-  if (s.endsWith('?')) return true;
-  const starters = ['why ', 'explain', 'tell me', 'describe', 'can you explain', 'can you tell', 'what does', 'what is a ', 'what are the', 'how do i', 'how does', 'what is vlookup', 'what is pivot'];
-  return starters.some(q => s.startsWith(q));
+  // Only treat "?" messages as questions if they start with a question word —
+  // action requests like "Can you bold the headers?" end with ? but need code.
+  const questionStarters = ['why ', 'explain', 'tell me', 'describe', 'can you explain', 'can you tell', 'what does', 'what is a ', 'what are the', 'how do i', 'how does', 'what is vlookup', 'what is pivot', 'what is a', 'is there ', 'are there ', 'does excel'];
+  return questionStarters.some(q => s.startsWith(q));
 }
 
 function modelForgotCode(responseText, userMessage) {
@@ -567,6 +568,7 @@ app.post('/api/chat', async (req, res) => {
   const deepThink     = options?.deepThink     || false;
   const dynamicDepth  = options?.dynamicDepth  || false;
   const autoModel     = options?.autoModel     || false;
+  const planFirst     = options?.plan          || false;
 
   let maxTokens = 4096;
   let effectiveModel = model || null;
@@ -623,6 +625,24 @@ app.post('/api/chat', async (req, res) => {
     }
   }
 
+  // ── Plan First: ask AI to outline steps before executing ─────────────────
+  let planText = null;
+  if (planFirst && !isQuestion(rawUserMessage)) {
+    try {
+      const prefsSection_ = preferences ? `\n\nUSER PREFERENCES:\n${preferences}` : '';
+      const contextMessages_ = workbookData ? [
+        { role: 'user', content: `Here is the current state of the workbook.\n\nActive sheet: ${activeSheet}\n\n${workbookData}` },
+        { role: 'assistant', content: 'I can see the full workbook. What would you like me to do?' }
+      ] : [];
+      const { text: planReply } = await callAI([
+        { role: 'system', content: SYSTEM_PROMPT + prefsSection_ + '\n\nIMPORTANT: The user has requested a plan. Do NOT output any CODE_JS block. Instead, write a short numbered plan (3-5 steps max) describing what you will do. Be concise.' },
+        ...contextMessages_,
+        { role: 'user', content: `Before executing, give me a brief plan for: ${rawUserMessage}` }
+      ], 512, effectiveModel, useOllama || false, useGroq || false, apiKey || null, groqKey || null);
+      planText = planReply.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
+    } catch {}
+  }
+
   // ── Code reminder ─────────────────────────────────────────────────────────
   const lastIdx = recentMessages.map(m=>m.role).lastIndexOf('user');
   if (lastIdx !== -1) {
@@ -672,7 +692,7 @@ app.post('/api/chat', async (req, res) => {
 
     const { code, cleaned } = parseResponse(responseText);
     if (code) console.log('[server] Code to execute:\n' + code);
-    res.json({ response: cleaned, code, usage, selectedModel });
+    res.json({ response: cleaned, code, usage, selectedModel, plan: planText });
 
   } catch (err) {
     console.error('AI error:', err);

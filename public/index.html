@@ -489,6 +489,13 @@ html,body{height:100%;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;
 </div>
 
 <script>
+// ── Column letter helper (supports beyond Z) ──────────────────────────────────
+function colLetter(i) {
+  let s = '', n = i + 1;
+  while (n > 0) { s = String.fromCharCode(64 + (n % 26 || 26)) + s; n = Math.floor((n - 1) / 26); }
+  return s;
+}
+
 // ── State ─────────────────────────────────────────────────────────────────────
 let chatId = null, history = [], summary = null, workbookData = '', activeSheet = '';
 let loading = false, ctrl = null, attached = null;
@@ -1079,9 +1086,9 @@ async function readWorkbook() {
     const wb=ctx.workbook,sheets=wb.worksheets,act=wb.worksheets.getActiveWorksheet();
     sheets.load('items/name');act.load('name');await ctx.sync();
     activeSheet=act.name;const parts=[];
-    for(const sh of sheets.items){try{const u=sh.getUsedRange();u.load('values');await ctx.sync();if(!u.values?.length)continue;const hdrs=u.values[0];const hLine='Headers: '+hdrs.map((h,i)=>String.fromCharCode(65+i)+'1='+h).join(' | ');const dLines=u.values.slice(1).map((r,ri)=>r.map((v,ci)=>String.fromCharCode(65+ci)+(ri+2)+':'+v).join(' | ')).join('\n');parts.push('Sheet: '+sh.name+'\n'+hLine+'\nData:\n'+dLines);}catch{}}
+    for(const sh of sheets.items){try{const u=sh.getUsedRange();u.load('values');await ctx.sync();if(!u.values?.length)continue;const hdrs=u.values[0];const hLine='Headers: '+hdrs.map((h,i)=>colLetter(i)+'1='+h).join(' | ');const dLines=u.values.slice(1).map((r,ri)=>r.map((v,ci)=>colLetter(ci)+(ri+2)+':'+v).join(' | ')).join('\n');parts.push('Sheet: '+sh.name+'\n'+hLine+'\nData:\n'+dLines);}catch{}}
     workbookData=parts.join('\n\n---\n\n');setSyncStatus('ok','Synced — '+activeSheet);
-  });}catch{setSyncStatus('err','Sync failed');}
+  });}catch(e){setSyncStatus('err','Sync failed');console.error('readWorkbook error',e);}
 }
 async function registerListeners() {
   if(changeReady)return;
@@ -1186,8 +1193,9 @@ async function sendMessage() {
     if(data.error){
       addMsg('assistant','⚠ '+data.error,true,ms);
     }else{
-      const{response:reply,code,usage,selectedModel:autoSelected}=data;
-      const tok=usage?.completion_tokens??usage?.total_tokens??null;
+      const{response:reply,code,usage,selectedModel:autoSelected,plan}=data;
+      if(plan){history.push({role:'assistant',content:'📋 Plan:\n'+plan});addMsg('assistant','📋 Plan:\n'+plan);}
+      const tok=usage?.completion_tokens??null;
       if(tok){totalTok+=tok;updateTok();}
       if(usage)addActualCost(usage, autoSelected||modelId);
 
@@ -1209,7 +1217,7 @@ async function sendMessage() {
         }else{
           addMsg('assistant','⚠ Error: '+r.err,true);
           history.push({role:'user',content:'The code failed: "'+r.err+'". Fix it with a corrected CODE_JS block.'});
-          const rr=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:history,workbookData,activeSheet,summary,model:modelId,useOllama:isOllama,useGroq:isGroq,apiKey,groqKey})});
+          const rr=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},signal:ctrl.signal,body:JSON.stringify({messages:history.slice(-8),workbookData,activeSheet,summary,model:modelId,useOllama:isOllama,useGroq:isGroq,apiKey,groqKey})});
           const rd=await rr.json();
           if(rd.code){const rres=await execCode(rd.code);if(rd.response)history.push({role:'assistant',content:rd.response});addMsg('assistant',rres.ok?'✓ Fixed.':'⚠ Retry failed: '+rres.err,!rres.ok);}
         }
