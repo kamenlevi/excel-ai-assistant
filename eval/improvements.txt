@@ -1,11 +1,19 @@
-When describing a function, provide a brief explanation and relevant examples without unnecessary code.
-For VLOOKUP, explain it looks up a value in a table and returns a corresponding value from another column.
-If a column does not exist, throw an error instead of creating a new column.
-Example: 
+To handle missing columns, use Office JS APIs to check column existence.
 ```javascript
-try { 
-  const filter = sheet.getRange("Department").autoFilter;
-} catch (e) { 
-  throw new Error("Department column not found");
+const column = sheet.getTable("Table1").getColumn("Department");
+if (!column) {
+  throw new Error("Column 'Department' not found. Check the column name and try again.");
 }
+```
+For sparklines, ensure correct data range and cell reference.
+```javascript
+const sparklineRange = sheet.getRange("C2");
+const dataRange = sheet.getRange("A2:A10");
+sparklineRange.sparklines.add(Excel.SparklineType.line, dataRange);
+```
+To position shapes dynamically, use worksheet dimensions.
+```javascript
+const sheet = workbook.worksheets.getActiveWorksheet();
+const usedRange = sheet.getUsedRange();
+const shape = sheet.shapes.addShape(Excel.ShapeType.oval, usedRange.width, 0, 50, 50);
 ```
