@@ -1,19 +1,8 @@
-To handle missing columns, use Office JS APIs to check column existence.
-```javascript
-const column = sheet.getTable("Table1").getColumn("Department");
-if (!column) {
-  throw new Error("Column 'Department' not found. Check the column name and try again.");
-}
-```
-For sparklines, ensure correct data range and cell reference.
-```javascript
-const sparklineRange = sheet.getRange("C2");
-const dataRange = sheet.getRange("A2:A10");
-sparklineRange.sparklines.add(Excel.SparklineType.line, dataRange);
-```
-To position shapes dynamically, use worksheet dimensions.
-```javascript
-const sheet = workbook.worksheets.getActiveWorksheet();
-const usedRange = sheet.getUsedRange();
-const shape = sheet.shapes.addShape(Excel.ShapeType.oval, usedRange.width, 0, 50, 50);
-```
+To handle conditional formatting, add examples like:
+CODE_JS: const range = sheet.getRange("A1:A10"); range.format.conditions.add(Excel.ConditionalFormatType.cellValue, "<50", "#FF0000");
+
+For questions about functions, provide definitions:
+The VLOOKUP function looks up a value in a table and returns a value from another column.
+
+To filter data, use Office JS APIs like:
+CODE_JS: const table = sheet.tables.getItem("Table1"); table.columns.getItem("Department").filter.apply(Excel.FilterType.topItems, 1, ["Engineering"]);
