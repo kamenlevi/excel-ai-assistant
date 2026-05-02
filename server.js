@@ -12,7 +12,7 @@ app.use(express.json({ limit: '20mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
 // ── SSL cert — use office-addin-dev-certs (trusted by Excel desktop) ──
-const DEV_CERTS_DIR = path.join(process.env.USERPROFILE, '.office-addin-dev-certs');
+const DEV_CERTS_DIR = path.join(process.env.USERPROFILE || process.env.HOME, '.office-addin-dev-certs');
 const pems = {
   cert:    fs.readFileSync(path.join(DEV_CERTS_DIR, 'localhost.crt'), 'utf8'),
   private: fs.readFileSync(path.join(DEV_CERTS_DIR, 'localhost.key'), 'utf8'),

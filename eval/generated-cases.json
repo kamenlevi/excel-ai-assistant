@@ -118,5 +118,111 @@
       "addShape"
     ],
     "forbiddenPatterns": []
+  },
+  {
+    "id": "gen-L2-Page-Layout-003",
+    "level": 2,
+    "category": "Page Layout",
+    "prompt": "Set the page orientation to portrait for all worksheets in the workbook, except for the worksheet named 'Summary', which should be set to landscape.",
+    "workbook": "Headers: A1=Name | B1=Sales\nData:\nA2:John | B2:100\nA3:Jane | B3:200\nWorksheets: Summary, Sales, Report",
+    "mustHaveCode": true,
+    "requiredPatterns": [
+      "worksheet.iterate",
+      "pageSetup.orientation"
+    ],
+    "forbiddenPatterns": []
+  },
+  {
+    "id": "gen-L2-Page-Layout-004",
+    "level": 2,
+    "category": "Page Layout",
+    "prompt": "Set the left and right margins to 0.5 inches for all worksheets in the workbook, but only if the worksheet has more than 10 rows of data.",
+    "workbook": "Headers: A1=ID | B1=Description\nData:\nA2:1 | B2:Item 1\nA3:2 | B3:Item 2\n... A12:11 | B12:Item 11\nWorksheets: Products, Orders, Inventory",
+    "mustHaveCode": true,
+    "requiredPatterns": [
+      "worksheet.getRange",
+      "pageSetup.margins"
+    ],
+    "forbiddenPatterns": []
+  },
+  {
+    "id": "gen-L2-Page-Layout-005",
+    "level": 2,
+    "category": "Page Layout",
+    "prompt": "Set the header and footer margins to 0.25 inches for the current worksheet, and center the header and footer text.",
+    "workbook": "Headers: A1=Date | B1=Amount\nData:\nA2:2022-01-01 | B2:100.00\nA3:2022-01-02 | B3:200.00",
+    "mustHaveCode": true,
+    "requiredPatterns": [
+      "pageSetup.headerFooterMargin",
+      "headerFooter.alignment"
+    ],
+    "forbiddenPatterns": []
+  },
+  {
+    "id": "gen-L2-Page-Layout-006",
+    "level": 2,
+    "category": "Page Layout",
+    "prompt": "Set the scale to 150% for all worksheets in the workbook, but only if the worksheet has a specific keyword 'Confidential' in the cell A1.",
+    "workbook": "Headers: A1=Confidential | B1=Project\nData:\nA2:Project Name | B2:Top Secret\nWorksheets: Project1, Project2, Public",
+    "mustHaveCode": true,
+    "requiredPatterns": [
+      "worksheet.getRange",
+      "pageSetup.scale"
+    ],
+    "forbiddenPatterns": []
+  },
+  {
+    "id": "gen-L2-Comments-003",
+    "level": 2,
+    "category": "Comments",
+    "prompt": "Add a comment to the cell with the highest value in column A, with the text 'Max value in column A'",
+    "workbook": "Headers: A1=Value | B1=Category\nData:\nA2:10 | B2:Cat1\nA3:20 | B3:Cat2\nA4:30 | B4:Cat3",
+    "mustHaveCode": true,
+    "requiredPatterns": [
+      "Worksheet.getRange",
+      "addComment"
+    ],
+    "forbiddenPatterns": []
+  },
+  {
+    "id": "gen-L2-Comments-004",
+    "level": 2,
+    "category": "Comments",
+    "prompt": "Delete all comments from cells in the range A1:E5 that contain the text 'Old comment'",
+    "workbook": "Headers: A1=Col1 | B1=Col2 | C1=Col3 | D1=Col4 | E1=Col5\nData:\nA2:val | B2:val | C2:val | D2:val | E2:val\nA3:val | B3:val | C3:val | D3:val | E3:val",
+    "mustHaveCode": true,
+    "requiredPatterns": [
+      "Worksheet.getRange",
+      "delete"
+    ],
+    "forbiddenPatterns": []
+  },
+  {
+    "id": "gen-L2-Comments-005",
+    "level": 2,
+    "category": "Comments",
+    "prompt": "Update the comment in cell A1 to include the current date, if the comment already exists",
+    "workbook": "Headers: A1=Date | B1=Description\nData:\nA2:2022-01-01 | B2:Comment exists",
+    "mustHaveCode": true,
+    "requiredPatterns": [
+      "Worksheet.getRange",
+      "getComment",
+      "setText"
+    ],
+    "forbiddenPatterns": []
+  },
+  {
+    "id": "gen-L2-Comments-006",
+    "level": 2,
+    "category": "Comments",
+    "prompt": "Copy the comment from cell A1 to all cells in the range B2:B5 that have the same value as cell A1",
+    "workbook": "Headers: A1=Value | B1=Category\nData:\nA2:10 | B2:Cat1\nA3:20 | B3:Cat2\nA4:10 | B4:Cat1\nA5:30 | B5:Cat3",
+    "mustHaveCode": true,
+    "requiredPatterns": [
+      "Worksheet.getRange",
+      "getComment",
+      "addComment"
+    ],
+    "forbiddenPatterns": []
   }
 ]
