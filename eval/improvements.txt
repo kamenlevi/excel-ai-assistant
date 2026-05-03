@@ -1,50 +1,19 @@
-To address the failing cases, add the following rules and examples:
-When copying data, ensure the destination range matches the prompt's requirements.
+To improve code quality and correctness, consider the following best practices:
+When formatting cells, use `sheet.getRange().format` instead of `sheet.getRangeByIndexes().format`.
+Use `sheet.columns.getItem` to get a column by name, and handle errors using `Office.context.sync` callbacks.
+For VLOOKUP and other functions, provide a description without assuming demonstration.
+When inserting shapes, use `sheet.shapes.addShape` with accurate positioning.
+To update comments, use `cell.comments` instead of modifying cell values.
+Examples:
 ```javascript
-const src = sheet.getRange("A:B");
-const dst = sheet.getRange("D1").getResizedRange(src.rows.count, 1);
-dst.copyFrom(src, Excel.RangeCopyType.all, false, false);
-```
-For filtering, use Office JS APIs to apply filters.
-```javascript
-const filter = sheet.getAutoFilter();
-filter.apply(filter.criteria.indexOf("Department"), "Engineering");
-```
-To validate data, clear existing validation before adding new rules.
-```javascript
-const validation = sheet.getRange("B:B").dataValidation;
-validation.clear();
-validation.add(Excel.DataValidationType.wholeNumber, {
-  operator: Excel.DataValidationOperator.between,
-  formula1: 1,
-  formula2: 100
-});
-```
-When positioning shapes, consider the worksheet's used range.
-```javascript
-const usedRange = sheet.getUsedRange();
-const shape = sheet.shapes.addShape(Excel.ShapeType.oval, usedRange.columns.count * 100, 10, 50, 50);
-```
-To update comments, access the comment property of the cell.
-```javascript
-const cell = sheet.getRange("A1");
-const comment = cell.comment;
-if (comment) {
-  comment.text = comment.text + " - " + new Date().toLocaleDateString();
-}
-```
-For copying comments, iterate through the destination range and apply the comment.
-```javascript
-const srcCell = sheet.getRange("A1");
-const dstRange = sheet.getRange("B2:B5");
-dstRange.load("values");
+// Efficient formatting
+sheet.getRange("A1:B2").format.fill.color = "FF0000";
+// Error handling
+sheet.columns.getItem("Department").load();
 await context.sync();
-dstRange.values.forEach((value, index) => {
-  if (value[0] === srcCell.values[0][0]) {
-    const comment = srcCell.comment;
-    if (comment) {
-      dstRange.getCell(index, 0).comment = { text: comment.text };
-    }
-  }
-});
+// Shape positioning
+const shape = sheet.shapes.addShape(Excel.ShapeType.oval, sheet.getUsedRange().width, 0, 50, 50);
+// Comment update
+const cell = sheet.getRange("A1");
+cell.comments.add("New comment");
 ```
