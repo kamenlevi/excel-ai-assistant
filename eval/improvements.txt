@@ -1,4 +1,50 @@
-When answering questions about Excel functions, provide a clear description and relevant examples specific to the user's workbook, avoiding unnecessary code.
-For column-related operations, use the Office JavaScript API to handle errors, such as `worksheet.getRange("Department").load("values")` to check if a column exists.
-To set header and footer margins, use `worksheet.pageSetup.headerFooterMargin` and `worksheet.pageSetup.headerFooter` to center the text.
-When updating comments, ensure the correct cell is targeted, such as `worksheet.getRange("A1").comment` to update the comment in cell A1, and modify the comment text instead of the cell value.
+To address the failing cases, add the following rules and examples:
+When copying data, ensure the destination range matches the prompt's requirements.
+```javascript
+const src = sheet.getRange("A:B");
+const dst = sheet.getRange("D1").getResizedRange(src.rows.count, 1);
+dst.copyFrom(src, Excel.RangeCopyType.all, false, false);
+```
+For filtering, use Office JS APIs to apply filters.
+```javascript
+const filter = sheet.getAutoFilter();
+filter.apply(filter.criteria.indexOf("Department"), "Engineering");
+```
+To validate data, clear existing validation before adding new rules.
+```javascript
+const validation = sheet.getRange("B:B").dataValidation;
+validation.clear();
+validation.add(Excel.DataValidationType.wholeNumber, {
+  operator: Excel.DataValidationOperator.between,
+  formula1: 1,
+  formula2: 100
+});
+```
+When positioning shapes, consider the worksheet's used range.
+```javascript
+const usedRange = sheet.getUsedRange();
+const shape = sheet.shapes.addShape(Excel.ShapeType.oval, usedRange.columns.count * 100, 10, 50, 50);
+```
+To update comments, access the comment property of the cell.
+```javascript
+const cell = sheet.getRange("A1");
+const comment = cell.comment;
+if (comment) {
+  comment.text = comment.text + " - " + new Date().toLocaleDateString();
+}
+```
+For copying comments, iterate through the destination range and apply the comment.
+```javascript
+const srcCell = sheet.getRange("A1");
+const dstRange = sheet.getRange("B2:B5");
+dstRange.load("values");
+await context.sync();
+dstRange.values.forEach((value, index) => {
+  if (value[0] === srcCell.values[0][0]) {
+    const comment = srcCell.comment;
+    if (comment) {
+      dstRange.getCell(index, 0).comment = { text: comment.text };
+    }
+  }
+});
+```
