@@ -1,72 +1,83 @@
 # Eval Results
-**Last run:** 2026-05-02 16:46:09  
-**Overall: 80.1/100**  (prev: 99.0)  
+**Last run:** 2026-05-03 02:48:20  
+**Overall: 81.0/100**  (prev: 99.0)  
 **Model:** meta-llama/llama-3.3-70b-instruct
 
 ## Scores by category
 
 | Category | Score | Trend | Cases |
 |---|---|---|---|
-| filtering | 81.7/100 | ↓ -18.3 | 3 |
-| sorting | 71.5/100 | ↓ -23.5 | 2 |
-| formatting | 81.0/100 | ↓ -19.0 | 3 |
-| formulas | 82.7/100 | ↓ -17.3 | 3 |
-| conditional formatting | 67.0/100 | ↓ -23.0 | 1 |
+| filtering | 79.0/100 | ↓ -21.0 | 3 |
+| sorting | 71.0/100 | ↓ -24.0 | 2 |
+| formatting | 86.0/100 | ↓ -14.0 | 3 |
+| formulas | 84.7/100 | ↓ -15.3 | 3 |
+| conditional formatting | 77.0/100 | ↓ -13.0 | 1 |
 | charts | 83.0/100 | ↓ -17.0 | 1 |
-| data manipulation | 80.0/100 | ↓ -20.0 | 2 |
-| sheet operations | 77.5/100 | ↓ -22.5 | 2 |
-| question handling | 68.5/100 | ↓ -31.5 | 2 |
-| edge cases | 40.0/100 | ↓ -60.0 | 1 |
-| data validation | 82.0/100 | → | 2 |
-| tables | 77.5/100 | → | 2 |
-| named ranges | 90.0/100 | → | 1 |
-| Hyperlinks | 88.5/100 | → | 2 |
-| Comments | 92.5/100 | → | 2 |
-| Sparklines | 86.5/100 | → | 2 |
-| Page Layout | 93.5/100 | → | 2 |
-| Shapes | 75.0/100 | → | 2 |
+| data manipulation | 81.0/100 | ↓ -19.0 | 2 |
+| sheet operations | 88.0/100 | ↓ -12.0 | 2 |
+| question handling | 69.5/100 | ↓ -30.5 | 2 |
+| edge cases | 50.0/100 | ↓ -50.0 | 1 |
+| data validation | 86.5/100 | → | 2 |
+| tables | 86.5/100 | → | 2 |
+| named ranges | 92.0/100 | → | 1 |
+| Hyperlinks | 86.0/100 | → | 2 |
+| Comments | 81.3/100 | → | 6 |
+| Sparklines | 87.5/100 | → | 2 |
+| Page Layout | 81.0/100 | → | 6 |
+| Shapes | 72.0/100 | → | 2 |
 
 ## All test cases
 
 | ID | Score | Pass | Reason |
 |---|---|---|---|
-| L1-filter-001 | 80 (-20) | ✓ | The code is mostly correct but loses points for not handling potential errors and not being a complete solution with proper context and loading, also it doesn't demonstrate the best approach by not checking if the filter already exists before applying it. |
-| L1-filter-002 | 80 (-20) | ✓ | The code is mostly correct but lacks error handling and context setup, and uses a straightforward approach without considering potential edge cases or optimizations. |
-| L1-filter-003 | 85 (-15) | ✓ | The code is mostly correct, but loses points for not checking if filters are actually applied before clearing them and not handling potential errors, also it doesn't use the most specific method to clear filters which might be available. |
-| L1-sort-001 | 70 (-30) | ✓ | The code uses a correct Office JS API method, sortByColumn, but lacks context and proper initialization, which may cause runtime errors, and does not fully follow best practices. |
-| L1-sort-002 | 73 (-17) | ✓ | The code uses a correct Office JS API method, sortByColumn, but lacks context and proper initialization, which might lead to runtime errors, and does not fully follow best practices. |
-| L1-format-001 | 88 (-12) | ✓ | The code is mostly correct and complete, but loses points for not handling potential errors and not using the most efficient approach, such as using `header.format.font.color` and `header.format.fill.color` in a single `range.format` property bag. |
-| L1-format-002 | 83 (-17) | ✗ | The code correctly uses Office JS APIs and should work in Excel Online, but it does not fully address the request as it only adds borders to the data range excluding the header row, and the approach can be improved by using more efficient methods to apply borders to the entire range. |
-| L1-format-003 | 72 (-28) | ✓ | The code correctly uses Office JS APIs and would likely work, but it only formats the second column (index 1) instead of column B, and does not fully address the request, also lacking best practices in terms of directly accessing the desired range. |
-| L1-formulas-001 | 63 (-37) | ✓ | The code uses correct Office JS APIs, but loses points for not fully addressing the request by hardcoding the range B2:B9 instead of dynamically calculating the range based on the actual data, and for not using best practices. |
-| L1-formulas-002 | 92 (-8) | ✓ | The code is mostly correct and complete, but loses points for not handling potential errors and not using the most efficient approach, such as checking if the range is valid before applying the formula. |
-| L1-formulas-003 | 93 (-7) | ✓ | The code is mostly correct and complete, but loses points for not handling potential errors and not using the most efficient approach, such as using the `values` property instead of `formulas` to set the value directly if the condition is known. |
-| L1-conditional-001 | 67 (-23) | ✗ | The code is mostly correct but loses points for not using best practices, such as directly accessing the column index without considering potential header name case sensitivity mismatches, and not handling potential errors that may occur during execution. |
-| L1-charts-001 | 83 (-17) | ✓ | The code is mostly correct and complete, but loses points for not handling potential errors, such as the worksheet or range not being available, and not using the most efficient or best practice approaches to creating and positioning the chart. |
-| L1-data-001 | 72 (-28) | ✓ | The code correctly uses Office JS APIs and would likely execute without runtime errors, but it partially addresses the request by copying data to columns D and E instead of just column D, and lacks best practices in its approach. |
-| L1-data-002 | 88 (-12) | ✓ | The code is mostly correct and complete, but loses points for not handling potential errors and not using the most efficient approach, such as using `sheet.getRange("C:C").clear(Excel.ClearApplyTo.contents)` to clear the entire column instead of loading the used range. |
-| L1-sheet-001 | 72 (-28) | ✓ | The code correctly uses the Office JS API to freeze panes, but it only partially addresses the request by freezing at row 2 instead of row 1, and lacks best practices in terms of error handling and code organization. |
-| L1-sheet-002 | 83 (-17) | ✗ | The code correctly uses Office JS APIs and addresses the request, but loses points for not handling potential errors and not using the most efficient approach, such as using `sheet.getUsedRange().autoFitColumns()` instead of looping through each column. |
-| L1-questions-001 | 65 (-35) | ✓ | The response accurately describes the VLOOKUP function and provides a relevant example, but includes unnecessary code and lacks clarity in explaining the function's parameters and potential caveats. |
-| L1-questions-002 | 72 (-28) | ✗ | The response is mostly accurate and relevant, but deducts points for assuming the first row is a header without explicitly checking, and for lacking additional context or examples in the bonus category. |
-| L1-edge-001 | 40 (-60) ⚠️ | ✗ | The code does not use any Office JS APIs and instead throws a generic JavaScript error, which is not the correct approach to handle errors in the context of the Office JavaScript API for Excel Online. |
-| L1-validation-001 | 72 | ✓ | The code correctly uses Office JS APIs and addresses the request, but has flaws in load/sync order, variable scope, and method signatures, and does not use best practices, resulting in potential runtime errors and inefficiencies. |
-| L1-validation-002 | 92 | ✓ | The code is mostly correct and complete, but loses points for not handling potential errors and not using the most efficient approach, such as checking if the data validation already exists before clearing it. |
-| L1-tables-001 | 72 | ✗ | The code correctly uses Office JS APIs and addresses the request, but lacks error handling and does not utilize best practices, such as checking if the range is valid before converting it to a table. |
-| L1-tables-002 | 83 | ✓ | The code correctly uses Office JS APIs and mostly addresses the request, but loses points for not fully handling potential errors and not using the most efficient approach to set formulas in the total row. |
-| L1-namedranges-001 | 90 | ✓ | The code is mostly correct and complete, but loses points for not checking if a named range with the same name already exists, and for not using try-catch blocks for error handling, which is a best practice. |
-| gen-L1-hyperlinks-001 | 85 | ✗ | The code correctly uses Office JS APIs and would likely work in Excel Online, but it doesn't fully address the request as it doesn't handle potential errors and doesn't check if a hyperlink already exists in the cell, and the approach could be improved by adding error handling and checking for existing hyperlinks. |
-| gen-L1-hyperlinks-002 | 92 | ✗ | The code is mostly correct and complete, but loses points for not handling potential errors and not using the most efficient approach, such as checking if the hyperlink exists before clearing it. |
-| gen-L1-comments-001 | 92 | ✗ | The code is mostly correct and complete, but loses points for not handling potential errors and not using try-catch blocks, and also for not checking if the worksheet or range is valid before adding a comment. |
-| gen-L1-comments-002 | 93 | ✗ | The code is mostly correct and complete, but loses points for not handling potential errors and not using the most efficient approach, such as checking if a comment exists before clearing it. |
-| gen-L1-sparklines-001 | 83 | ✗ | The code is mostly correct and complete, but loses points for not handling potential errors, such as checking if the worksheet or range is valid, and not using best practices like checking the range values before creating a sparkline. |
-| gen-L1-sparklines-002 | 90 | ✗ | The code is mostly correct and complete, but loses points for not handling potential errors and not using the most efficient or best-practice approach to add a sparkline, such as checking if a sparkline already exists in the target cell. |
-| gen-L1-page-layout-001 | 95 ✅ | ✓ | The code is nearly flawless, but loses points on approach because it directly modifies the pageSetup orientation without considering potential edge cases or providing additional error handling. |
-| gen-L1-page-layout-002 | 92 | ✗ | The code is mostly correct, but it assumes the unit of measurement for the topMargin property is inches, which might not be the case, and it doesn't handle potential errors that might occur during the execution of the context.sync() method. |
-| gen-L1-shapes-001 | 67 | ✓ | The code correctly uses Office JS APIs and attempts to add a rectangle shape to cell A1, but lacks consideration for the size and position of the shape relative to the cell, and does not follow best practices for handling potential errors or syncing the worksheet. |
-| gen-L1-shapes-002 | 83 | ✓ | The code correctly uses Office JS APIs and is mostly complete, but loses points for not perfectly addressing the request, having a minor potential issue with load/sync order, and not using the most optimal approach to position the shape in the top-right corner. |
+| L1-filter-001 | 85 (-15) | ✓ | The code is mostly correct, but loses points for API correctness due to the lack of verification that the "Name" column exists and the applyColumnFilter method is used without checking if the column is already filtered, and also loses points for would_it_work due to potential issues with the load and sync order of the worksheet. |
+| L1-filter-002 | 80 (-20) | ✓ | The code is mostly correct and would work, but it lacks consideration for loading the worksheet and applying the filter to the correct range, and does not fully follow best practices for handling potential errors or edge cases. |
+| L1-filter-003 | 72 (-28) | ✓ | The code correctly uses the clearFilters API and addresses the request, but lacks context and proper error handling, and does not demonstrate best practices in terms of loading the worksheet or handling potential asynchronous issues. |
+| L1-sort-001 | 72 (-28) | ✗ | The code correctly uses Office JS APIs and addresses the request, but has flaws in load/sync order and variable scope, and does not use best practices such as available helpers for sorting. |
+| L1-sort-002 | 70 (-20) | ✓ | The code uses a correct Office JS API method, sortByColumn, but lacks context and proper initialization, which may cause runtime errors, and does not demonstrate best practices in implementing the sorting functionality. |
+| L1-format-001 | 88 (-12) | ✓ | The code is mostly correct and complete, but loses points for not using the most efficient approach and having a minor potential issue with the color code used for the dark green background, which is "#008000" instead of a more modern or precise way of defining the color. |
+| L1-format-002 | 83 (-17) | ✗ | The code correctly uses Office JS APIs and should work in Excel Online, but it does not fully address the request as it adds borders to the entire used range, not just the data range, and lacks best practices in its approach. |
+| L1-format-003 | 87 (-13) | ✓ | The code is mostly correct and would work, but it lacks consideration for best practices, such as handling potential errors or using more efficient methods to achieve the desired formatting. |
+| L1-formulas-001 | 72 (-28) | ✓ | The code correctly uses Office JS APIs and would likely execute without runtime errors, but it only partially addresses the request by summing up to row 9 instead of including all relevant data in the column, and lacks best practices in its approach. |
+| L1-formulas-002 | 92 (-8) | ✓ | The code is mostly correct and complete, but loses points for not handling potential errors and not using the most efficient or best-practice approach, such as checking if the range is valid before applying the formula. |
+| L1-formulas-003 | 90 (-10) | ✓ | The code accurately uses Office JS APIs and fully addresses the request, but loses points for not handling potential errors and not using the most efficient approach, such as using the `values` property instead of `formulas` for simpler scenarios. |
+| L1-conditional-001 | 77 (-13) | ✗ | The code correctly uses Office JS APIs and would mostly work, but it doesn't handle header row and lacks best practices, such as using more efficient methods for conditional formatting. |
+| L1-charts-001 | 83 (-17) | ✓ | The code is mostly correct and complete, but loses points for not handling potential errors and not using the most efficient methods, such as directly setting the chart's position and title in a single sync operation. |
+| L1-data-001 | 75 (-25) | ✓ | The code correctly uses Office JS APIs and would likely execute without runtime errors, but it only partially addresses the request by copying data to columns D and E instead of just column D, and lacks best practices in its approach. |
+| L1-data-002 | 87 (-13) | ✓ | The code is mostly correct and would work, but it doesn't handle potential errors and doesn't use the most efficient approach, such as using `sheet.getRange("C:C").clear()` to clear the entire column, which would be a more straightforward and best-practice solution. |
+| L1-sheet-001 | 93 (-7) | ✓ | The code is mostly correct and complete, but loses points for not handling potential errors and not using the most efficient approach, such as checking if the freeze panes are already set before attempting to freeze them. |
+| L1-sheet-002 | 83 (-17) | ✗ | The code is mostly correct and complete, but loses points for not handling potential errors and not using the most efficient approach, such as using the `autoFitColumns` method on the entire used range instead of looping through each column. |
+| L1-questions-001 | 67 (-33) | ✗ | The response accurately describes the VLOOKUP function and is clear, but includes unnecessary code and lacks relevant examples or context specific to the user's workbook, deducting points for relevance and bonus. |
+| L1-questions-002 | 72 (-28) | ✗ | The response accurately calculates the number of rows, but deducts points for not considering potential edge cases, such as empty worksheets or non-contiguous data ranges, and for not providing additional context or examples. |
+| L1-edge-001 | 50 (-50) ⚠️ | ✗ | The code correctly throws an error when the column is not found, but it does not use the Office JavaScript API and instead relies on a generic JavaScript error, losing points for API correctness and approach. |
+| L1-validation-001 | 83 | ✓ | The code correctly uses Office JS APIs and addresses the request, but loses points for not handling potential errors and not using the most efficient approach, such as using an array of values instead of a comma-separated string for the dropdown list. |
+| L1-validation-002 | 90 | ✓ | The code is mostly correct and should work as intended, but loses points for not handling potential errors and not using the most efficient or best practice approach, such as checking if the worksheet is active before getting the range. |
+| L1-tables-001 | 90 | ✗ | The code is mostly correct and complete, but loses points for not handling potential errors and not using the most efficient approach, such as checking if the range is already a table before converting it. |
+| L1-tables-002 | 83 | ✓ | The code correctly uses Office JS APIs and would likely work in Excel Online, but it lacks error handling and does not fully address the request by not specifying which columns to total, resulting in lost points for completeness and approach. |
+| L1-namedranges-001 | 92 | ✓ | The code is mostly correct and complete, but loses points for not handling potential errors and not using the most efficient approach, such as checking if the named range already exists before adding it. |
+| gen-L1-hyperlinks-001 | 80 | ✗ | The code correctly uses Office JS APIs and addresses the request, but loses points for not handling potential errors and not using the most efficient approach, such as checking if the range already has a hyperlink before setting it. |
+| gen-L1-hyperlinks-002 | 92 | ✗ | The code is mostly correct and complete, but loses points for not handling potential errors and not using try-catch blocks, which is a best practice in Office JS API programming. |
+| gen-L1-comments-001 | 90 | ✓ | The code is mostly correct and complete, but loses points for not handling potential errors and not using the most efficient approach, such as checking if a comment already exists before adding a new one. |
+| gen-L1-comments-002 | 95 ✅ | ✗ | The code is almost perfect, but it loses points on approach because it manually clears comments using the `clear` method, whereas a more idiomatic approach might be to directly access and remove the comment object, if available. |
+| gen-L1-sparklines-001 | 83 | ✗ | The code is mostly correct and complete, but loses points for not handling potential errors, such as the worksheet or range not being available, and not following best practices for syncing the context. |
+| gen-L1-sparklines-002 | 92 | ✗ | The code is mostly correct and complete, but loses points for not handling potential errors and not using the most efficient approach, such as checking if the range is valid before adding a sparkline. |
+| gen-L1-page-layout-001 | 95 ✅ | ✓ | The code is almost perfect, but loses a few points on approach because it doesn't handle potential errors that might occur during the execution of the `context.sync()` method, which is a good practice in Office JS development. |
+| gen-L1-page-layout-002 | 92 | ✗ | The code is mostly correct, but it assumes the unit of measurement for the topMargin property is inches, which is not explicitly specified in the Office JS API, and it also lacks error handling, which is a best practice. |
+| gen-L1-shapes-001 | 72 | ✗ | The code correctly uses Office JS APIs and would likely work in Excel Online, but it does not fully address the request as it adds a rectangle with fixed dimensions (100x20) instead of sizing it to fit cell A1, and lacks best practices in its approach. |
+| gen-L1-shapes-002 | 72 | ✗ | The code correctly uses Office JS APIs and would likely execute without runtime errors, but it does not fully address the request as it adds the shape at a fixed position (200, 0) instead of dynamically determining the top-right corner of the worksheet. |
+| gen-L2-Page-Layout-003 | 90 | ✗ | The code accurately addresses the request and uses correct Office JS APIs, but loses points for not handling potential errors and not using the most efficient approach, such as using an array of worksheet names to filter the worksheets. |
+| gen-L2-Page-Layout-004 | 89 | ✗ | The code is mostly correct and should work as intended, but it lacks input validation and error handling, and does not fully follow best practices for loading and syncing properties in Office JS. |
+| gen-L2-Page-Layout-005 | 48 ⚠️ | ✗ | The code is incomplete and lacks proper method calls, such as setting the footer margin and centering the header and footer text, resulting in significant deductions across all dimensions. |
+| gen-L2-Page-Layout-006 | 72 | ✓ | The code is mostly correct but loses points for not handling potential errors, lacking best practices, and not fully addressing the request due to incomplete loading of worksheet properties before accessing them. |
+| gen-L2-Comments-003 | 88 | ✗ | The code accurately addresses the request and uses correct Office JS APIs, but loses points for not using best practices, such as directly finding the maximum value without manually iterating over the rows. |
+| gen-L2-Comments-004 | 83 | ✗ | The code is mostly correct and complete, but loses points for not checking if comments exist before trying to delete them and not handling potential errors, and also for not using more efficient methods to filter comments. |
+| gen-L2-Comments-005 | 60 | ✗ | The code incorrectly updates the comment in cell B2 instead of cell A1 and modifies the cell value instead of the comment, resulting in significant deductions across all dimensions. |
+| gen-L2-Comments-006 | 72 | ✗ | The code mostly uses correct Office JS APIs and would work, but it has flaws in completeness, as it copies comments to cells in column B based on values in column A, but the request asks for copying comments to cells with the same value as cell A1, which is in column A, not necessarily related to the values in column B. |
 
 ## ⚠️ Needs attention
 
-**[L1-edge-001]** score=40 — The code does not use any Office JS APIs and instead throws a generic JavaScript error, which is not the correct approach to handle errors in the context of the Office JavaScript API for Excel Online.
+**[L1-edge-001]** score=50 — The code correctly throws an error when the column is not found, but it does not use the Office JavaScript API and instead relies on a generic JavaScript error, losing points for API correctness and approach.
 - missing patterns: `applyColumnFilter`
+
+**[gen-L2-Page-Layout-005]** score=48 — The code is incomplete and lacks proper method calls, such as setting the footer margin and centering the header and footer text, resulting in significant deductions across all dimensions.
+- missing patterns: `pageSetup.headerFooterMargin`, `headerFooter.alignment`

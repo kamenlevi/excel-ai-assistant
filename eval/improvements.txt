@@ -1,43 +1,4 @@
-To dynamically calculate ranges, use `sheet.getUsedRange()` and load the `address` property.
-Example: `const usedRange = sheet.getUsedRange(); usedRange.load('address'); await context.sync(); const address = usedRange.address;`
-
-When accessing columns, use `hdr.indexOf()` with case-insensitive comparison and error handling.
-Example: 
-```javascript
-const hdr = rows[0].map(h => String(h).toLowerCase().trim());
-const col = hdr.indexOf("score");
-if (col === -1) throw new Error(`Column 'Score' not found.`);
-```
-
-For error handling, use try-catch blocks and check for specific Office JS API errors.
-Example: 
-```javascript
-try {
-  // Office JS API code
-} catch (error) {
-  if (error instanceof OfficeExtension.Error) {
-    // Handle Office JS API error
-  } else {
-    // Handle other errors
-  }
-}
-```
-
-When explaining functions, provide clear descriptions of parameters and potential caveats.
-Example: 
-```javascript
-// VLOOKUP function: searches for a value in the first column and returns a value in the same row from another column
-// Parameters: lookup value, table array, column index, [range lookup]
-```
-
-When adding shapes, use explicit pixel coordinates (left, top, width, height) — Range does not have a getAbsolutePosition() method.
-Example:
-```javascript
-try {
-  const shape = sheet.shapes.addGeometricShape("Rectangle");
-  shape.left = 100; shape.top = 50; shape.width = 200; shape.height = 40;
-  await context.sync();
-} catch (error) {
-  throw new Error("Failed to add shape: " + error.message);
-}
-```
+When answering questions about Excel functions, provide a clear description and relevant examples specific to the user's workbook, avoiding unnecessary code.
+For column-related operations, use the Office JavaScript API to handle errors, such as `worksheet.getRange("Department").load("values")` to check if a column exists.
+To set header and footer margins, use `worksheet.pageSetup.headerFooterMargin` and `worksheet.pageSetup.headerFooter` to center the text.
+When updating comments, ensure the correct cell is targeted, such as `worksheet.getRange("A1").comment` to update the comment in cell A1, and modify the comment text instead of the cell value.
