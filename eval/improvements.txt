@@ -1,19 +1,10 @@
-To improve code quality and correctness, consider the following best practices:
-When formatting cells, use `sheet.getRange().format` instead of `sheet.getRangeByIndexes().format`.
-Use `sheet.columns.getItem` to get a column by name, and handle errors using `Office.context.sync` callbacks.
-For VLOOKUP and other functions, provide a description without assuming demonstration.
-When inserting shapes, use `sheet.shapes.addShape` with accurate positioning.
-To update comments, use `cell.comments` instead of modifying cell values.
-Examples:
+When filtering data, use Office JS APIs such as `sheet.getRange().filter()` instead of throwing generic errors.
+To add comments to the correct cell, ensure the row index is accurate by using `sheet.getRange(`A${maxRowIndex + 1}`)` without the extra `+ 1`.
+When updating comments, target the correct cell range, such as `sheet.getRange("A1")`, and use the `comments` property to access and modify existing comments.
+CODE_JS:
 ```javascript
-// Efficient formatting
-sheet.getRange("A1:B2").format.fill.color = "FF0000";
-// Error handling
-sheet.columns.getItem("Department").load();
-await context.sync();
-// Shape positioning
-const shape = sheet.shapes.addShape(Excel.ShapeType.oval, sheet.getUsedRange().width, 0, 50, 50);
-// Comment update
-const cell = sheet.getRange("A1");
-cell.comments.add("New comment");
+const sheet = workbook.worksheets.getActiveWorksheet();
+const filter = sheet.getRange("Department").filter.apply({
+  criteria: "Engineering"
+});
 ```
