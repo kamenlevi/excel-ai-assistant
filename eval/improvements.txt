@@ -1,10 +1,4 @@
-When filtering data, use Office JS APIs such as `sheet.getRange().filter()` instead of throwing generic errors.
-To add comments to the correct cell, ensure the row index is accurate by using `sheet.getRange(`A${maxRowIndex + 1}`)` without the extra `+ 1`.
-When updating comments, target the correct cell range, such as `sheet.getRange("A1")`, and use the `comments` property to access and modify existing comments.
-CODE_JS:
-```javascript
-const sheet = workbook.worksheets.getActiveWorksheet();
-const filter = sheet.getRange("Department").filter.apply({
-  criteria: "Engineering"
-});
-```
+When handling errors, use Office JS APIs to display error messages, such as `Office.context.ui.notificationMessages`.
+To remove hyperlinks, target the correct cell and set its `hyperlink` property to `null`, e.g., `sheet.getRange("A1").format.hyperlink = null;`.
+To position shapes dynamically, use worksheet dimensions, e.g., `const worksheetWidth = sheet.getUsedRange().getColumnCount() * 100;`.
+When updating comments, target the correct cell and use the `addComment` or `getComment` method, e.g., `const comment = sheet.getRange("A1").getComment();`.
