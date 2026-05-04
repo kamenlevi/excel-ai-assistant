@@ -1,4 +1,26 @@
-When handling errors, use Office JS APIs to display error messages, such as `Office.context.ui.notificationMessages`.
-To remove hyperlinks, target the correct cell and set its `hyperlink` property to `null`, e.g., `sheet.getRange("A1").format.hyperlink = null;`.
-To position shapes dynamically, use worksheet dimensions, e.g., `const worksheetWidth = sheet.getUsedRange().getColumnCount() * 100;`.
-When updating comments, target the correct cell and use the `addComment` or `getComment` method, e.g., `const comment = sheet.getRange("A1").getComment();`.
+To handle column names correctly, add:
+If the prompt mentions a column name, ensure it exists in the worksheet before attempting to filter or access it.
+
+CODE_JS example:
+```javascript
+const sheet = workbook.worksheets.getActiveWorksheet();
+const column = sheet.columns.getItem("Department");
+if (!column) {
+  throw new Error("Column 'Department' not found. Check the column name and try again.");
+}
+```
+
+To update comments correctly, add:
+When updating a comment, check if a comment already exists in the cell and update the comment text instead of the cell value.
+
+CODE_JS example:
+```javascript
+const sheet = workbook.worksheets.getActiveWorksheet();
+const cell = sheet.getRange("A1");
+const comment = cell.comments.getItemAt(0);
+if (comment) {
+  comment.text = `Updated on ${new Date().toISOString().split('T')[0]}`;
+} else {
+  cell.addComment(`Comment created on ${new Date().toISOString().split('T')[0]}`);
+}
+```

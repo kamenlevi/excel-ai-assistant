@@ -224,5 +224,57 @@
       "addComment"
     ],
     "forbiddenPatterns": []
+  },
+  {
+    "id": "gen-L2-Page-Layout-007",
+    "level": 2,
+    "category": "Page Layout",
+    "prompt": "Set the page orientation to landscape for all worksheets in the workbook that have a table with a specific header 'Sales Data', and set the scale to 120% for those worksheets. For other worksheets, set the page orientation to portrait and the scale to 100%.",
+    "workbook": "Headers: A1=Sales Data | B1=Region\nData:\nA2:100 | B2=North\nA3:200 | B3=South\n---\nSheet2:\nA1=Expenses | B1=Category\nData:\nA2:500 | B2=Rent",
+    "mustHaveCode": true,
+    "requiredPatterns": [
+      "worksheet.tables",
+      "table.headers"
+    ],
+    "forbiddenPatterns": []
+  },
+  {
+    "id": "gen-L2-Page-Layout-008",
+    "level": 2,
+    "category": "Page Layout",
+    "prompt": "Set the top and bottom margins to 0.75 inches for all worksheets in the workbook that have more than 20 rows of data, and set the header and footer margins to 0.5 inches for those worksheets. For worksheets with less than 20 rows, set the top and bottom margins to 0.5 inches and the header and footer margins to 0.25 inches.",
+    "workbook": "Headers: A1=Name | B1=Age\nData:\nA2:John | B2:25\nA3:Jane | B3:30\n... (25 rows)\n---\nSheet2:\nA1=Product | B1=Price\nData:\nA2:ProductA | B2:10.99\nA3:ProductB | B3:9.99",
+    "mustHaveCode": true,
+    "requiredPatterns": [
+      "worksheet.rows",
+      "margin.settings"
+    ],
+    "forbiddenPatterns": []
+  },
+  {
+    "id": "gen-L2-Page-Layout-009",
+    "level": 2,
+    "category": "Page Layout",
+    "prompt": "Set the page orientation to portrait for all worksheets in the workbook that have a specific keyword 'Draft' in the cell A1, and set the scale to 90% for those worksheets. For other worksheets, set the page orientation to landscape and the scale to 110%.",
+    "workbook": "Headers: A1=Draft | B1=Version\nData:\nA2:1.0 | B2=Initial\n---\nSheet2:\nA1=Final | B1=Version\nData:\nA2:2.0 | B2=Updated",
+    "mustHaveCode": true,
+    "requiredPatterns": [
+      "worksheet.cell",
+      "page.orientation"
+    ],
+    "forbiddenPatterns": []
+  },
+  {
+    "id": "gen-L2-Page-Layout-010",
+    "level": 2,
+    "category": "Page Layout",
+    "prompt": "Set the left and right margins to 1 inch for all worksheets in the workbook that have a table with a specific column 'Date', and set the header and footer margins to 0.5 inches for those worksheets. For worksheets without a table or without the 'Date' column, set the left and right margins to 0.5 inches and the header and footer margins to 0.25 inches.",
+    "workbook": "Headers: A1=Date | B1=Sales\nData:\nA2:2022-01-01 | B2:100\nA3:2022-01-02 | B3:200\n---\nSheet2:\nA1=Product | B1=Price\nData:\nA2:ProductA | B2:10.99\nA3:ProductB | B3:9.99",
+    "mustHaveCode": true,
+    "requiredPatterns": [
+      "table.columns",
+      "margin.settings"
+    ],
+    "forbiddenPatterns": []
   }
 ]
