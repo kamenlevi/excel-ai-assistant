@@ -1,52 +1,43 @@
-When filtering a column, use the `applyColumnFilter` method with the column name and filter value.
-Example: `await applyColumnFilter("Department", "Engineering");`
+To handle non-existent columns, check if the column exists before applying a filter.
+```javascript
+if (workbook.worksheets.getActiveWorksheet().getRange("Department").getColumn()!== null) {
+  await applyColumnFilter("Department", "Engineering");
+}
+```
 
-For VLOOKUP function explanations, provide a clear description of the function's parameters without including unnecessary code examples.
-Example: The VLOOKUP function looks up a value in a table and returns a value from another column.
+When adding comments, ensure the correct cell is targeted and the comment object is used.
+```javascript
+const sheet = workbook.worksheets.getActiveWorksheet();
+const cell = sheet.getRange("A1");
+const comment = cell.comments.add("This is a comment");
+await context.sync();
+```
 
-When inserting shapes, calculate the position dynamically based on the worksheet's size.
-Example: 
+For sparklines, display high and low points by setting the sparkline type and axis options.
+```javascript
+const sparklineRange = sheet.getRange("D2");
+const dataRange = sheet.getRange("B2:B10");
+sparklineRange.sparklineGroups.add(Excel.SparklineGroupType.line, dataRange, 1, 1);
+sparklineRange.sparklineGroups.getItemAt(0).axis.showRightAxis = true;
+sparklineRange.sparklineGroups.getItemAt(0).axis.axisType = Excel.SparklineAxisType.custom;
+await context.sync();
+```
+
+To dynamically position shapes, calculate the worksheet's used range and add the shape at the top-right corner.
 ```javascript
 const sheet = workbook.worksheets.getActiveWorksheet();
 const usedRange = sheet.getUsedRange();
-const shape = sheet.shapes.addShape(Excel.ShapeType.oval, usedRange.columnIndex + usedRange.columns.count - 1, 0, 50, 50);
+const shape = sheet.shapes.add(Excel.ShapeType.oval, usedRange.width + 10, 10, 50, 50);
 await context.sync();
 ```
 
-When adding comments to cells, ensure the correct cell is targeted and use the `comments.add` method.
-Example: 
+When updating comments, target the correct cell and modify the comment text.
 ```javascript
 const sheet = workbook.worksheets.getActiveWorksheet();
 const cell = sheet.getRange("A1");
-cell.comments.add("Max value in column A");
-await context.sync();
-```
-
-When updating comments, target the correct cell and use the `comments.getItem` method.
-Example: 
-```javascript
-const sheet = workbook.worksheets.getActiveWorksheet();
-const cell = sheet.getRange("A1");
-const comment = cell.comments.getItem(0);
-comment.body = `Updated comment - ${new Date().toISOString().split('T')[0]}`;
-await context.sync();
-```
-
-When copying comments, compare values correctly and use the `comments.add` method.
-Example: 
-```javascript
-const sheet = workbook.worksheets.getActiveWorksheet();
-const commentRange = sheet.getRange("A1");
-const targetRange = sheet.getRange("B2:B5");
-const comment = commentRange.comments.getItem(0);
-targetRange.load("values");
-await context.sync();
-const values = targetRange.values;
-for (let i = 0; i < values.length; i++) {
-  if (values[i][0] === commentRange.values[0][0]) {
-    const cell = sheet.getRangeByIndexes(i + 1, 1);
-    cell.comments.add(comment.body);
-  }
+const comment = cell.comments.getItemAt(0);
+if (comment) {
+  comment.text = `${comment.text} - Updated on ${new Date().toISOString().split('T')[0]}`;
+  await context.sync();
 }
-await context.sync();
 ```

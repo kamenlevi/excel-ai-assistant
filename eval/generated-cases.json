@@ -276,5 +276,109 @@
       "margin.settings"
     ],
     "forbiddenPatterns": []
+  },
+  {
+    "id": "gen-L2-charts-014",
+    "level": 2,
+    "category": "charts",
+    "prompt": "create a stacked area chart using the data in A1:C10, with a custom title and axis labels",
+    "workbook": "Headers: A1=Category | B1=Series1 | C1=Series2\nData:\nA2:CatA | B2:10 | C2:20\nA3:CatB | B3:15 | C3:30\nA4:CatC | B4:20 | C4:40\nA5:CatD | B5:25 | C5:50\nA6:CatE | B6:30 | C6:60\nA7:CatF | B7:35 | C7:70\nA8:CatG | B8:40 | C8:80\nA9:CatH | B9:45 | C9:90\nA10:CatI | B10:50 | C10:100",
+    "mustHaveCode": true,
+    "requiredPatterns": [
+      "chart.setTitle",
+      "chart.axes"
+    ],
+    "forbiddenPatterns": []
+  },
+  {
+    "id": "gen-L2-charts-015",
+    "level": 2,
+    "category": "charts",
+    "prompt": "create a combo chart with a line series and a column series using the data in A1:B10 and C1:D10 respectively",
+    "workbook": "Headers: A1=X | B1=Y\nData:\nA2:1 | B2:10\nA3:2 | B3:15\nA4:3 | B4:20\nA5:4 | B5:25\nA6:5 | B6:30\nA7:6 | B7:35\nA8:7 | B8:40\nA9:8 | B9:45\nA10:9 | B10:50\nHeaders: C1=X2 | D1=Y2\nData:\nC2:1 | D2:100\nC3:2 | D3:150\nC4:3 | D4:200\nC5:4 | D5:250\nC6:5 | D6:300\nC7:6 | D7:350\nC8:7 | D8:400\nC9:8 | D9:450\nC10:9 | D10:500",
+    "mustHaveCode": true,
+    "requiredPatterns": [
+      "chart.series",
+      "chart.type"
+    ],
+    "forbiddenPatterns": []
+  },
+  {
+    "id": "gen-L2-charts-016",
+    "level": 2,
+    "category": "charts",
+    "prompt": "create a scatter chart with a trendline using the data in A1:B10, and format the trendline to display the equation and R-squared value",
+    "workbook": "Headers: A1=X | B1=Y\nData:\nA2:1 | B2:2\nA3:2 | B3:4\nA4:3 | B4:6\nA5:4 | B5:8\nA6:5 | B6:10\nA7:6 | B7:12\nA8:7 | B8:14\nA9:8 | B9:16\nA10:9 | B10:18",
+    "mustHaveCode": true,
+    "requiredPatterns": [
+      "chart.trendline",
+      "chart.format"
+    ],
+    "forbiddenPatterns": []
+  },
+  {
+    "id": "gen-L2-charts-017",
+    "level": 2,
+    "category": "charts",
+    "prompt": "create a radar chart using the data in A1:E5, with custom axis labels and a filled area",
+    "workbook": "Headers: A1=Category | B1=Series1 | C1=Series2 | D1=Series3 | E1=Series4\nData:\nA2:CatA | B2:10 | C2:20 | D2:30 | E2:40\nA3:CatB | B3:15 | C3:30 | D3:45 | E3:60\nA4:CatC | B4:20 | C4:40 | D4:60 | E4:80\nA5:CatD | B5:25 | C5:50 | D5:75 | E5:100",
+    "mustHaveCode": true,
+    "requiredPatterns": [
+      "chart.radar",
+      "chart.area"
+    ],
+    "forbiddenPatterns": []
+  },
+  {
+    "id": "gen-L2-tables-101",
+    "level": 2,
+    "category": "tables",
+    "prompt": "merge the tables in the worksheets 'Sales' and 'Expenses' into a single table in a new worksheet named 'Summary', including a column for the worksheet name",
+    "workbook": "Sales: Headers: A1=Date | B1=Amount\nData:\nA2:2022-01-01 | B2:100\nA3:2022-01-02 | B3:200\nExpenses: Headers: A1=Date | B1=Amount\nData:\nA2:2022-01-01 | B2:50\nA3:2022-01-02 | B3:75",
+    "mustHaveCode": true,
+    "requiredPatterns": [
+      "getTable",
+      "addWorksheet"
+    ],
+    "forbiddenPatterns": []
+  },
+  {
+    "id": "gen-L2-tables-102",
+    "level": 2,
+    "category": "tables",
+    "prompt": "create a table from the data in A1:C10, then add a column with a formula that calculates the average of the values in columns B and C, and finally sort the table by this new column in descending order",
+    "workbook": "Headers: A1=X | B1=Y | C1=Z\nData:\nA2:val1 | B2:10 | C2:20\nA3:val2 | B3:30 | C3:40\nA4:val3 | B4:50 | C4:60\nA5:val4 | B5:70 | C5:80\nA6:val5 | B6:90 | C6:100\nA7:val6 | B7:110 | C7:120\nA8:val7 | B8:130 | C8:140\nA9:val8 | B9:150 | C9:160\nA10:val9 | B10:170 | C10:180",
+    "mustHaveCode": true,
+    "requiredPatterns": [
+      "addColumn",
+      "sort"
+    ],
+    "forbiddenPatterns": []
+  },
+  {
+    "id": "gen-L2-tables-103",
+    "level": 2,
+    "category": "tables",
+    "prompt": "create a table from the data in A1:E5, then apply filters to columns B and D to only show rows where the value in B is greater than 50 and the value in D is less than 100",
+    "workbook": "Headers: A1=X | B1=Y | C1=Z | D1=W | E1=V\nData:\nA2:val1 | B2:10 | C2:20 | D2:30 | E2:40\nA3:val2 | B3:60 | C3:70 | D3:80 | E3:90\nA4:val3 | B4:30 | C4:40 | D4:110 | E4:120\nA5:val4 | B5:70 | C5:80 | D5:90 | E5:100",
+    "mustHaveCode": true,
+    "requiredPatterns": [
+      "addTable",
+      "applyFilter"
+    ],
+    "forbiddenPatterns": []
+  },
+  {
+    "id": "gen-L2-tables-104",
+    "level": 2,
+    "category": "tables",
+    "prompt": "create a table from the data in A1:C10, then add a total row with formulas that calculate the sum, average, and count of the values in column B, and finally format the total row with a bold font and a background color",
+    "workbook": "Headers: A1=X | B1=Y | C1=Z\nData:\nA2:val1 | B2:10 | C2:20\nA3:val2 | B3:30 | C3:40\nA4:val3 | B4:50 | C4:60\nA5:val4 | B5:70 | C5:80\nA6:val5 | B6:90 | C6:100\nA7:val6 | B7:110 | C7:120\nA8:val7 | B8:130 | C8:140\nA9:val8 | B9:150 | C9:160\nA10:val9 | B10:170 | C10:180",
+    "mustHaveCode": true,
+    "requiredPatterns": [
+      "addTotalRow",
+      "format"
+    ],
+    "forbiddenPatterns": []
   }
 ]
