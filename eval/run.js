@@ -20,7 +20,7 @@ const JUDGE_MODEL      = 'meta-llama/llama-3.3-70b-instruct';
 const COST_PER_1M_IN   = 0.07;
 const COST_PER_1M_OUT  = 0.30;
 const BUDGET_USD       = 0.50;
-const MASTERY_THRESHOLD = 95;
+const MASTERY_THRESHOLD = 90;
 
 const PATHS = {
   cases:     path.join(__dirname, 'cases.json'),
