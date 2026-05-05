@@ -380,5 +380,57 @@
       "format"
     ],
     "forbiddenPatterns": []
+  },
+  {
+    "id": "gen-L2-Comments-007",
+    "level": 2,
+    "category": "Comments",
+    "prompt": "Add a comment to all cells in column A that have a value greater than the average of the values in column B, with the text 'Above average'",
+    "workbook": "Headers: A1=Score | B1=Weight\nData:\nA2:90 | B2:10\nA3:80 | B3:20\nA4:95 | B4:15",
+    "mustHaveCode": true,
+    "requiredPatterns": [
+      "Worksheet.getRange",
+      "Context.workbook"
+    ],
+    "forbiddenPatterns": []
+  },
+  {
+    "id": "gen-L2-Comments-008",
+    "level": 2,
+    "category": "Comments",
+    "prompt": "Delete all comments from cells in the range C1:E10 that contain the text 'Old comment' and have a formula that references a cell in column A",
+    "workbook": "Headers: A1=X | B1=Y | C1=Z\nData:\nA2:val | B2:val | C2:=A2*B2\nA3:val | B3:val | C3:=A3*B3",
+    "mustHaveCode": true,
+    "requiredPatterns": [
+      "Worksheet.getRange",
+      "Range.formula"
+    ],
+    "forbiddenPatterns": []
+  },
+  {
+    "id": "gen-L2-Comments-009",
+    "level": 2,
+    "category": "Comments",
+    "prompt": "Update the comment in all cells in the range A1:B5 to include the current value of the cell, if the comment already exists and the cell has a value greater than 0",
+    "workbook": "Headers: A1=X | B1=Y\nData:\nA2:10 | B2:20\nA3:-5 | B3:30\nA4:0 | B4:40",
+    "mustHaveCode": true,
+    "requiredPatterns": [
+      "Worksheet.getRange",
+      "Range.value"
+    ],
+    "forbiddenPatterns": []
+  },
+  {
+    "id": "gen-L2-Comments-010",
+    "level": 2,
+    "category": "Comments",
+    "prompt": "Copy the comment from the cell with the maximum value in column A to all cells in the range C1:C10 that have the same value as the cell with the minimum value in column B",
+    "workbook": "Headers: A1=X | B1=Y | C1=Z\nData:\nA2:90 | B2:10 | C2:val\nA3:80 | B3:20 | C3:val\nA4:95 | B4:15 | C4:val",
+    "mustHaveCode": true,
+    "requiredPatterns": [
+      "Worksheet.getRange",
+      "Math.max"
+    ],
+    "forbiddenPatterns": []
   }
 ]

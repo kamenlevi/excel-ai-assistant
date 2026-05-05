@@ -1,43 +1,57 @@
-To handle non-existent columns, check if the column exists before applying a filter.
+To improve handling of conditional formatting, ensure correct load and sync order, and use best practices such as error handling and default font colors.
 ```javascript
-if (workbook.worksheets.getActiveWorksheet().getRange("Department").getColumn()!== null) {
-  await applyColumnFilter("Department", "Engineering");
+// Load and sync in the correct order
+used.load("values");
+await context.sync();
+// Check for potential errors
+if (col === -1) throw new Error("Column not found.");
+// Use default font color
+sheet.getRangeByIndexes(i, col, 1, 1).format.font.color = null;
+```
+
+For descriptive functions like VLOOKUP, provide clear explanations and relevant, concise code examples.
+```javascript
+// Clearly describe the function
+VLOOKUP looks up a value in a table and returns a value from another column.
+// Provide a concise example
+const resultRange = sheet.getRange("C2");
+resultRange.formulas = [[`=VLOOKUP("Alice", A1:B2, 2, FALSE)`]];
+```
+
+When filtering data, use actual Office JS APIs to interact with the worksheet.
+```javascript
+// Filter data using Office JS APIs
+const filter = sheet.getRange("A1").autoFilter;
+filter.applyFilters([{"columnId": 0, "filterCriteria": {"filterType": "custom", "specificFilter": "Engineering"}}]);
+```
+
+For sparklines, ensure the correct type is used to display high and low points.
+```javascript
+// Add a sparkline to show high and low points
+sparklineRange.sparklines.add(Excel.SparklineType.column, dataRange, true, false, false);
+```
+
+When inserting shapes, accurately position them and consider best practices.
+```javascript
+// Insert a circle shape in the top-right corner
+const shape = sheet.shapes.addShape(Excel.ShapeType.oval, sheet.getUsedRange().width, 0, 50, 50);
+```
+
+For updating comments, ensure the correct cell is targeted and use efficient methods.
+```javascript
+// Update the comment in the correct cell
+const cell = sheet.getRange("A1");
+cell.load("comment, values");
+await context.sync();
+if (cell.comment) {
+  cell.comment.text = cell.comment.text + " - " + new Date().toISOString().split('T')[0];
 }
 ```
 
-When adding comments, ensure the correct cell is targeted and the comment object is used.
+When copying comments, compare values in the correct columns.
 ```javascript
-const sheet = workbook.worksheets.getActiveWorksheet();
-const cell = sheet.getRange("A1");
-const comment = cell.comments.add("This is a comment");
-await context.sync();
-```
-
-For sparklines, display high and low points by setting the sparkline type and axis options.
-```javascript
-const sparklineRange = sheet.getRange("D2");
-const dataRange = sheet.getRange("B2:B10");
-sparklineRange.sparklineGroups.add(Excel.SparklineGroupType.line, dataRange, 1, 1);
-sparklineRange.sparklineGroups.getItemAt(0).axis.showRightAxis = true;
-sparklineRange.sparklineGroups.getItemAt(0).axis.axisType = Excel.SparklineAxisType.custom;
-await context.sync();
-```
-
-To dynamically position shapes, calculate the worksheet's used range and add the shape at the top-right corner.
-```javascript
-const sheet = workbook.worksheets.getActiveWorksheet();
-const usedRange = sheet.getUsedRange();
-const shape = sheet.shapes.add(Excel.ShapeType.oval, usedRange.width + 10, 10, 50, 50);
-await context.sync();
-```
-
-When updating comments, target the correct cell and modify the comment text.
-```javascript
-const sheet = workbook.worksheets.getActiveWorksheet();
-const cell = sheet.getRange("A1");
-const comment = cell.comments.getItemAt(0);
-if (comment) {
-  comment.text = `${comment.text} - Updated on ${new Date().toISOString().split('T')[0]}`;
-  await context.sync();
-}
-```
+// Copy the comment to cells with matching values in column A
+const commentRange = sheet.getRange("A1");
+const targetRange = sheet.getRange("A2:A5");
+targetRange.load("values");
+await context
