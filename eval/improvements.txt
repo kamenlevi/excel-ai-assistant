@@ -1,64 +1,77 @@
-When describing Excel functions, provide a concrete example or Excel-specific context.
-Example: "The VLOOKUP function looks up a value in a table and returns a corresponding value from another column. For instance, =VLOOKUP(A2, B:C, 2, FALSE) looks up the value in cell A2 in the first column of the range B:C and returns the corresponding value in the second column."
-
-When filtering data, use Office JS APIs to interact with the worksheet.
-Example: 
+To handle entire column ranges, use dynamic last row detection:
 ```javascript
-const sheet = workbook.worksheets.getActiveWorksheet();
-const table = sheet.tables.getItem("Table1");
-table.columns.getItem("Department").filter.apply({
-  filterOn: Excel.FilterOn.custom,
-  customFormula: "=Department=\"Engineering\""
-});
-await context.sync();
+const lastRow = sheet.getRange("B" + sheet.getLastRow()).getAddress();
+sheet.getRange("B10").formulas = [["=SUM(B:B)"]];
 ```
 
-When inserting shapes, dynamically determine the position based on the worksheet's dimensions.
+For conditional formatting, load and sync in the correct order and handle errors:
 ```javascript
-const sheet = workbook.worksheets.getActiveWorksheet();
-const usedRange = sheet.getUsedRange();
-usedRange.load("address");
-await context.sync();
-const shape = sheet.shapes.addShape(Excel.ShapeType.oval, usedRange.address.width, 0, 50, 50);
-await context.sync();
-```
-
-For page layout settings, generate code that fully addresses the request.
-```javascript
-const sheet = workbook.worksheets.getActiveWorksheet();
-sheet.pageSetup.headerMargin = 0.25;
-sheet.pageSetup.footerMargin = 0.25;
-sheet.pageSetup.centerHeader = true;
-sheet.pageSetup.centerFooter = true;
-await context.sync();
-```
-
-When updating comments, use the correct range and best practices for handling comments.
-```javascript
-const sheet = workbook.worksheets.getActiveWorksheet();
-const cell = sheet.getRange("A1");
-cell.load("comment");
-await context.sync();
-const comment = cell.comment;
-const currentDate = new Date().toISOString().split('T')[0];
-if (comment) {
-  comment.text = comment.text + " - " + currentDate;
-} else {
-  cell.addComment(currentDate);
+try {
+  const used = sheet.getUsedRange();
+  used.load("values");
+  await context.sync();
+  // ...
+} catch (error) {
+  console.error(error);
 }
-await context.sync();
 ```
 
-When copying comments, use the correct range and comparison.
+To filter a column, use the `autoFilter` API:
 ```javascript
-const sheet = workbook.worksheets.getActiveWorksheet();
-const commentRange = sheet.getRange("A1");
-commentRange.load("comment");
+const filter = sheet.getRange("Department").autoFilter;
+filter.apply({ criteria: "Engineering" });
+```
+
+For adding total rows to tables, ensure the table exists and is loaded:
+```javascript
+const table = sheet.tables.getItem("Table1");
+if (table) {
+  table.totalRow.showTotals(true);
+}
+```
+
+When adding shapes, specify the correct shape type and position:
+```javascript
+const shape = sheet.shapes.addShape(Excel.ShapeType.rectangle, "A1");
+shape.width = 100;
+shape.height = 50;
+```
+
+To set page layout for multiple worksheets, iterate through worksheets and apply settings:
+```javascript
+const worksheets = workbook.worksheets;
+worksheets.load("items");
 await context.sync();
-const comment = commentRange.comment;
-const targetRange = sheet.getRange("B2:B5");
-targetRange.load("values");
-await context.sync();
-const values = targetRange.values;
-const valueA1 = sheet.getRange("A1").values[0][0];
-for (let i =
+worksheets.items.forEach((sheet) => {
+  if (sheet.getRange("A1").values[0][0] === "Draft") {
+    sheet.pageSetup.orientation = Excel.PageOrientation.portrait;
+  } else {
+    sheet.pageSetup.orientation = Excel.PageOrientation.landscape;
+  }
+});
+```
+
+For updating comments, access the comment property directly:
+```javascript
+const cell = sheet.getRange("A1");
+if (cell.comment) {
+  cell.comment.text = "New comment";
+}
+```
+
+To create radar charts with custom axis labels, use the `chart.axes` API:
+```javascript
+const chart = sheet.charts.add(Excel.ChartType.radarWithMarkersFilled, dataRange);
+chart.axes.categoryAxis.customAxisLabels = ["Label1", "Label2"];
+```
+
+When copying comments, ensure the source and target ranges are correct:
+```javascript
+const sourceComment = sheet.getRange("A1").comment;
+const targetRange = sheet.getRange("C1:C10");
+targetRange.comment = sourceComment;
+```
+
+For sparklines, calculate the moving average or standard deviation correctly:
+```javascript
+const data = sheet.getRange("A2
