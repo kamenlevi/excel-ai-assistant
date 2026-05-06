@@ -432,5 +432,53 @@
       "Math.max"
     ],
     "forbiddenPatterns": []
+  },
+  {
+    "id": "gen-L2-Sparklines-011",
+    "level": 2,
+    "category": "Sparklines",
+    "prompt": "Create a sparkline in cell C2 to show the trend of values in cells A2:A20, but only for the top 5 values in column B",
+    "workbook": "Headers: A1=Sales | B1=Region\nData:\nA2:100 | B2:North\nA3:200 | B3:South\nA4:50 | B4:East\nA5:300 | B5:West\nA6:150 | B6:North\nA7:250 | B7:South\nA8:75 | B8:East\nA9:400 | B9:West\nA10:200 | B10:North\nA11:120 | B11:South\nA12:180 | B12:East\nA13:320 | B13:West\nA14:250 | B14:North\nA15:300 | B15:South\nA16:100 | B16:East\nA17:400 | B17:West\nA18:150 | B18:North\nA19:200 | B19:South\nA20:50 | B20:East",
+    "mustHaveCode": true,
+    "requiredPatterns": [
+      "Office.context.document"
+    ],
+    "forbiddenPatterns": []
+  },
+  {
+    "id": "gen-L2-Sparklines-012",
+    "level": 2,
+    "category": "Sparklines",
+    "prompt": "Add a sparkline to cell D2 to display the moving average of the data in cells A2:A15, with a 3-period window",
+    "workbook": "Headers: A1=Values | B1=Moving Average\nData:\nA2:10 | B2=\nA3:20 | B3=\nA4:30 | B4=\nA5:40 | B5=\nA6:50 | B6=\nA7:60 | B7=\nA8:70 | B8=\nA9:80 | B9=\nA10:90 | B10=\nA11:100 | B11=\nA12:110 | B12=\nA13:120 | B13=\nA14:130 | B14=\nA15:140 | B15=",
+    "mustHaveCode": true,
+    "requiredPatterns": [
+      "context.workbook"
+    ],
+    "forbiddenPatterns": []
+  },
+  {
+    "id": "gen-L2-Sparklines-013",
+    "level": 2,
+    "category": "Sparklines",
+    "prompt": "Create a sparkline in cell E2 to show the standard deviation of the values in cells A2:A10, grouped by the categories in cells B2:B10",
+    "workbook": "Headers: A1=Values | B1=Category\nData:\nA2:10 | B2=A\nA3:20 | B3=A\nA4:30 | B4=B\nA5:40 | B5=B\nA6:50 | B6=C\nA7:60 | B7=C\nA8:70 | B8=A\nA9:80 | B9=B\nA10:90 | B10=C",
+    "mustHaveCode": true,
+    "requiredPatterns": [
+      "Excel.Range"
+    ],
+    "forbiddenPatterns": []
+  },
+  {
+    "id": "gen-L2-Sparklines-014",
+    "level": 2,
+    "category": "Sparklines",
+    "prompt": "Add a sparkline to cell F2 to display the cumulative sum of the values in cells A2:A20, with a reset point at every 5th row",
+    "workbook": "Headers: A1=Values | B1=Cumulative Sum\nData:\nA2:10 | B2=\nA3:20 | B3=\nA4:30 | B4=\nA5:40 | B5=\nA6:50 | B6=\nA7:60 | B7=\nA8:70 | B8=\nA9:80 | B9=\nA10:90 | B10=\nA11:100 | B11=\nA12:110 | B12=\nA13:120 | B13=\nA14:130 | B14=\nA15:140 | B15=\nA16:150 | B16=\nA17:160 | B17=\nA18:170 | B18=\nA19:180 | B19=\nA20:190 | B20=",
+    "mustHaveCode": true,
+    "requiredPatterns": [
+      "context.sync"
+    ],
+    "forbiddenPatterns": []
   }
 ]
