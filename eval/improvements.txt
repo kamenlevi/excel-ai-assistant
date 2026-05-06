@@ -1,77 +1,64 @@
-To handle entire column ranges, use dynamic last row detection:
+To handle conditional formatting, use built-in formatting methods and avoid incorrect indexing.
 ```javascript
-const lastRow = sheet.getRange("B" + sheet.getLastRow()).getAddress();
-sheet.getRange("B10").formulas = [["=SUM(B:B)"]];
-```
-
-For conditional formatting, load and sync in the correct order and handle errors:
-```javascript
-try {
-  const used = sheet.getUsedRange();
-  used.load("values");
-  await context.sync();
-  // ...
-} catch (error) {
-  console.error(error);
-}
-```
-
-To filter a column, use the `autoFilter` API:
-```javascript
-const filter = sheet.getRange("Department").autoFilter;
-filter.apply({ criteria: "Engineering" });
-```
-
-For adding total rows to tables, ensure the table exists and is loaded:
-```javascript
-const table = sheet.tables.getItem("Table1");
-if (table) {
-  table.totalRow.showTotals(true);
-}
-```
-
-When adding shapes, specify the correct shape type and position:
-```javascript
-const shape = sheet.shapes.addShape(Excel.ShapeType.rectangle, "A1");
-shape.width = 100;
-shape.height = 50;
-```
-
-To set page layout for multiple worksheets, iterate through worksheets and apply settings:
-```javascript
-const worksheets = workbook.worksheets;
-worksheets.load("items");
+const sheet = workbook.worksheets.getActiveWorksheet();
+const range = sheet.getRange("B:B");
+range.format.conditions.add(Excel.FormatConditionType.cellValue, Excel.FormatConditionOperator.lessThan, 50);
+range.format.conditions.getItemAt(0).font.color = "#FF0000";
 await context.sync();
-worksheets.items.forEach((sheet) => {
-  if (sheet.getRange("A1").values[0][0] === "Draft") {
-    sheet.pageSetup.orientation = Excel.PageOrientation.portrait;
-  } else {
-    sheet.pageSetup.orientation = Excel.PageOrientation.landscape;
-  }
-});
 ```
 
-For updating comments, access the comment property directly:
+For VLOOKUP function descriptions, provide clear and concise responses without unnecessary code.
 ```javascript
+// VLOOKUP function description
+const description = "The VLOOKUP function looks up a value in a table and returns a value from another column.";
+```
+
+When filtering data, utilize Office JS APIs to achieve the desired result.
+```javascript
+const sheet = workbook.worksheets.getActiveWorksheet();
+const table = sheet.tables.getItem("Table1");
+table.columns.getItem("Department").filter.apply({ criteria1: "Engineering" });
+await context.sync();
+```
+
+To set page margins, use the pageSetup property of the worksheet object.
+```javascript
+const sheet = workbook.worksheets.getActiveWorksheet();
+sheet.pageSetup.topMargin = 1;
+await context.sync();
+```
+
+For shape insertion, specify the correct position and size.
+```javascript
+const sheet = workbook.worksheets.getActiveWorksheet();
+const shape = sheet.shapes.addShape(Excel.ShapeType.oval, sheet.getUsedRange().width - 50, 10, 50, 50);
+await context.sync();
+```
+
+When updating comments, ensure the correct cell is targeted and use efficient methods.
+```javascript
+const sheet = workbook.worksheets.getActiveWorksheet();
 const cell = sheet.getRange("A1");
+cell.load("comment");
+await context.sync();
 if (cell.comment) {
-  cell.comment.text = "New comment";
+  cell.comment.text = cell.comment.text + " - " + new Date().toLocaleDateString();
+} else {
+  cell.comment = { text: new Date().toLocaleDateString() };
 }
+await context.sync();
 ```
 
-To create radar charts with custom axis labels, use the `chart.axes` API:
+To copy comments, compare values correctly and set comments on the target cells.
 ```javascript
-const chart = sheet.charts.add(Excel.ChartType.radarWithMarkersFilled, dataRange);
-chart.axes.categoryAxis.customAxisLabels = ["Label1", "Label2"];
-```
-
-When copying comments, ensure the source and target ranges are correct:
-```javascript
-const sourceComment = sheet.getRange("A1").comment;
-const targetRange = sheet.getRange("C1:C10");
-targetRange.comment = sourceComment;
-```
-
-For sparklines, calculate the moving average or standard deviation correctly:
-```javascript
-const data = sheet.getRange("A2
+const sheet = workbook.worksheets.getActiveWorksheet();
+const commentRange = sheet.getRange("A1");
+const targetRange = sheet.getRange("B2:B5");
+commentRange.load("comment");
+targetRange.load("values");
+await context.sync();
+const comment = commentRange.comment;
+const values = targetRange.values;
+for (let i = 0; i < values.length; i++) {
+  if (values[i][0] === sheet.getRange("A1").values[0][0]) {
+    const

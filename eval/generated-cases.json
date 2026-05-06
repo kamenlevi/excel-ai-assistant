@@ -480,5 +480,53 @@
       "context.sync"
     ],
     "forbiddenPatterns": []
+  },
+  {
+    "id": "gen-L2-named-ranges-001",
+    "level": 2,
+    "category": "named ranges",
+    "prompt": "Create a named range called QuarterlySales that covers the range C2:E10, but only if the values in column A are greater than 1000",
+    "workbook": "Headers: A1=Region | B1=Sales | C1=Quarter\nData:\nA2:1200 | B2:500 | C2:Q1\nA3:800 | B3:300 | C3:Q2\nA4:1500 | B4:700 | C4:Q3",
+    "mustHaveCode": true,
+    "requiredPatterns": [
+      "Range.prototype.getAddress"
+    ],
+    "forbiddenPatterns": []
+  },
+  {
+    "id": "gen-L2-named-ranges-002",
+    "level": 2,
+    "category": "named ranges",
+    "prompt": "Create a named range called TopPerformers that covers the top 5 rows of the range A1:B10, sorted by column B in descending order",
+    "workbook": "Headers: A1=Name | B1=Score\nData:\nA2:John | B2:90\nA3:Jane | B3:80\nA4:Bob | B4:95\nA5:Alice | B5:85\nA6:Mike | B6:92",
+    "mustHaveCode": true,
+    "requiredPatterns": [
+      "Worksheet.prototype.getRange"
+    ],
+    "forbiddenPatterns": []
+  },
+  {
+    "id": "gen-L2-named-ranges-003",
+    "level": 2,
+    "category": "named ranges",
+    "prompt": "Create a named range called BudgetSummary that covers the range D2:E5, but only if the worksheet contains a header row with the exact phrase 'Budget Summary'",
+    "workbook": "Headers: A1=Category | B1=Subcategory | C1=Description | D1=Budget Summary | E1=Actual\nData:\nA2:Salaries | B2:Management | C2:CEO | D2:10000 | E2:9000\nA3:Salaries | B3:Management | C3:CTO | D3:8000 | E3:7000",
+    "mustHaveCode": true,
+    "requiredPatterns": [
+      "Worksheet.prototype.getRange"
+    ],
+    "forbiddenPatterns": []
+  },
+  {
+    "id": "gen-L2-named-ranges-004",
+    "level": 2,
+    "category": "named ranges",
+    "prompt": "Create a named range called DynamicData that covers the range A1:B10, but dynamically updates to include new data added to the bottom of the range",
+    "workbook": "Headers: A1=Date | B1=Value\nData:\nA2:2022-01-01 | B2:10\nA3:2022-01-02 | B3:20\nA4:2022-01-03 | B4:30",
+    "mustHaveCode": true,
+    "requiredPatterns": [
+      "Table.prototype.addRows"
+    ],
+    "forbiddenPatterns": []
   }
 ]
