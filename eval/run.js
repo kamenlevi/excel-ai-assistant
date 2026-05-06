@@ -5,7 +5,9 @@
  * - Scores AI responses 0–100 using an LLM judge
  * - Tracks per-category levels in progress.json
  * - When a category averages >= 95, auto-generates harder cases for it
- * - When ALL categories hit 95, also generates cases for brand-new Excel domains
+ * - When overall avg >= 95, also generates a brand-new Excel domain category
+ * - When overall avg >= 90, generates a level-2 category (easier threshold)
+ * - When a category is stuck on the same level for too long, generates easier cases
  * - Hard budget limit: $0.50 per session
  */
 require('dotenv').config({ path: require('path').join(__dirname, '../.env') });
@@ -20,7 +22,10 @@ const JUDGE_MODEL      = 'meta-llama/llama-3.3-70b-instruct';
 const COST_PER_1M_IN   = 0.07;
 const COST_PER_1M_OUT  = 0.30;
 const BUDGET_USD       = 0.50;
-const MASTERY_THRESHOLD = 90;
+const MASTERY_THRESHOLD      = 95;
+const NEW_CAT_THRESHOLD      = 95;  // overall avg to spawn a brand-new category
+const NEW_CAT_L2_THRESHOLD   = 90;  // overall avg to spawn a level-2-style category
+const STUCK_RUNS_THRESHOLD   = 3;   // runs without leveling up before we ease the cases
 
 const PATHS = {
   cases:     path.join(__dirname, 'cases.json'),
@@ -363,6 +368,55 @@ Return ONLY a valid JSON array, no explanation. Each object must have:
   }
 }
 
+// ── Generate easier replacement cases for a stuck category ───────────────────
+async function generateEasierCases(category, currentLevel, existingCases) {
+  const stuckCases = existingCases
+    .filter(c => c.category === category && c.level === currentLevel)
+    .map(c => `  - [${c.id}] "${c.prompt}"`)
+    .join('\n');
+
+  const prompt = `You generate test cases for an Excel AI assistant evaluation suite.
+
+The AI has been STUCK on level ${currentLevel} of the "${category}" category across multiple runs.
+These are the current cases it keeps failing:
+${stuckCases}
+
+Generate exactly 3 NEW test cases at level ${currentLevel} for "${category}" that are EASIER and more approachable. They must:
+1. Test the same core category skill but with simpler scenarios
+2. Avoid the tricky edge-cases the AI is clearly struggling with
+3. Be solvable via Office JavaScript API (no VBA, no pivot tables)
+4. Include simple, realistic workbook data
+
+Return ONLY a valid JSON array, no explanation. Each object must have:
+{
+  "id": "gen-L${currentLevel}-${category.replace(/\s+/g, '-')}-easy-NNN",
+  "level": ${currentLevel},
+  "category": "${category}",
+  "prompt": "...",
+  "workbook": "Headers: A1=X | B1=Y\\nData:\\nA2:val | B2:val",
+  "mustHaveCode": true,
+  "requiredPatterns": ["pattern1"],
+  "forbiddenPatterns": []
+}`;
+
+  console.log(`\n  Generating easier cases for stuck category "${category}" (level ${currentLevel})...`);
+  const raw = await callLLM([
+    { role: 'system', content: 'You generate JSON test cases. Return only valid JSON arrays.' },
+    { role: 'user',   content: prompt },
+  ], MODEL, 2048);
+
+  try {
+    const jsonMatch = raw.match(/\[[\s\S]*\]/);
+    if (!jsonMatch) throw new Error('No JSON array found in response');
+    const newCases = JSON.parse(jsonMatch[0]);
+    console.log(`  Generated ${newCases.length} easier cases for "${category}"`);
+    return newCases;
+  } catch (err) {
+    console.warn(`  Failed to parse easier cases for "${category}": ${err.message}`);
+    return [];
+  }
+}
+
 // ── Write markdown summary to eval/RESULTS.md ────────────────────────────────
 function writeMarkdownSummary(results, prev, timestamp) {
   const prevById = {};
@@ -536,17 +590,18 @@ async function main() {
   });
 
   for (const { cat, avg, currentLevel, mastered } of categoryStatus) {
-    if (!progress[cat]) progress[cat] = { level: 1, masteredAt: null };
-    progress[cat].lastScore = Math.round(avg * 10) / 10;
-    progress[cat].lastRun   = timestamp;
+    if (!progress[cat]) progress[cat] = { level: 1, masteredAt: null, runsAtLevel: 0 };
+    progress[cat].lastScore  = Math.round(avg * 10) / 10;
+    progress[cat].lastRun    = timestamp;
 
     if (mastered) {
       console.log(`✓ "${cat}" mastered at level ${currentLevel} (avg ${avg.toFixed(1)}) — generating level ${currentLevel + 1} cases`);
       try {
         const newCases = await generateHarderCases(cat, currentLevel, allCases, categoryStatus);
         newCasesGenerated = [...newCasesGenerated, ...newCases];
-        progress[cat].level      = currentLevel + 1;
-        progress[cat].masteredAt = timestamp;
+        progress[cat].level       = currentLevel + 1;
+        progress[cat].masteredAt  = timestamp;
+        progress[cat].runsAtLevel = 0;
       } catch (err) {
         if (err.message.startsWith('BUDGET_EXCEEDED')) {
           console.log('Budget hit during generation — skipping remaining generations.');
@@ -554,14 +609,31 @@ async function main() {
         }
         console.warn(`Generation failed for "${cat}": ${err.message}`);
       }
+    } else {
+      // Track how many consecutive runs this category has been stuck on the same level
+      progress[cat].runsAtLevel = (progress[cat].runsAtLevel ?? 0) + 1;
+      if (progress[cat].runsAtLevel >= STUCK_RUNS_THRESHOLD) {
+        console.log(`⚠ "${cat}" stuck at level ${currentLevel} for ${progress[cat].runsAtLevel} runs (avg ${avg.toFixed(1)}) — generating easier cases`);
+        try {
+          const easierCases = await generateEasierCases(cat, currentLevel, allCases);
+          newCasesGenerated = [...newCasesGenerated, ...easierCases];
+          progress[cat].runsAtLevel = 0;
+        } catch (err) {
+          if (err.message.startsWith('BUDGET_EXCEEDED')) {
+            console.log('Budget hit during easier case generation — skipping.');
+            break;
+          }
+          console.warn(`Easier case generation failed for "${cat}": ${err.message}`);
+        }
+      }
     }
   }
 
-  // ── Auto-generate a new category when overall avg > 90 ─────────────────────
+  // ── Auto-generate a new category based on overall avg thresholds ────────────
   const overallAvg = results.reduce((s, r) => s + r.score, 0) / results.length;
   const existingCategories = Object.keys(byCategory);
-  if (overallAvg >= 90) {
-    console.log(`\n📂 Overall avg ${overallAvg.toFixed(1)} >= 90 — generating a new category...`);
+  if (overallAvg >= NEW_CAT_THRESHOLD) {
+    console.log(`\n📂 Overall avg ${overallAvg.toFixed(1)} >= ${NEW_CAT_THRESHOLD} — generating a new category...`);
     try {
       const newCat = await generateNewCategory(existingCategories);
       if (newCat) {
@@ -570,6 +642,24 @@ async function main() {
           progress[newCat.category] = { level: 1, masteredAt: null };
         }
         console.log(`  Added new category: "${newCat.category}" (${newCat.cases.length} cases)`);
+      }
+    } catch (err) {
+      if (err.message.startsWith('BUDGET_EXCEEDED')) {
+        console.log('Budget hit — skipping new category generation.');
+      } else {
+        console.warn(`New category generation failed: ${err.message}`);
+      }
+    }
+  } else if (overallAvg >= NEW_CAT_L2_THRESHOLD) {
+    console.log(`\n📂 Overall avg ${overallAvg.toFixed(1)} >= ${NEW_CAT_L2_THRESHOLD} — generating a level-2 category...`);
+    try {
+      const newCat = await generateNewCategory(existingCategories);
+      if (newCat) {
+        newCasesGenerated = [...newCasesGenerated, ...newCat.cases];
+        if (!progress[newCat.category]) {
+          progress[newCat.category] = { level: 1, masteredAt: null, runsAtLevel: 0 };
+        }
+        console.log(`  Added new category (L2 threshold): "${newCat.category}" (${newCat.cases.length} cases)`);
       }
     } catch (err) {
       if (err.message.startsWith('BUDGET_EXCEEDED')) {
