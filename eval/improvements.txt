@@ -1,61 +1,10 @@
-To correctly highlight cells in the Score column, use the getRangeByIndexes method with the correct column index.
-```javascript
-const scoreColumnIndex = 1; // assuming Score column is in column B
-sheet.getRangeByIndexes(i + 1, scoreColumnIndex, 1, 1).format.fill.color = "FF0000";
-```
-
-To freeze the top row, use the freezePanes method with the correct range.
-```javascript
-sheet.freezePanes("A2");
-```
-
-When filtering data, use Office JS APIs to filter the range.
-```javascript
-const filter = sheet.getRange("Department:Department").autoFilter;
-filter.apply({ criteria: "Engineering" });
-```
-
-To insert a shape in the top-right corner, calculate the correct position.
-```javascript
-const shape = sheet.shapes.addShape(Excel.ShapeType.oval, sheet.getUsedRange().width - 50, 0, 50, 50);
-```
-
-To set margins for worksheets with more than 10 rows, use a conditional statement.
-```javascript
-if (sheet.getUsedRange().rowCount > 10) {
-  sheet.pageSetup.leftMargin = 0.5;
-  sheet.pageSetup.rightMargin = 0.5;
-}
-```
-
-When adding comments, ensure the correct cell is targeted.
-```javascript
-const cell = sheet.getRange(`A${maxRowIndex}`);
-cell.comments.add(`Max value in column A`);
-```
-
-To update existing comments, check if the comment already exists.
-```javascript
-const cell = sheet.getRange("A1");
-if (cell.comments.items.length > 0) {
-  const comment = cell.comments.items[0];
-  comment.text = `Max value in column A - ${new Date().toLocaleDateString()}`;
-}
-```
-
-When copying comments, use the correct range and value comparison.
-```javascript
-const targetRange = sheet.getRange("B2:B5");
-targetRange.load("values");
-await context.sync();
-const values = targetRange.values;
-for (let i = 0; i < values.length; i++) {
-  if (values[i][0] === sheet.getRange("A1").value) {
-    targetRange.getCell(i, 0).comments.add(comment.text);
-  }
-}
-```
-
-To create sparklines, use the correct data range and filtering.
-```javascript
-const top5Values = rows.sort((a, b) => b[1] - a[1]).slice(0, 5).map(r => r[
+To handle conditional formatting, use `sheet.getRangeByIndexes(i, col, 1, 1).format.fill.color` for cell-level formatting.
+For filtering, utilize `table.columns.getItem("Department").filter` instead of throwing errors.
+When updating comments, use `cell.comment` instead of modifying `cell.values`.
+To copy comments, compare values using `sheet.getRange("A1").values[0][0]` and assign comments with `cell.comment = comment`.
+For table creation, use `table.columns.add` and `formulaRange.formulas` with a single formula assignment.
+To sort tables, apply `table.getRange().sort` with the correct key and ascending order.
+For sparklines, calculate moving averages or cumulative sums using array formulas or loops.
+To create named ranges, use `workbook.names.add` with a sorted range address. 
+Use `Excel.SparklinePointType` and `Excel.SparklineAxisType` for sparkline customization.
+Utilize `await context.sync()` after each API call for synchronization.
