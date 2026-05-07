@@ -1,10 +1,64 @@
-To handle conditional formatting, use `sheet.getRangeByIndexes(i, col, 1, 1).format.fill.color` for cell-level formatting.
-For filtering, utilize `table.columns.getItem("Department").filter` instead of throwing errors.
-When updating comments, use `cell.comment` instead of modifying `cell.values`.
-To copy comments, compare values using `sheet.getRange("A1").values[0][0]` and assign comments with `cell.comment = comment`.
-For table creation, use `table.columns.add` and `formulaRange.formulas` with a single formula assignment.
-To sort tables, apply `table.getRange().sort` with the correct key and ascending order.
-For sparklines, calculate moving averages or cumulative sums using array formulas or loops.
-To create named ranges, use `workbook.names.add` with a sorted range address. 
-Use `Excel.SparklinePointType` and `Excel.SparklineAxisType` for sparkline customization.
-Utilize `await context.sync()` after each API call for synchronization.
+When copying data, ensure the destination range matches the source range's dimensions.
+```javascript
+const src = sheet.getRange("A:B");
+const dst = sheet.getRange("D1").getResizedRange(src.rowCount, src.columnCount);
+dst.copyFrom(src, Excel.RangeCopyType.all, false, false);
+```
+
+Before clearing hyperlinks, verify the cell contains a hyperlink.
+```javascript
+const cell = sheet.getRange("A1");
+cell.load("hyperlinks");
+await context.sync();
+if (cell.hyperlinks.items.length > 0) {
+  cell.hyperlinks.clear();
+}
+```
+
+To position a shape in the top-right corner, use the worksheet's used range.
+```javascript
+const usedRange = sheet.getUsedRange();
+const shape = sheet.shapes.add(Excel.ShapeType.oval, usedRange.width + 10, 10, 50, 50);
+```
+
+When finding the cell with the highest value, avoid off-by-one errors.
+```javascript
+const maxRowIndex = rows.indexOf(maxRow);
+const cell = sheet.getRange(`A${maxRowIndex + 1}`);
+```
+
+Update comments in the correct cell and check for existing comments.
+```javascript
+const cell = sheet.getRange("A1");
+cell.load("comments");
+await context.sync();
+if (cell.comments.items.length > 0) {
+  cell.comments.items[0].text = "Max value in column A - " + new Date().toLocaleDateString();
+}
+```
+
+For sparklines, filter data based on the correct column.
+```javascript
+const top5 = rows.sort((a, b) => b[1] - a[1]).slice(0, 5);
+const top5Values = top5.map(r => r[0]);
+```
+
+Calculate moving averages for sparklines.
+```javascript
+const dataRange = sheet.getRange("A2:A15");
+const values = dataRange.values;
+const movingAverages = [];
+for (let i = 0; i < values.length; i++) {
+  if (i < 2) {
+    movingAverages.push(null);
+  } else {
+    movingAverages.push((values[i] + values[i-1] + values[i-2]) / 3);
+  }
+}
+const sparklineRange = sheet.getRange("D2");
+sparklineRange.sparklines.add(Excel.SparklineType.line, movingAverages);
+```
+
+Calculate cumulative sums for sparklines.
+```javascript
+const dataRange = sheet.getRange("A2
