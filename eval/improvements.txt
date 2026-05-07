@@ -1,64 +1,61 @@
-To handle conditional formatting, use built-in formatting methods and avoid incorrect indexing.
+To correctly highlight cells in the Score column, use the getRangeByIndexes method with the correct column index.
 ```javascript
-const sheet = workbook.worksheets.getActiveWorksheet();
-const range = sheet.getRange("B:B");
-range.format.conditions.add(Excel.FormatConditionType.cellValue, Excel.FormatConditionOperator.lessThan, 50);
-range.format.conditions.getItemAt(0).font.color = "#FF0000";
-await context.sync();
+const scoreColumnIndex = 1; // assuming Score column is in column B
+sheet.getRangeByIndexes(i + 1, scoreColumnIndex, 1, 1).format.fill.color = "FF0000";
 ```
 
-For VLOOKUP function descriptions, provide clear and concise responses without unnecessary code.
+To freeze the top row, use the freezePanes method with the correct range.
 ```javascript
-// VLOOKUP function description
-const description = "The VLOOKUP function looks up a value in a table and returns a value from another column.";
+sheet.freezePanes("A2");
 ```
 
-When filtering data, utilize Office JS APIs to achieve the desired result.
+When filtering data, use Office JS APIs to filter the range.
 ```javascript
-const sheet = workbook.worksheets.getActiveWorksheet();
-const table = sheet.tables.getItem("Table1");
-table.columns.getItem("Department").filter.apply({ criteria1: "Engineering" });
-await context.sync();
+const filter = sheet.getRange("Department:Department").autoFilter;
+filter.apply({ criteria: "Engineering" });
 ```
 
-To set page margins, use the pageSetup property of the worksheet object.
+To insert a shape in the top-right corner, calculate the correct position.
 ```javascript
-const sheet = workbook.worksheets.getActiveWorksheet();
-sheet.pageSetup.topMargin = 1;
-await context.sync();
+const shape = sheet.shapes.addShape(Excel.ShapeType.oval, sheet.getUsedRange().width - 50, 0, 50, 50);
 ```
 
-For shape insertion, specify the correct position and size.
+To set margins for worksheets with more than 10 rows, use a conditional statement.
 ```javascript
-const sheet = workbook.worksheets.getActiveWorksheet();
-const shape = sheet.shapes.addShape(Excel.ShapeType.oval, sheet.getUsedRange().width - 50, 10, 50, 50);
-await context.sync();
-```
-
-When updating comments, ensure the correct cell is targeted and use efficient methods.
-```javascript
-const sheet = workbook.worksheets.getActiveWorksheet();
-const cell = sheet.getRange("A1");
-cell.load("comment");
-await context.sync();
-if (cell.comment) {
-  cell.comment.text = cell.comment.text + " - " + new Date().toLocaleDateString();
-} else {
-  cell.comment = { text: new Date().toLocaleDateString() };
+if (sheet.getUsedRange().rowCount > 10) {
+  sheet.pageSetup.leftMargin = 0.5;
+  sheet.pageSetup.rightMargin = 0.5;
 }
-await context.sync();
 ```
 
-To copy comments, compare values correctly and set comments on the target cells.
+When adding comments, ensure the correct cell is targeted.
 ```javascript
-const sheet = workbook.worksheets.getActiveWorksheet();
-const commentRange = sheet.getRange("A1");
+const cell = sheet.getRange(`A${maxRowIndex}`);
+cell.comments.add(`Max value in column A`);
+```
+
+To update existing comments, check if the comment already exists.
+```javascript
+const cell = sheet.getRange("A1");
+if (cell.comments.items.length > 0) {
+  const comment = cell.comments.items[0];
+  comment.text = `Max value in column A - ${new Date().toLocaleDateString()}`;
+}
+```
+
+When copying comments, use the correct range and value comparison.
+```javascript
 const targetRange = sheet.getRange("B2:B5");
-commentRange.load("comment");
 targetRange.load("values");
 await context.sync();
-const comment = commentRange.comment;
 const values = targetRange.values;
 for (let i = 0; i < values.length; i++) {
-  if (values[i][0] === sheet.getRange("A1").values[0][0]) {
-    const
+  if (values[i][0] === sheet.getRange("A1").value) {
+    targetRange.getCell(i, 0).comments.add(comment.text);
+  }
+}
+```
+
+To create sparklines, use the correct data range and filtering.
+```javascript
+const top5Values = rows.sort((a, b) => b[1] - a[1]).slice(0, 5).map(r => r[
