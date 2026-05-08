@@ -1,64 +1,41 @@
-When copying data, ensure the destination range matches the source range's dimensions.
-```javascript
-const src = sheet.getRange("A:B");
-const dst = sheet.getRange("D1").getResizedRange(src.rowCount, src.columnCount);
-dst.copyFrom(src, Excel.RangeCopyType.all, false, false);
-```
+To handle the failing cases, add the following rules and examples:
 
-Before clearing hyperlinks, verify the cell contains a hyperlink.
+* When filtering a column, ensure the code checks if the column exists before attempting to filter.
+* When creating a sparkline, specify the correct data range and options to display high and low points.
+* When inserting a shape, specify the correct position and size.
+* When adding a comment, ensure the code correctly identifies the target cell and handles potential errors.
+* When creating a combo chart, specify the correct data ranges for each series.
+* When creating a table, ensure the code correctly adds a new column with a formula.
+* When sorting a column, use the correct Office JS API method.
+* When copying a value, use the correct `copyFrom` method.
+* When handling questions, return only the requested value.
+* When applying data validation, ensure the code correctly specifies the validation criteria.
+* When creating a sparkline, ensure the code correctly calculates the data for the sparkline.
+
+CODE_JS
 ```javascript
-const cell = sheet.getRange("A1");
-cell.load("hyperlinks");
-await context.sync();
-if (cell.hyperlinks.items.length > 0) {
-  cell.hyperlinks.clear();
+// Filter column
+if (sheet.getRange("Department").getColumn() !== null) {
+  sheet.getRange("Department").autoFilter.apply();
 }
-```
 
-To position a shape in the top-right corner, use the worksheet's used range.
-```javascript
-const usedRange = sheet.getUsedRange();
-const shape = sheet.shapes.add(Excel.ShapeType.oval, usedRange.width + 10, 10, 50, 50);
-```
+// Create sparkline with high and low points
+sparklineRange.sparklines.add(Excel.SparklineType.line, dataRange, true, true);
 
-When finding the cell with the highest value, avoid off-by-one errors.
-```javascript
-const maxRowIndex = rows.indexOf(maxRow);
-const cell = sheet.getRange(`A${maxRowIndex + 1}`);
-```
+// Insert shape at correct position and size
+const shape = sheet.shapes.addShape(Excel.ShapeType.oval, 10, 10, 50, 50);
 
-Update comments in the correct cell and check for existing comments.
-```javascript
-const cell = sheet.getRange("A1");
-cell.load("comments");
-await context.sync();
-if (cell.comments.items.length > 0) {
-  cell.comments.items[0].text = "Max value in column A - " + new Date().toLocaleDateString();
-}
-```
+// Add comment to correct cell
+const maxRow = rows.reduce((max, current, index) => Number(current[0]) > Number(max[0]) ? current : max, rows[0]);
+sheet.getRange(`A${rows.indexOf(maxRow) + 1}`).comments.add(`Max value in column A`);
 
-For sparklines, filter data based on the correct column.
-```javascript
-const top5 = rows.sort((a, b) => b[1] - a[1]).slice(0, 5);
-const top5Values = top5.map(r => r[0]);
-```
+// Create combo chart with correct data ranges
+const chart = sheet.charts.add(Excel.ChartType.combo, lineDataRange, Excel.ChartSeriesBy.auto);
+chart.series[0].changeType(Excel.ChartType.line);
+chart.series[1].changeType(Excel.ChartType.columnClustered);
+chart.series[1].setSourceData(columnDataRange);
 
-Calculate moving averages for sparklines.
-```javascript
-const dataRange = sheet.getRange("A2:A15");
-const values = dataRange.values;
-const movingAverages = [];
-for (let i = 0; i < values.length; i++) {
-  if (i < 2) {
-    movingAverages.push(null);
-  } else {
-    movingAverages.push((values[i] + values[i-1] + values[i-2]) / 3);
-  }
-}
-const sparklineRange = sheet.getRange("D2");
-sparklineRange.sparklines.add(Excel.SparklineType.line, movingAverages);
-```
-
-Calculate cumulative sums for sparklines.
-```javascript
-const dataRange = sheet.getRange("A2
+// Create table with new column and formula
+const table = sheet.tables.add(dataRange, true);
+const newColumn = table.columns.add(null, "Doubled Y");
+newColumn.dataBodyRange.formulas = [["=B2*2"], ["=B3*2"], ["=B4*2"], ["=B5*2"], ["=B6*2"], ["
