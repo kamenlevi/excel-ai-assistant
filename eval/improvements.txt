@@ -1,41 +1,10 @@
-To handle the failing cases, add the following rules and examples:
+To address the failing cases, add the following rules and examples:
 
-* When filtering a column, ensure the code checks if the column exists before attempting to filter.
-* When creating a sparkline, specify the correct data range and options to display high and low points.
-* When inserting a shape, specify the correct position and size.
-* When adding a comment, ensure the code correctly identifies the target cell and handles potential errors.
-* When creating a combo chart, specify the correct data ranges for each series.
-* When creating a table, ensure the code correctly adds a new column with a formula.
-* When sorting a column, use the correct Office JS API method.
-* When copying a value, use the correct `copyFrom` method.
-* When handling questions, return only the requested value.
-* When applying data validation, ensure the code correctly specifies the validation criteria.
-* When creating a sparkline, ensure the code correctly calculates the data for the sparkline.
-
-CODE_JS
-```javascript
-// Filter column
-if (sheet.getRange("Department").getColumn() !== null) {
-  sheet.getRange("Department").autoFilter.apply();
-}
-
-// Create sparkline with high and low points
-sparklineRange.sparklines.add(Excel.SparklineType.line, dataRange, true, true);
-
-// Insert shape at correct position and size
-const shape = sheet.shapes.addShape(Excel.ShapeType.oval, 10, 10, 50, 50);
-
-// Add comment to correct cell
-const maxRow = rows.reduce((max, current, index) => Number(current[0]) > Number(max[0]) ? current : max, rows[0]);
-sheet.getRange(`A${rows.indexOf(maxRow) + 1}`).comments.add(`Max value in column A`);
-
-// Create combo chart with correct data ranges
-const chart = sheet.charts.add(Excel.ChartType.combo, lineDataRange, Excel.ChartSeriesBy.auto);
-chart.series[0].changeType(Excel.ChartType.line);
-chart.series[1].changeType(Excel.ChartType.columnClustered);
-chart.series[1].setSourceData(columnDataRange);
-
-// Create table with new column and formula
-const table = sheet.tables.add(dataRange, true);
-const newColumn = table.columns.add(null, "Doubled Y");
-newColumn.dataBodyRange.formulas = [["=B2*2"], ["=B3*2"], ["=B4*2"], ["=B5*2"], ["=B6*2"], ["
+* When adding a formula, ensure the range is correct, e.g., "add an AVERAGE formula in cell C2 for the range B2:B8" should use `sheet.getRange("C2").formulas = [["=AVERAGE(B2:B8)"]]`.
+* For copying data, specify the destination range correctly, e.g., "copy the data in columns A and B and paste it starting at column D" should use `const dst = sheet.getRange("D1"); dst.copyFrom(src, Excel.RangeCopyType.all, false, false)`.
+* When freezing panes, use the correct row or column, e.g., "freeze the top row" should use `sheet.freezePanes("A1")`.
+* For filtering, use real Office JS APIs, e.g., "filter the Department column to show only Engineering" should use `const filter = sheet.getRange("Department").autoFilter; filter.applyFilters([{"column": 1, "filterCriteria": {"operator": "equals", "values": ["Engineering"]}}])`.
+* When updating comments, ensure the correct cell is updated, e.g., "Update the comment in cell A1" should use `const cell = sheet.getRange("A1"); cell.load("comment"); await context.sync();`.
+* For copying comments, compare values correctly, e.g., "Copy the comment from cell A1 to all cells in the range B2:B5 that have the same value as cell A1" should use `const commentRange = sheet.getRange("A1"); commentRange.load("comment"); await context.sync(); const comment = commentRange.comment; const targetRange = sheet.getRange("B2:B5"); targetRange.load("values"); await context.sync(); const values = targetRange.values; for (let i = 0; i < values.length; i++) { if (values[i][0] === sheet.getRange("A1").values[0][0]) { targetRange.getCell(i, 0).comment = comment; } }`.
+* When setting page layout, use correct properties, e.g., "Set the page orientation to portrait" should use `sheet.pageLayout.orientation = Excel.PageOrientation.portrait`.
+* For sparklines, use correct data and sorting, e.g., "Create a sparkline in cell C2 to show the trend of values in cells A2:A20, but only for the top 5 values in
