@@ -1,11 +1,54 @@
-To improve handling of sorting, use `sheet.getRange("A:A").sort.apply([{ key: 0, ascending: true }])` for sorting entire columns.
-For formulas, ensure the range includes all data, e.g., `sheet.getRange("B10").formulas = [["=SUM(B:B)"]]`.
-When filtering, use `sheet.getRange("A:A").autoFilter.apply({ filterOn: "Department", criteria1: "Engineering" })`.
-For sparklines, calculate moving averages or standard deviations before adding the sparkline, e.g., `const movingAverageFormula = "=AVERAGE(A2:A4)";`.
-To update comments, use `sheet.getRange("A1").comments.add("Updated comment")`.
-For named ranges, use `workbook.names.add("TopPerformers", sheet.getRange("A1:B5"))` and consider sorting before naming.
-When creating hyperlinks, specify display text, e.g., `sheet.getRange("B2").hyperlink = { address: "https://www.google.com", display: "Google" }`.
-For data validation, use `sheet.getRange("A:A").dataValidation.clear(); sheet.getRange("A:A").dataValidation.setType(Excel.DataValidationType.custom); sheet.getRange("A:A").dataValidation.setFormula("=A1>10")`.
-To clear filters, specify the column, e.g., `sheet.getRange("X:X").autoFilter.clear()`.
-For conditional formatting, use `sheet.getRange("X:X").format.conditional.format = { type: "formula", formula: "=X1=5" }`.
-When adding shapes, position them relative to cells, e.g., `const shape = sheet.shapes.addShape(Excel.ShapeType.rectangle, 0, 0, 100, 50); shape.top = 10; shape.left = 10`.
+To address the failing cases, the following rules and examples can be added:
+
+* For [L1-questions-001], provide relevant examples: 
+  When describing a function like VLOOKUP, include examples of its usage, such as `=VLOOKUP(A2, B:C, 2, FALSE)`.
+
+* For [L1-edge-001], use Office JS APIs for filtering:
+  ```javascript
+  const sheet = workbook.worksheets.getActiveWorksheet();
+  const filter = sheet.getRange("Department").autoFilter;
+  filter.apply({ criteria: "Engineering" });
+  await context.sync();
+  ```
+
+* For [L1-validation-002], set data validation for whole numbers:
+  ```javascript
+  const sheet = workbook.worksheets.getActiveWorksheet();
+  const range = sheet.getRange("B:B");
+  range.dataValidation.clear();
+  range.dataValidation.add(Excel.DataValidationType.wholeNumber, {
+    operator: Excel.DataValidationOperator.between,
+    formula1: 1,
+    formula2: 100
+  });
+  await context.sync();
+  ```
+
+* For [gen-L1-shapes-002], position shapes relative to the worksheet:
+  ```javascript
+  const sheet = workbook.worksheets.getActiveWorksheet();
+  const usedRange = sheet.getUsedRange();
+  const shape = sheet.shapes.addShape(Excel.ShapeType.oval, usedRange.width - 50, 0, 50, 50);
+  await context.sync();
+  ```
+
+* For [gen-L2-Comments-003], correctly add comments to max value cells:
+  ```javascript
+  const sheet = workbook.worksheets.getActiveWorksheet();
+  const used = sheet.getUsedRange();
+  used.load("values");
+  await context.sync();
+  const rows = used.values;
+  const maxRow = rows.slice(1).reduce((max, row, index) => Number(row[0]) > Number(max[0]) ? [row, index + 1] : max, [rows[1], 1]);
+  const commentRange = sheet.getRange(`A${maxRow[1]}`);
+  commentRange.comments.add(`Max value in column A`);
+  await context.sync();
+  ```
+
+* For [gen-L2-Comments-005], update existing comments:
+  ```javascript
+  const sheet = workbook.worksheets.getActiveWorksheet();
+  const commentRange = sheet.getRange("A1");
+  commentRange.load("comments");
+  await context.sync();
+  if (commentRange.comments.items[0])
