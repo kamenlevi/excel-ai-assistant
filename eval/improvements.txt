@@ -1,51 +1,11 @@
-To address the failing cases, add the following rules and examples:
-
-* When adding borders, ensure all edges and inside borders are styled.
-* For filtering, use the `autoFilter` API and specify the column and criteria.
-* When creating sparklines, use the correct data source and options.
-* To copy values, use the `copy` and `paste` methods correctly.
-* For data validation, use dynamic formulas and restrict input correctly.
-* When sorting, specify the correct column and order.
-* To highlight cells, use efficient formatting methods.
-* For charts, use the correct data range and options.
-* When inserting hyperlinks, set display text correctly.
-* To set page orientation, use the `pageSetup` API.
-* When inserting shapes, position them correctly in cells.
-
-CODE_JS
-```javascript
-// Add borders around all cells in the data range
-const range = sheet.getRange("A1:B10");
-range.borders.load();
-await context.sync();
-range.borders.getItem(Excel.BorderIndex.edgeTop).style = Excel.BorderStyle.thin;
-range.borders.getItem(Excel.BorderIndex.edgeBottom).style = Excel.BorderStyle.thin;
-range.borders.getItem(Excel.BorderIndex.edgeLeft).style = Excel.BorderStyle.thin;
-range.borders.getItem(Excel.BorderIndex.edgeRight).style = Excel.BorderStyle.thin;
-range.borders.getItem(Excel.BorderIndex.insideHorizontal).style = Excel.BorderStyle.thin;
-range.borders.getItem(Excel.BorderIndex.insideVertical).style = Excel.BorderStyle.thin;
-await context.sync();
-
-// Filter the Department column to show only Engineering
-const filter = sheet.getRange("A1").autoFilter;
-filter.apply({ criteria: "Engineering" });
-await context.sync();
-
-// Create a sparkline in cell C2 to show the trend of values in cells A2:A20
-const sparklineRange = sheet.getRange("C2");
-sparklineRange.sparklines.add(Excel.SparklineType.line, "A2:A20");
-await context.sync();
-
-// Copy the value in cell A1 and paste it into cell B1
-const source = sheet.getRange("A1");
-const destination = sheet.getRange("B1");
-source.copy(Excel.RangeCopyType.all);
-destination.paste(Excel.PasteType.all);
-await context.sync();
-
-// Restrict column A to only allow values greater than 10
-const dataRange = sheet.getRange("A1:A10");
-dataRange.dataValidation.clear();
-const rule = {
-  showInput: true,
-  showError: true,
+To improve handling of sorting, use `sheet.getRange("A:A").sort.apply([{ key: 0, ascending: true }])` for sorting entire columns.
+For formulas, ensure the range includes all data, e.g., `sheet.getRange("B10").formulas = [["=SUM(B:B)"]]`.
+When filtering, use `sheet.getRange("A:A").autoFilter.apply({ filterOn: "Department", criteria1: "Engineering" })`.
+For sparklines, calculate moving averages or standard deviations before adding the sparkline, e.g., `const movingAverageFormula = "=AVERAGE(A2:A4)";`.
+To update comments, use `sheet.getRange("A1").comments.add("Updated comment")`.
+For named ranges, use `workbook.names.add("TopPerformers", sheet.getRange("A1:B5"))` and consider sorting before naming.
+When creating hyperlinks, specify display text, e.g., `sheet.getRange("B2").hyperlink = { address: "https://www.google.com", display: "Google" }`.
+For data validation, use `sheet.getRange("A:A").dataValidation.clear(); sheet.getRange("A:A").dataValidation.setType(Excel.DataValidationType.custom); sheet.getRange("A:A").dataValidation.setFormula("=A1>10")`.
+To clear filters, specify the column, e.g., `sheet.getRange("X:X").autoFilter.clear()`.
+For conditional formatting, use `sheet.getRange("X:X").format.conditional.format = { type: "formula", formula: "=X1=5" }`.
+When adding shapes, position them relative to cells, e.g., `const shape = sheet.shapes.addShape(Excel.ShapeType.rectangle, 0, 0, 100, 50); shape.top = 10; shape.left = 10`.
