@@ -1,69 +1,51 @@
-To improve the handling of IF formulas, use the following example:
+To address the failing cases, add the following rules and examples:
+
+* When adding borders, ensure all edges and inside borders are styled.
+* For filtering, use the `autoFilter` API and specify the column and criteria.
+* When creating sparklines, use the correct data source and options.
+* To copy values, use the `copy` and `paste` methods correctly.
+* For data validation, use dynamic formulas and restrict input correctly.
+* When sorting, specify the correct column and order.
+* To highlight cells, use efficient formatting methods.
+* For charts, use the correct data range and options.
+* When inserting hyperlinks, set display text correctly.
+* To set page orientation, use the `pageSetup` API.
+* When inserting shapes, position them correctly in cells.
+
+CODE_JS
 ```javascript
-const sheet = workbook.worksheets.getActiveWorksheet();
-sheet.getRange("D2").formulas = [["=IF(C2>50, \"Pass\", \"Fail\")"]];
+// Add borders around all cells in the data range
+const range = sheet.getRange("A1:B10");
+range.borders.load();
 await context.sync();
-```
-For auto-fitting column widths, iterate over each column:
-```javascript
-const sheet = workbook.worksheets.getActiveWorksheet();
-const used = sheet.getUsedRange();
-used.load("columnCount");
+range.borders.getItem(Excel.BorderIndex.edgeTop).style = Excel.BorderStyle.thin;
+range.borders.getItem(Excel.BorderIndex.edgeBottom).style = Excel.BorderStyle.thin;
+range.borders.getItem(Excel.BorderIndex.edgeLeft).style = Excel.BorderStyle.thin;
+range.borders.getItem(Excel.BorderIndex.edgeRight).style = Excel.BorderStyle.thin;
+range.borders.getItem(Excel.BorderIndex.insideHorizontal).style = Excel.BorderStyle.thin;
+range.borders.getItem(Excel.BorderIndex.insideVertical).style = Excel.BorderStyle.thin;
 await context.sync();
-for (let i = 0; i < used.columnCount; i++) {
-  sheet.getRangeByIndexes(0, i, used.rowCount, 1).format.autofitColumns();
-}
+
+// Filter the Department column to show only Engineering
+const filter = sheet.getRange("A1").autoFilter;
+filter.apply({ criteria: "Engineering" });
 await context.sync();
-```
-When filtering a column, use the `autoFilter` method:
-```javascript
-const sheet = workbook.worksheets.getActiveWorksheet();
-const filterRange = sheet.getRange("A1:B10");
-filterRange.autoFilter.apply({
-  filterOn: "Department",
-  criteria1: "Engineering",
-  operator1: Excel.FilterOperator.equal
-});
+
+// Create a sparkline in cell C2 to show the trend of values in cells A2:A20
+const sparklineRange = sheet.getRange("C2");
+sparklineRange.sparklines.add(Excel.SparklineType.line, "A2:A20");
 await context.sync();
-```
-To add a dropdown list, specify the allowed values:
-```javascript
-const sheet = workbook.worksheets.getActiveWorksheet();
-const validation = sheet.getRange("C1:C10").dataValidation;
-validation.clear();
-validation.add(Excel.DataValidationType.list, {
-  inCellDropdown: true,
-  formula1: ["Low", "Medium", "High"]
-});
+
+// Copy the value in cell A1 and paste it into cell B1
+const source = sheet.getRange("A1");
+const destination = sheet.getRange("B1");
+source.copy(Excel.RangeCopyType.all);
+destination.paste(Excel.PasteType.all);
 await context.sync();
-```
-For inserting shapes, specify the correct position:
-```javascript
-const sheet = workbook.worksheets.getActiveWorksheet();
-const shape = sheet.shapes.add(Excel.ShapeType.oval, sheet.getRange("A1").width, 0, 50, 50);
-await context.sync();
-```
-When updating comments, target the correct cell:
-```javascript
-const sheet = workbook.worksheets.getActiveWorksheet();
-const cell = sheet.getRange("A1");
-cell.load("comment");
-await context.sync();
-if (cell.comment) {
-  const date = new Date();
-  const formattedDate = date.toLocaleDateString();
-  cell.comment.text += " - " + formattedDate;
-}
-await context.sync();
-```
-To copy comments, compare values in the same column:
-```javascript
-const sheet = workbook.worksheets.getActiveWorksheet();
-const commentRange = sheet.getRange("A1");
-commentRange.load("comment");
-await context.sync();
-const comment = commentRange.comment;
-const targetRange = sheet.getRange("A2:A5");
-targetRange.load("values");
-await context.sync();
-const
+
+// Restrict column A to only allow values greater than 10
+const dataRange = sheet.getRange("A1:A10");
+dataRange.dataValidation.clear();
+const rule = {
+  showInput: true,
+  showError: true,
