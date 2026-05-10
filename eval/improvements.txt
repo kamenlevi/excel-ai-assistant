@@ -1,54 +1,69 @@
 To address the failing cases, the following rules and examples can be added:
 
-* For [L1-questions-001], provide relevant examples: 
-  When describing a function like VLOOKUP, include examples of its usage, such as `=VLOOKUP(A2, B:C, 2, FALSE)`.
+* When copying data, ensure the destination range matches the source range's dimensions.
+```javascript
+const src = sheet.getRange("A:B");
+const dst = sheet.getRange("D1").resize(src.rowCount, src.columnCount);
+dst.copyFrom(src, Excel.RangeCopyType.all, false, false);
+```
 
-* For [L1-edge-001], use Office JS APIs for filtering:
-  ```javascript
-  const sheet = workbook.worksheets.getActiveWorksheet();
-  const filter = sheet.getRange("Department").autoFilter;
-  filter.apply({ criteria: "Engineering" });
-  await context.sync();
-  ```
+* For filtering, use Office JS APIs to apply filters to specific columns.
+```javascript
+const filter = sheet.getRange("A:A").autoFilter;
+filter.apply({ criteria: { filterOn: Excel.FilterOn.values, operator: Excel.FilterOperator.equals, values: ["Engineering"] } });
+```
 
-* For [L1-validation-002], set data validation for whole numbers:
-  ```javascript
-  const sheet = workbook.worksheets.getActiveWorksheet();
-  const range = sheet.getRange("B:B");
-  range.dataValidation.clear();
-  range.dataValidation.add(Excel.DataValidationType.wholeNumber, {
-    operator: Excel.DataValidationOperator.between,
-    formula1: 1,
-    formula2: 100
-  });
-  await context.sync();
-  ```
+* When removing hyperlinks, target the correct cell.
+```javascript
+const range = sheet.getRange("A1");
+range.hyperlink = null;
+```
 
-* For [gen-L1-shapes-002], position shapes relative to the worksheet:
-  ```javascript
-  const sheet = workbook.worksheets.getActiveWorksheet();
-  const usedRange = sheet.getUsedRange();
-  const shape = sheet.shapes.addShape(Excel.ShapeType.oval, usedRange.width - 50, 0, 50, 50);
-  await context.sync();
-  ```
+* For page layout settings, iterate through all worksheets and apply settings accordingly.
+```javascript
+const sheets = workbook.worksheets;
+for (const sheet of sheets.items) {
+  if (sheet.name === "Summary") {
+    sheet.pageSetup.orientation = Excel.PageOrientation.landscape;
+  } else {
+    sheet.pageSetup.orientation = Excel.PageOrientation.portrait;
+  }
+}
+```
 
-* For [gen-L2-Comments-003], correctly add comments to max value cells:
-  ```javascript
-  const sheet = workbook.worksheets.getActiveWorksheet();
-  const used = sheet.getUsedRange();
-  used.load("values");
-  await context.sync();
-  const rows = used.values;
-  const maxRow = rows.slice(1).reduce((max, row, index) => Number(row[0]) > Number(max[0]) ? [row, index + 1] : max, [rows[1], 1]);
-  const commentRange = sheet.getRange(`A${maxRow[1]}`);
-  commentRange.comments.add(`Max value in column A`);
-  await context.sync();
-  ```
+* When updating comments, check if a comment exists before updating it.
+```javascript
+const comment = sheet.getRange("A1").comment;
+if (comment) {
+  comment.text = `Updated on ${new Date().toISOString().split('T')[0]}`;
+}
+```
 
-* For [gen-L2-Comments-005], update existing comments:
-  ```javascript
-  const sheet = workbook.worksheets.getActiveWorksheet();
-  const commentRange = sheet.getRange("A1");
-  commentRange.load("comments");
-  await context.sync();
-  if (commentRange.comments.items[0])
+* For sparkline creation, use the correct data range and settings.
+```javascript
+const dataRange = sheet.getRange("A2:A20");
+const sparklineRange = sheet.getRange("C2");
+sparklineRange.sparklines.add(Excel.SparklineType.line, dataRange);
+```
+
+* When creating named ranges, ensure the range address is correct.
+```javascript
+const dataRange = sheet.getRange("C2:E10");
+const namedRange = workbook.names.add("QuarterlySales", dataRange);
+```
+
+* For sorting, use the correct API method and handle potential errors.
+```javascript
+const used = sheet.getUsedRange();
+used.load("values");
+await context.sync();
+used.sort.apply([{ key: 0, ascending: true }]);
+```
+
+* When formatting cells, use the correct API method and handle potential errors.
+```javascript
+const range = sheet.getRange("A1");
+range.format.fill.color = "lightblue";
+```
+
+* For data validation, use the correct API
