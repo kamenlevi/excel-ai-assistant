@@ -1,67 +1,58 @@
-To handle errors and edge cases, add error checking and input validation:
+To handle errors and edge cases, add error checking for column existence and data type.
+```javascript
+if (col === -1) throw new Error(`Column '${columnName}' not found.`);
+if (typeof rows[i][col] !== 'number') throw new Error(`Non-numeric value in column ${columnName}`);
 ```
-if (columnIndex === -1) {
-  throw new Error(`Column '${columnName}' not found.`);
+
+For efficient data manipulation, use built-in Office JS API helpers.
+```javascript
+used.sort.apply([{ key: col, ascending: true }]);
+```
+
+To address case sensitivity issues, use toLowerCase() for header comparison.
+```javascript
+const hdr = rows[0].map(h => String(h).toLowerCase().trim());
+const col = hdr.indexOf(columnName.toLowerCase());
+```
+
+For filtering, use the clearFilters method on the specific column range.
+```javascript
+const columnRange = sheet.getRange(columnName + ":" + columnName);
+columnRange.clearFilters();
+```
+
+To create a combo chart, use the addChart method with the correct series types.
+```javascript
+const chart = sheet.charts.add(Excel.ChartType.combo, lineDataRange, Excel.ChartSeriesBy.auto);
+chart.series[0].changeSeriesType(Excel.ChartType.line);
+chart.series[1].changeSeriesType(Excel.ChartType.columnClustered);
+```
+
+For sparklines, calculate the moving average or cumulative sum before creating the sparkline.
+```javascript
+const movingAverage = [];
+for (let i = 0; i < values.length; i++) {
+  movingAverage.push(values.slice(Math.max(0, i - 2), i + 1).reduce((a, b) => a + b, 0) / Math.min(3, i + 1));
 }
 ```
 
-For conditional formatting, use available helpers:
-```
-used.format.conditional.formatAll(cells, {
-  type: Excel.ConditionalFormatType.cellValue,
-  operator: Excel.ConditionalFormatOperator.greaterThan,
-  formula1: "25",
-  fontColor: "#0000FF"
-});
-```
-
-To address the VLOOKUP question, provide a clear and concise answer:
-```
-The VLOOKUP function looks up a value in a table and returns a value from another column.
-```
-
-For filtering, use the correct API method:
-```
-await sheet.getRange("X:X").autoFilter.apply({
-  criteria1: ["val"],
-  operator: Excel.FilterOperator.equals
-});
-```
-
-To clear filters, specify the column and worksheet:
-```
-await sheet.getRange("X:X").autoFilter.clear();
-```
-
-For sorting, use the built-in sorting functionality:
-```
-used.sort.apply([{ key: columnIndex, ascending: true }]);
-```
-
-To create a named range, use the correct API method:
-```
+To create a named range, use the add method with the correct range address.
+```javascript
 const namedRange = workbook.names.add("QuarterlySales", sheet.getRange("C2:E10"));
 ```
 
-For sparklines, use the correct data source and options:
-```
-sparklineRange.sparklines.add(Excel.SparklineType.line, dataRange, {
-  seriesColor: "blue",
-  verticalAxis: {
-    visible: false
-  }
-});
+For data validation, use the dataValidation method to restrict input.
+```javascript
+const dataValidation = sheet.getRange("A1").dataValidation;
+dataValidation.allowType = Excel.DataValidationType.list;
+dataValidation.formula = { formula1: "\"Approved\"" };
 ```
 
-To copy and paste values, use the correct API method:
-```
-destination.copyFrom(source, Excel.RangeCopyType.all, false, false);
+To sort a column, use the sortByColumn helper.
+```javascript
+sheet.getRange(columnName + ":" + columnName).sortBy([[{ key: 0, ascending: true }]]);
 ```
 
-For data validation, restrict input to a specific value:
-```
-sheet.getRange("A:A").dataValidation.clear();
-sheet.getRange("A:A").dataValidation.add(Excel.DataValidationType.list, {
-  formula1: ["Approved"]
-});
-```
+For conditional formatting, use the conditionalFormats method.
+```javascript
+const conditionalFormat = sheet.getRange("X:X").conditionalFormats.add(Excel
