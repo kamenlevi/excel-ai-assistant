@@ -1,59 +1,64 @@
-To address the failing cases, add the following rules and examples:
+To improve handling of conditional formatting requests, add:
+```
+if prompt includes "highlight" or "format", ensure code uses Office JS APIs for conditional formatting.
+```
 
-* When describing Excel functions, provide clear and concise explanations without unnecessary code snippets.
-* Use Office JS APIs to filter data, such as `applyFilters` or `autoFilter`.
-* When positioning shapes, consider the worksheet's dimensions and existing content.
-* Update comments using the correct cell reference and include the current date.
-* Create sparklines using the correct data source and sorting criteria.
-* Use `clearFilters` with specificity to clear filters on a particular column.
-* Sort data using the `sortBy` method with the correct column index and ascending/descending order.
-* Use data validation to restrict input data types, such as dates or whole numbers.
-* Copy and paste values using the correct `copy` and `paste` methods or the `values` property.
-* Handle edge cases, such as filtering or sorting data with specific conditions.
-* Create hyperlinks with display text and addresses using the `hyperlinks.add` method.
-* Create named ranges with the correct range references and names.
+For accurate VLOOKUP function descriptions, include:
+```
+when describing VLOOKUP, focus on its purpose and parameters without providing unnecessary code examples.
+```
 
-CODE_JS examples:
-```javascript
-// Filter data using applyFilters
-sheet.getRange("A1").autoFilter.applyFilters([{
-  column: 1,
-  filterCriteria: {
-    operator: Excel.FilterOperator.greaterThan,
-    values: [10]
-  }
-}]);
+To address edge cases in filtering, such as showing only Engineering departments:
+```
+use real Office JS APIs for filtering, like applyColumnFilter or applyFilters.
+```
 
-// Position shapes considering worksheet dimensions
-const shape = sheet.shapes.addShape(Excel.ShapeType.oval, 100, 100, 50, 50);
+For data validation, like ensuring a column only accepts whole numbers between 1 and 100:
+```
+use dataValidation.rule with appropriate operator and formula to restrict input values.
+```
 
-// Update comments with current date
-const date = new Date();
-const dateString = date.toLocaleDateString();
-cell.comment = `Updated on ${dateString}`;
+To correctly position shapes, such as inserting a circle in the top-right corner:
+```
+calculate shape position based on worksheet content and size to ensure accurate placement.
+```
 
-// Create sparklines with correct data source and sorting
-sparklineRange.sparklineGroups.add(Excel.SparklineType.line, "A2:A20", top5Values);
+For updating comments, like adding the current date to an existing comment:
+```
+check if comment exists before updating, and handle potential errors gracefully.
+```
 
-// Clear filters with specificity
-sheet.getRange("A1").autoFilter.clearFilters();
+To copy comments correctly, such as from one cell to another based on conditions:
+```
+compare cell values accurately and use correct Office JS APIs for comment manipulation.
+```
 
-// Sort data using sortBy method
-used.sort.apply([{ key: col, ascending: true }]);
+When creating named ranges, like for the top 5 rows of a sorted range:
+```
+use built-in sorting methods and ensure named range covers the correct cells.
+```
 
-// Use data validation to restrict input data types
-sheet.getRange("A1").dataValidation.add(
-  Excel.DataValidationType.wholeNumber,
-  {
-    operator: Excel.DataValidationOperator.greaterThanOrEqual,
-    formula1: 0
-  },
-  "Whole numbers only"
-);
+For filtering and sorting, such as clearing filters on a specific column or sorting by a column:
+```
+use specific Office JS API methods like clearFilters or sortBy, specifying the column or range as needed.
+```
 
-// Copy and paste values using correct methods
-src.copy(Excel.RangeCopyType.all, false, false);
-dst.paste(Excel.RangePasteType.all, false, false);
+To handle shape insertion, like adding a square to a specific cell:
+```
+position shapes relative to cell positions and sizes for accurate placement.
+```
 
-// Handle edge cases
-if (cell.comment
+For hyperlink insertion, such as creating a link with specific text:
+```
+use hyperlink property with address and display text, avoiding overwriting existing cell content.
+```
+
+To improve data manipulation, like copying a value from one cell to another:
+```
+use correct copyFrom method on destination range, ensuring data is copied from source to destination accurately.
+```
+
+For data validation and edge cases, such as limiting input to whole numbers:
+```
+apply data validation rules to entire ranges, using appropriate operators and formulas for restrictions.
+```
