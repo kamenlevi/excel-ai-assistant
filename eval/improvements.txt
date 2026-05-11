@@ -1,58 +1,11 @@
-To handle errors and edge cases, add error checking for column existence and data type.
-```javascript
-if (col === -1) throw new Error(`Column '${columnName}' not found.`);
-if (typeof rows[i][col] !== 'number') throw new Error(`Non-numeric value in column ${columnName}`);
-```
+To address the failing cases, add the following rules and examples:
 
-For efficient data manipulation, use built-in Office JS API helpers.
-```javascript
-used.sort.apply([{ key: col, ascending: true }]);
-```
-
-To address case sensitivity issues, use toLowerCase() for header comparison.
-```javascript
-const hdr = rows[0].map(h => String(h).toLowerCase().trim());
-const col = hdr.indexOf(columnName.toLowerCase());
-```
-
-For filtering, use the clearFilters method on the specific column range.
-```javascript
-const columnRange = sheet.getRange(columnName + ":" + columnName);
-columnRange.clearFilters();
-```
-
-To create a combo chart, use the addChart method with the correct series types.
-```javascript
-const chart = sheet.charts.add(Excel.ChartType.combo, lineDataRange, Excel.ChartSeriesBy.auto);
-chart.series[0].changeSeriesType(Excel.ChartType.line);
-chart.series[1].changeSeriesType(Excel.ChartType.columnClustered);
-```
-
-For sparklines, calculate the moving average or cumulative sum before creating the sparkline.
-```javascript
-const movingAverage = [];
-for (let i = 0; i < values.length; i++) {
-  movingAverage.push(values.slice(Math.max(0, i - 2), i + 1).reduce((a, b) => a + b, 0) / Math.min(3, i + 1));
-}
-```
-
-To create a named range, use the add method with the correct range address.
-```javascript
-const namedRange = workbook.names.add("QuarterlySales", sheet.getRange("C2:E10"));
-```
-
-For data validation, use the dataValidation method to restrict input.
-```javascript
-const dataValidation = sheet.getRange("A1").dataValidation;
-dataValidation.allowType = Excel.DataValidationType.list;
-dataValidation.formula = { formula1: "\"Approved\"" };
-```
-
-To sort a column, use the sortByColumn helper.
-```javascript
-sheet.getRange(columnName + ":" + columnName).sortBy([[{ key: 0, ascending: true }]]);
-```
-
-For conditional formatting, use the conditionalFormats method.
-```javascript
-const conditionalFormat = sheet.getRange("X:X").conditionalFormats.add(Excel
+* When filtering a column, use the `apply` method on the `filter` object, such as `sheet.getRange("A1:A10").filter.apply({ criteria: { filterOn: Excel.FilterOn.values, operator: Excel.FilterOperator.equal, values: ["Engineering"] } })`.
+* To add a shape, use the `addShape` method, such as `sheet.shapes.addShape(Excel.ShapeType.rectangle, 10, 10, 50, 50)`.
+* When creating a sparkline, use the `add` method on the `sparklines` object, such as `sheet.getRange("C2").sparklines.add(Excel.SparklineType.line, sheet.getRange("A2:A10"))`.
+* To update a comment, use the `update` method on the `comment` object, such as `sheet.getRange("A1").comments.items[0].text = "Updated comment"`.
+* When sorting a column, use the `sort` method on the `usedRange` object, such as `sheet.getUsedRange().sort.apply([{ key: 0, ascending: true }])`.
+* To restrict a column to a specific value, use the `dataValidation` object, such as `sheet.getRange("A1:A10").dataValidation.setType(Excel.DataValidationType.list, { formula1: "=OK" })`.
+* When creating a table, use the `addTable` method, such as `sheet.tables.add(sheet.getRange("A1:B4"), true)`.
+* To apply a filter to a table column, use the `filter` method on the `table` object, such as `sheet.tables[0].columns[1].filter.apply({ criteria: { filterOn: Excel.FilterOn.values, operator: Excel.FilterOperator.greaterThan, values: [20] } })`.
+* When creating a hyperlink, use the `hyperlink` property, such as `sheet.getRange("A1").hyperlink = { address: "https://www.example.com", text: "Link" }`.
