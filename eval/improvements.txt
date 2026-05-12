@@ -1,67 +1,26 @@
-To improve the VLOOKUP function explanation, add:
-When using VLOOKUP, ensure the column index is correct and the range includes the column with the value to be looked up.
+To improve the sorting functionality, add the following rule:
+When sorting by a column, ensure the sort order is correctly applied, such as using `await sortByColumn("Amount", false)` for sorting by "Amount" from highest to lowest.
 
-For the "how many rows of data do I have?" prompt, use:
-```javascript
-const sheet = workbook.worksheets.getActiveWorksheet();
-const used = sheet.getUsedRange();
-used.load("rowCount");
-await context.sync();
-return "You have " + used.rowCount + " rows of data.";
-```
+For formulas, add:
+When applying a formula to a range, ensure the formula is applied to the entire range, such as using `sheet.getRange("B10").formulas = [["=SUM(B:B)"]];` for summing the entire column B.
 
-To filter the Department column, use:
-```javascript
-const sheet = workbook.worksheets.getActiveWorksheet();
-const table = sheet.tables.getItem("Table1");
-table.columns.getItem("Department").filter.clear();
-table.columns.getItem("Department").filter.apply({ filterOn: Excel.FilterOn.values, values: ["Engineering"] });
-await context.sync();
-```
+To enhance filtering, add:
+When filtering a column, use the correct Office JS API, such as `worksheet.getRange("Department").autoFilter.apply({ filterOn: "Engineering" });` for filtering the "Department" column to show only "Engineering".
 
-For inserting a circle shape, use:
-```javascript
-const sheet = workbook.worksheets.getActiveWorksheet();
-const shape = sheet.shapes.addCircle();
-shape.top = sheet.getRange("A1").top;
-shape.left = sheet.getRange("A1").left + sheet.getRange("A1").width;
-await context.sync();
-```
+For shape insertion, add:
+When inserting a shape, accurately position it, such as using `const shape = sheet.shapes.addShape(Excel.ShapeType.oval, sheet.getRange("A1").left, sheet.getRange("A1").top, 50, 50);` for inserting a circle shape in the top-left corner of cell A1.
 
-To set header and footer margins, use:
-```javascript
-const sheet = workbook.worksheets.getActiveWorksheet();
-sheet.pageSetup.headerMargin = 0.25;
-sheet.pageSetup.footerMargin = 0.25;
-sheet.pageSetup.headerCenter = "&C&F";
-sheet.pageSetup.footerCenter = "&C&F";
-await context.sync();
-```
+To improve comment updating, add:
+When updating a comment, check if the comment exists and update it correctly, such as using `if (cell.comment) { cell.comment.text = "New comment"; }` for updating the comment in a cell.
 
-For updating a comment, use:
-```javascript
-const sheet = workbook.worksheets.getActiveWorksheet();
-const commentRange = sheet.getRange("A1");
-commentRange.load("comment");
-await context.sync();
-if (commentRange.comment) {
-  commentRange.comment.text = "Updated comment " + new Date().toLocaleDateString();
-} else {
-  commentRange.comment = { text: "New comment " + new Date().toLocaleDateString() };
-}
-await context.sync();
-```
+For sparkline creation, add:
+When creating a sparkline, use the correct data range and settings, such as using `sparklineRange.sparklineGroups.add(Excel.SparklineGroupType.line, "A2:A20", top5.map(r => r[0]));` for creating a sparkline showing the trend of values in cells A2:A20 for the top 5 values.
 
-To copy a comment, use:
-```javascript
-const sheet = workbook.worksheets.getActiveWorksheet();
-const sourceRange = sheet.getRange("A1");
-const targetRange = sheet.getRange("B2:B5");
-sourceRange.load("comment");
-targetRange.load("values");
-await context.sync();
-const comment = sourceRange.comment;
-if (comment) {
-  targetRange.values.forEach((value, index) => {
-    if (value[0] === sourceRange.values[0][0]) {
-      targetRange.getCell(index, 0).comment = comment;
+To enhance data validation, add:
+When restricting a column to specific values, use the correct data validation settings, such as using `range.dataValidation.add(Excel.DataValidationType.list, { formula1: "=Hello" });` for restricting a column to only allow the value "Hello".
+
+For hyperlink creation, add:
+When creating a hyperlink, use the correct hyperlink settings, such as using `range.hyperlink = { address: "https://www.example.com", textToDisplay: "" };` for creating a hyperlink with no display text.
+
+To improve filtering and sorting, add:
+When clearing filters or sorting, use the correct Office JS API, such as using `await worksheet.getRange("X:X").autoFilter.clear()` for clearing filters on the "X"
