@@ -1,65 +1,67 @@
-To address the failing cases, add the following rules and examples:
+To improve the VLOOKUP function explanation, add:
+When using VLOOKUP, ensure the column index is correct and the range includes the column with the value to be looked up.
 
-When describing a function, provide a relevant example or context specific to the user's workbook.
+For the "how many rows of data do I have?" prompt, use:
 ```javascript
-// Example: Describe VLOOKUP function with a relevant example
 const sheet = workbook.worksheets.getActiveWorksheet();
-const exampleRange = sheet.getRange("A1:B10");
-exampleRange.load("values");
+const used = sheet.getUsedRange();
+used.load("rowCount");
 await context.sync();
+return "You have " + used.rowCount + " rows of data.";
 ```
 
-Use real Office JS APIs for filtering, such as `applyFilters` or `clearFilters`.
+To filter the Department column, use:
 ```javascript
-// Example: Filter Department column to show only Engineering
 const sheet = workbook.worksheets.getActiveWorksheet();
 const table = sheet.tables.getItem("Table1");
-table.columns.getItem("Department").filter.apply({ filterOn: "Engineering" });
+table.columns.getItem("Department").filter.clear();
+table.columns.getItem("Department").filter.apply({ filterOn: Excel.FilterOn.values, values: ["Engineering"] });
 await context.sync();
 ```
 
-Check all worksheets in the workbook, not just specific ones.
+For inserting a circle shape, use:
 ```javascript
-// Example: Set scale to 150% for all worksheets with 'Confidential' in cell A1
-workbook.worksheets.load("items");
-await context.sync();
-workbook.worksheets.items.forEach(function (sheet) {
-  sheet.load("name");
-  sheet.getRange("A1").load("values");
-  await context.sync();
-  if (sheet.getRange("A1").values[0][0] === "Confidential") {
-    sheet.pageSetup.scale = 150;
-  }
-});
-await context.sync();
-```
-
-Update comments correctly, checking if a comment already exists and updating the correct cell.
-```javascript
-// Example: Update comment in cell A1 to include the current date
 const sheet = workbook.worksheets.getActiveWorksheet();
-const cell = sheet.getRange("A1");
-cell.load("comment");
+const shape = sheet.shapes.addCircle();
+shape.top = sheet.getRange("A1").top;
+shape.left = sheet.getRange("A1").left + sheet.getRange("A1").width;
 await context.sync();
-if (cell.comment) {
-  const date = new Date();
-  const formattedDate = date.toLocaleDateString();
-  cell.comment.text = cell.comment.text + " - " + formattedDate;
+```
+
+To set header and footer margins, use:
+```javascript
+const sheet = workbook.worksheets.getActiveWorksheet();
+sheet.pageSetup.headerMargin = 0.25;
+sheet.pageSetup.footerMargin = 0.25;
+sheet.pageSetup.headerCenter = "&C&F";
+sheet.pageSetup.footerCenter = "&C&F";
+await context.sync();
+```
+
+For updating a comment, use:
+```javascript
+const sheet = workbook.worksheets.getActiveWorksheet();
+const commentRange = sheet.getRange("A1");
+commentRange.load("comment");
+await context.sync();
+if (commentRange.comment) {
+  commentRange.comment.text = "Updated comment " + new Date().toLocaleDateString();
 } else {
-  cell.comment = { text: "New comment - " + formattedDate };
+  commentRange.comment = { text: "New comment " + new Date().toLocaleDateString() };
 }
 await context.sync();
 ```
 
-Create sparklines correctly, using the right data and settings.
+To copy a comment, use:
 ```javascript
-// Example: Create a sparkline in cell C2 to show the trend of values in cells A2:A20
 const sheet = workbook.worksheets.getActiveWorksheet();
-const dataRange = sheet.getRange("A2:A20");
-const sparklineRange = sheet.getRange("C2");
-sparklineRange.sparklines.add(Excel.SparklineType.line, dataRange);
+const sourceRange = sheet.getRange("A1");
+const targetRange = sheet.getRange("B2:B5");
+sourceRange.load("comment");
+targetRange.load("values");
 await context.sync();
-```
-
-Calculate moving averages and cumulative sums correctly for sparklines.
-```
+const comment = sourceRange.comment;
+if (comment) {
+  targetRange.values.forEach((value, index) => {
+    if (value[0] === sourceRange.values[0][0]) {
+      targetRange.getCell(index, 0).comment = comment;
