@@ -1,64 +1,65 @@
-To improve handling of conditional formatting requests, add:
-```
-if prompt includes "highlight" or "format", ensure code uses Office JS APIs for conditional formatting.
+To address the failing cases, add the following rules and examples:
+
+When describing a function, provide a relevant example or context specific to the user's workbook.
+```javascript
+// Example: Describe VLOOKUP function with a relevant example
+const sheet = workbook.worksheets.getActiveWorksheet();
+const exampleRange = sheet.getRange("A1:B10");
+exampleRange.load("values");
+await context.sync();
 ```
 
-For accurate VLOOKUP function descriptions, include:
-```
-when describing VLOOKUP, focus on its purpose and parameters without providing unnecessary code examples.
-```
-
-To address edge cases in filtering, such as showing only Engineering departments:
-```
-use real Office JS APIs for filtering, like applyColumnFilter or applyFilters.
-```
-
-For data validation, like ensuring a column only accepts whole numbers between 1 and 100:
-```
-use dataValidation.rule with appropriate operator and formula to restrict input values.
+Use real Office JS APIs for filtering, such as `applyFilters` or `clearFilters`.
+```javascript
+// Example: Filter Department column to show only Engineering
+const sheet = workbook.worksheets.getActiveWorksheet();
+const table = sheet.tables.getItem("Table1");
+table.columns.getItem("Department").filter.apply({ filterOn: "Engineering" });
+await context.sync();
 ```
 
-To correctly position shapes, such as inserting a circle in the top-right corner:
-```
-calculate shape position based on worksheet content and size to ensure accurate placement.
-```
-
-For updating comments, like adding the current date to an existing comment:
-```
-check if comment exists before updating, and handle potential errors gracefully.
-```
-
-To copy comments correctly, such as from one cell to another based on conditions:
-```
-compare cell values accurately and use correct Office JS APIs for comment manipulation.
-```
-
-When creating named ranges, like for the top 5 rows of a sorted range:
-```
-use built-in sorting methods and ensure named range covers the correct cells.
+Check all worksheets in the workbook, not just specific ones.
+```javascript
+// Example: Set scale to 150% for all worksheets with 'Confidential' in cell A1
+workbook.worksheets.load("items");
+await context.sync();
+workbook.worksheets.items.forEach(function (sheet) {
+  sheet.load("name");
+  sheet.getRange("A1").load("values");
+  await context.sync();
+  if (sheet.getRange("A1").values[0][0] === "Confidential") {
+    sheet.pageSetup.scale = 150;
+  }
+});
+await context.sync();
 ```
 
-For filtering and sorting, such as clearing filters on a specific column or sorting by a column:
-```
-use specific Office JS API methods like clearFilters or sortBy, specifying the column or range as needed.
-```
-
-To handle shape insertion, like adding a square to a specific cell:
-```
-position shapes relative to cell positions and sizes for accurate placement.
-```
-
-For hyperlink insertion, such as creating a link with specific text:
-```
-use hyperlink property with address and display text, avoiding overwriting existing cell content.
-```
-
-To improve data manipulation, like copying a value from one cell to another:
-```
-use correct copyFrom method on destination range, ensuring data is copied from source to destination accurately.
+Update comments correctly, checking if a comment already exists and updating the correct cell.
+```javascript
+// Example: Update comment in cell A1 to include the current date
+const sheet = workbook.worksheets.getActiveWorksheet();
+const cell = sheet.getRange("A1");
+cell.load("comment");
+await context.sync();
+if (cell.comment) {
+  const date = new Date();
+  const formattedDate = date.toLocaleDateString();
+  cell.comment.text = cell.comment.text + " - " + formattedDate;
+} else {
+  cell.comment = { text: "New comment - " + formattedDate };
+}
+await context.sync();
 ```
 
-For data validation and edge cases, such as limiting input to whole numbers:
+Create sparklines correctly, using the right data and settings.
+```javascript
+// Example: Create a sparkline in cell C2 to show the trend of values in cells A2:A20
+const sheet = workbook.worksheets.getActiveWorksheet();
+const dataRange = sheet.getRange("A2:A20");
+const sparklineRange = sheet.getRange("C2");
+sparklineRange.sparklines.add(Excel.SparklineType.line, dataRange);
+await context.sync();
 ```
-apply data validation rules to entire ranges, using appropriate operators and formulas for restrictions.
+
+Calculate moving averages and cumulative sums correctly for sparklines.
 ```
