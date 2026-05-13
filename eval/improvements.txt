@@ -1,26 +1,50 @@
-To improve the sorting functionality, add the following rule:
-When sorting by a column, ensure the sort order is correctly applied, such as using `await sortByColumn("Amount", false)` for sorting by "Amount" from highest to lowest.
+To address the failing cases, add the following rules and examples:
 
-For formulas, add:
-When applying a formula to a range, ensure the formula is applied to the entire range, such as using `sheet.getRange("B10").formulas = [["=SUM(B:B)"]];` for summing the entire column B.
+* When filtering a column, use the `autoFilter` method and specify the column range.
+* To clear filters on a specific column, use the `autoFilter` method with the `clear` option.
+* For data validation, use the `dataValidation` method and specify the validation type and formula.
+* When sorting a column, use the `sort` method and specify the column range and sort order.
+* To insert a shape, use the `shapes` method and specify the shape type and position.
+* For sparklines, use the `sparklines` method and specify the sparkline type and data range.
+* When creating a named range, use the `names` method and specify the range address.
+* To copy and paste values, use the `copyFrom` method on the destination range.
+* For hyperlink creation, use the `hyperlinks` method and specify the address and display text.
+* When applying conditional formatting, use the `conditionalFormats` method and specify the format and criteria.
+* To filter a column based on a condition, use the `autoFilter` method with the `criteria` option.
+* For edge cases, handle errors and exceptions using try-catch blocks and provide informative error messages.
 
-To enhance filtering, add:
-When filtering a column, use the correct Office JS API, such as `worksheet.getRange("Department").autoFilter.apply({ filterOn: "Engineering" });` for filtering the "Department" column to show only "Engineering".
+```javascript
+// Filter a column
+const sheet = workbook.worksheets.getActiveWorksheet();
+const columnRange = sheet.getRange("A:A");
+columnRange.autoFilter.apply();
 
-For shape insertion, add:
-When inserting a shape, accurately position it, such as using `const shape = sheet.shapes.addShape(Excel.ShapeType.oval, sheet.getRange("A1").left, sheet.getRange("A1").top, 50, 50);` for inserting a circle shape in the top-left corner of cell A1.
+// Clear filters on a column
+const autoFilter = sheet.autoFilter;
+autoFilter.clear();
 
-To improve comment updating, add:
-When updating a comment, check if the comment exists and update it correctly, such as using `if (cell.comment) { cell.comment.text = "New comment"; }` for updating the comment in a cell.
+// Data validation
+const dataValidation = sheet.getRange("B:B").dataValidation;
+dataValidation.clear();
+dataValidation.rule = {
+  showInput: true,
+  showError: true,
+  type: Excel.DataValidationType.list,
+  formula1: "\"Low,Medium,High\""
+};
 
-For sparkline creation, add:
-When creating a sparkline, use the correct data range and settings, such as using `sparklineRange.sparklineGroups.add(Excel.SparklineGroupType.line, "A2:A20", top5.map(r => r[0]));` for creating a sparkline showing the trend of values in cells A2:A20 for the top 5 values.
+// Sort a column
+const usedRange = sheet.getUsedRange();
+usedRange.load("values");
+await context.sync();
+const hdr = usedRange.values[0].map(h => String(h).toLowerCase().trim());
+const col = hdr.indexOf("x");
+if (col === -1) throw new Error("Column 'X' not found.");
+usedRange.sort.apply([{ key: col, ascending: true }]);
 
-To enhance data validation, add:
-When restricting a column to specific values, use the correct data validation settings, such as using `range.dataValidation.add(Excel.DataValidationType.list, { formula1: "=Hello" });` for restricting a column to only allow the value "Hello".
+// Insert a shape
+const shape = sheet.shapes.addShape(Excel.ShapeType.oval, sheet.getUsedRange().width - 50, 0, 50, 50);
 
-For hyperlink creation, add:
-When creating a hyperlink, use the correct hyperlink settings, such as using `range.hyperlink = { address: "https://www.example.com", textToDisplay: "" };` for creating a hyperlink with no display text.
-
-To improve filtering and sorting, add:
-When clearing filters or sorting, use the correct Office JS API, such as using `await worksheet.getRange("X:X").autoFilter.clear()` for clearing filters on the "X"
+// Sparklines
+const sparklineRange = sheet.getRange("C2");
+const data
