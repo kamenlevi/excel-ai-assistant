@@ -1,50 +1,66 @@
-To address the failing cases, add the following rules and examples:
-
-* When filtering a column, use the `autoFilter` method and specify the column range.
-* To clear filters on a specific column, use the `autoFilter` method with the `clear` option.
-* For data validation, use the `dataValidation` method and specify the validation type and formula.
-* When sorting a column, use the `sort` method and specify the column range and sort order.
-* To insert a shape, use the `shapes` method and specify the shape type and position.
-* For sparklines, use the `sparklines` method and specify the sparkline type and data range.
-* When creating a named range, use the `names` method and specify the range address.
-* To copy and paste values, use the `copyFrom` method on the destination range.
-* For hyperlink creation, use the `hyperlinks` method and specify the address and display text.
-* When applying conditional formatting, use the `conditionalFormats` method and specify the format and criteria.
-* To filter a column based on a condition, use the `autoFilter` method with the `criteria` option.
-* For edge cases, handle errors and exceptions using try-catch blocks and provide informative error messages.
+To improve the sorting functionality, add the following rule:
+If the prompt contains "sort by" or "sort", use the `sort` method with the specified column and order.
 
 ```javascript
-// Filter a column
-const sheet = workbook.worksheets.getActiveWorksheet();
-const columnRange = sheet.getRange("A:A");
-columnRange.autoFilter.apply();
+if (prompt.includes("sort by") || prompt.includes("sort")) {
+  const column = prompt.split(" ")[2];
+  const order = prompt.includes("ascending") ? true : false;
+  const sheet = workbook.worksheets.getActiveWorksheet();
+  const used = sheet.getUsedRange();
+  used.sort.apply([[{ key: column, order: order }]]);
+  await context.sync();
+}
+```
 
-// Clear filters on a column
-const autoFilter = sheet.autoFilter;
-autoFilter.clear();
+For filtering, add:
+If the prompt contains "filter" and a column name, use the `applyColumnFilter` method with the specified column and criteria.
 
-// Data validation
-const dataValidation = sheet.getRange("B:B").dataValidation;
-dataValidation.clear();
-dataValidation.rule = {
-  showInput: true,
-  showError: true,
-  type: Excel.DataValidationType.list,
-  formula1: "\"Low,Medium,High\""
-};
+```javascript
+if (prompt.includes("filter")) {
+  const column = prompt.split(" ")[1];
+  const criteria = prompt.split(" ").slice(3).join(" ");
+  const sheet = workbook.workbooks.getActiveWorksheet();
+  const used = sheet.getUsedRange();
+  used.applyColumnFilter(column, criteria);
+  await context.sync();
+}
+```
 
-// Sort a column
-const usedRange = sheet.getUsedRange();
-usedRange.load("values");
-await context.sync();
-const hdr = usedRange.values[0].map(h => String(h).toLowerCase().trim());
-const col = hdr.indexOf("x");
-if (col === -1) throw new Error("Column 'X' not found.");
-usedRange.sort.apply([{ key: col, ascending: true }]);
+To address data validation issues, add:
+If the prompt contains "limit" or "restrict", use the `dataValidation` property to set the validation rule.
 
-// Insert a shape
-const shape = sheet.shapes.addShape(Excel.ShapeType.oval, sheet.getUsedRange().width - 50, 0, 50, 50);
+```javascript
+if (prompt.includes("limit") || prompt.includes("restrict")) {
+  const column = prompt.split(" ")[1];
+  const rule = prompt.split(" ").slice(3).join(" ");
+  const sheet = workbook.worksheets.getActiveWorksheet();
+  const range = sheet.getRange(`${column}:${column}`);
+  range.dataValidation.clear();
+  range.dataValidation.rule = {
+    showInput: true,
+    showError: true,
+    type: Excel.DataValidationType.custom,
+    formula1: rule
+  };
+  await context.sync();
+}
+```
 
-// Sparklines
-const sparklineRange = sheet.getRange("C2");
-const data
+For comment-related issues, add:
+If the prompt contains "comment" and "cell", use the `comments` property to add or update a comment.
+
+```javascript
+if (prompt.includes("comment") && prompt.includes("cell")) {
+  const cell = prompt.split(" ")[2];
+  const text = prompt.split(" ").slice(4).join(" ");
+  const sheet = workbook.worksheets.getActiveWorksheet();
+  const range = sheet.getRange(cell);
+  range.comments.add(text);
+  await context.sync();
+}
+```
+
+To fix the sparkline issues, add:
+If the prompt contains "sparkline" and "cell", use the `sparklines` property to add a sparkline.
+
+```javascript
