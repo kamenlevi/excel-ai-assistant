@@ -1,66 +1,62 @@
-To improve the sorting functionality, add the following rule:
-If the prompt contains "sort by" or "sort", use the `sort` method with the specified column and order.
-
+To improve the handling of conditional formatting, add the following example:
 ```javascript
-if (prompt.includes("sort by") || prompt.includes("sort")) {
-  const column = prompt.split(" ")[2];
-  const order = prompt.includes("ascending") ? true : false;
-  const sheet = workbook.worksheets.getActiveWorksheet();
-  const used = sheet.getUsedRange();
-  used.sort.apply([[{ key: column, order: order }]]);
+// Highlight cells in the Score column red if below 50
+const sheet = workbook.worksheets.getActiveWorksheet();
+const used = sheet.getUsedRange();
+used.load("values");
+await context.sync();
+const rows = used.values;
+const hdr = rows[0].map(h => String(h).toLowerCase().trim());
+const col = hdr.indexOf("score");
+if (col === -1) throw new Error("Column 'Score' not found.");
+const conditionalFormat = used.conditionalFormats.add(Excel.ConditionalFormatType.cellValue);
+conditionalFormat.formula = `=${used.columns[col].address} < 50`;
+conditionalFormat.font.color = "#FF0000";
+await context.sync();
+```
+
+For filtering, include this rule:
+```javascript
+// Filter the Department column to show only Engineering
+const sheet = workbook.worksheets.getActiveWorksheet();
+const used = sheet.getUsedRange();
+used.load("values");
+await context.sync();
+const hdr = used.values[0].map(h => String(h).toLowerCase().trim());
+const col = hdr.indexOf("department");
+if (col === -1) throw new Error("Column 'Department' not found.");
+used.autoFilter.apply({ column: col + 1, criteria1: "Engineering" });
+await context.sync();
+```
+
+To address hyperlink removal, add:
+```javascript
+// Remove the hyperlink from cell A1
+const sheet = workbook.worksheets.getActiveWorksheet();
+const hyperlink = sheet.getRange("A1").hyperlinks.getItemAt(0);
+if (hyperlink) {
+  hyperlink.delete();
   await context.sync();
 }
 ```
 
-For filtering, add:
-If the prompt contains "filter" and a column name, use the `applyColumnFilter` method with the specified column and criteria.
-
+For sparkline creation with specific data points, include:
 ```javascript
-if (prompt.includes("filter")) {
-  const column = prompt.split(" ")[1];
-  const criteria = prompt.split(" ").slice(3).join(" ");
-  const sheet = workbook.workbooks.getActiveWorksheet();
-  const used = sheet.getUsedRange();
-  used.applyColumnFilter(column, criteria);
-  await context.sync();
-}
+// Add a sparkline to cell D2 to display the high and low points of the data in cells B2:B10
+const sheet = workbook.worksheets.getActiveWorksheet();
+const dataRange = sheet.getRange("B2:B10");
+const sparklineRange = sheet.getRange("D2");
+sparklineRange.sparklines.add(Excel.SparklineType.line, dataRange);
+await context.sync();
 ```
 
-To address data validation issues, add:
-If the prompt contains "limit" or "restrict", use the `dataValidation` property to set the validation rule.
-
+To fix shape insertion, add:
 ```javascript
-if (prompt.includes("limit") || prompt.includes("restrict")) {
-  const column = prompt.split(" ")[1];
-  const rule = prompt.split(" ").slice(3).join(" ");
-  const sheet = workbook.worksheets.getActiveWorksheet();
-  const range = sheet.getRange(`${column}:${column}`);
-  range.dataValidation.clear();
-  range.dataValidation.rule = {
-    showInput: true,
-    showError: true,
-    type: Excel.DataValidationType.custom,
-    formula1: rule
-  };
-  await context.sync();
-}
-```
-
-For comment-related issues, add:
-If the prompt contains "comment" and "cell", use the `comments` property to add or update a comment.
-
-```javascript
-if (prompt.includes("comment") && prompt.includes("cell")) {
-  const cell = prompt.split(" ")[2];
-  const text = prompt.split(" ").slice(4).join(" ");
-  const sheet = workbook.worksheets.getActiveWorksheet();
-  const range = sheet.getRange(cell);
-  range.comments.add(text);
-  await context.sync();
-}
-```
-
-To fix the sparkline issues, add:
-If the prompt contains "sparkline" and "cell", use the `sparklines` property to add a sparkline.
-
-```javascript
+// Insert a circle shape in the top-right corner of the worksheet
+const sheet = workbook.worksheets.getActiveWorksheet();
+const used = sheet.getUsedRange();
+const shape = sheet.shapes.add(Excel.ShapeType.oval, used.columnCount + 1, 1);
+shape.height = 20;
+shape.width = 20;
+await context.sync();
+``
