@@ -1,59 +1,46 @@
-To improve the handling of filtering, use the `applyFilters` method instead of manual approaches.
+To address the failing cases, the following rules and examples can be added:
+
+* When formatting a column as currency, ensure the correct column index is used.
+```javascript
+// Format column B as currency with 2 decimal places
+const priceColumn = sheet.getRangeByIndexes(0, 1, used.rowCount, 1);
+priceColumn.numberFormat = [["\$#,##0.00"]];
+```
+
+* When filtering a column, use the correct Office JS API and specify the column name.
 ```javascript
 // Filter the Department column to show only Engineering
-const sheet = workbook.worksheets.getActiveWorksheet();
-const table = sheet.tables.getItem("MyTable");
-table.columns.getItem("Department").filter.apply({
-  filterOn: Excel.FilterOn.custom,
-  criteria1: ["Engineering"]
-});
-await context.sync();
+const table = sheet.tables.getItem("Table1");
+const filter = table.columns.getItem("Department").filter;
+filter.clear();
+filter.apply({ filterOn: Excel.FilterOn.custom, criteria1: "Engineering" });
 ```
 
-For hyperlinks, ensure the correct cell is targeted and use the `add` method for creating new hyperlinks.
-```javascript
-// Create a hyperlink in cell A1 to https://www.example.com
-const sheet = workbook.worksheets.getActiveWorksheet();
-const range = sheet.getRange("A1");
-range.hyperlinks.add({
-  address: "https://www.example.com",
-  text: "Example"
-});
-await context.sync();
-```
-
-When removing hyperlinks, target the correct cell.
+* When removing a hyperlink, target the correct cell.
 ```javascript
 // Remove the hyperlink from cell A1
-const sheet = workbook.workbooks.getActiveWorksheet();
 const range = sheet.getRange("A1");
-range.hyperlinks.clear();
-await context.sync();
+range.hyperlink = null;
 ```
 
-For comments, update the correct cell and check if a comment already exists.
+* When updating a comment, target the correct cell and use the correct comment properties.
 ```javascript
 // Update the comment in cell A1 to include the current date
-const sheet = workbook.worksheets.getActiveWorksheet();
 const cell = sheet.getRange("A1");
 cell.load("comment");
 await context.sync();
 if (cell.comment) {
-  const currentDate = new Date();
-  const formattedDate = currentDate.toLocaleDateString();
-  cell.comment.value += " - " + formattedDate;
-} else {
-  cell.comments.add("Comment added on " + formattedDate);
+  const date = new Date();
+  const formattedDate = date.toLocaleDateString();
+  cell.comment.text = cell.comment.text + " - " + formattedDate;
 }
-await context.sync();
 ```
 
-When copying comments, compare values in the correct columns.
+* When copying a comment to multiple cells, use the correct target range and compare values correctly.
 ```javascript
 // Copy the comment from cell A1 to all cells in the range B2:B5 that have the same value as cell A1
-const sheet = workbook.worksheets.getActiveWorksheet();
 const commentRange = sheet.getRange("A1");
-commentRange.load("comment, values");
+commentRange.load("comment");
 await context.sync();
 const comment = commentRange.comment;
 const targetRange = sheet.getRange("B2:B5");
@@ -61,5 +48,14 @@ targetRange.load("values");
 await context.sync();
 const values = targetRange.values;
 for (let i = 0; i < values.length; i++) {
-  if (values[i][0] === commentRange.values[0][0]) {
-    sheet.getRangeByIndexes(i + 1, 1, 1, 1).comment = comment;
+  if (values[i][0] === sheet.getRange("A1").value) {
+    const cell = sheet.getRangeByIndexes(i + 1, 1, 1, 1);
+    cell.comment = comment;
+  }
+}
+```
+
+* When creating a stacked area chart, use the correct chart type and data range.
+```javascript
+// Create a stacked area chart using the data in A1:C10
+const dataRange = sheet.get

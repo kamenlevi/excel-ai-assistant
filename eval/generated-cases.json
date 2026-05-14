@@ -4967,5 +4967,654 @@
       "Office.context"
     ],
     "forbiddenPatterns": []
+  },
+  {
+    "id": "gen-L1-filtering-easy-022",
+    "level": 1,
+    "category": "filtering",
+    "prompt": "filter the X column to show only val",
+    "workbook": "Headers: A1=X | B1=Y\nData:\nA2:val | B2:val\nA3:other | B3:other",
+    "mustHaveCode": true,
+    "requiredPatterns": [
+      "worksheet.autoFilter"
+    ],
+    "forbiddenPatterns": []
+  },
+  {
+    "id": "gen-L1-filtering-easy-023",
+    "level": 1,
+    "category": "filtering",
+    "prompt": "show only rows where Y is val",
+    "workbook": "Headers: A1=X | B1=Y\nData:\nA2:val | B2:val\nA3:val | B3:other",
+    "mustHaveCode": true,
+    "requiredPatterns": [
+      "worksheet.autoFilter"
+    ],
+    "forbiddenPatterns": []
+  },
+  {
+    "id": "gen-L1-filtering-easy-024",
+    "level": 1,
+    "category": "filtering",
+    "prompt": "clear filter on the X column",
+    "workbook": "Headers: A1=X | B1=Y\nData:\nA2:val | B2:val\nA3:other | B3:other",
+    "mustHaveCode": true,
+    "requiredPatterns": [
+      "worksheet.autoFilter.clear"
+    ],
+    "forbiddenPatterns": []
+  },
+  {
+    "id": "gen-L1-sorting-easy-022",
+    "level": 1,
+    "category": "sorting",
+    "prompt": "sort column X from lowest to highest",
+    "workbook": "Headers: A1=X | B1=Y\nData:\nA2:10 | B2:apple\nA3:5 | B3:banana\nA4:20 | B4:cherry",
+    "mustHaveCode": true,
+    "requiredPatterns": [
+      "Range.Sort"
+    ],
+    "forbiddenPatterns": []
+  },
+  {
+    "id": "gen-L1-sorting-easy-023",
+    "level": 1,
+    "category": "sorting",
+    "prompt": "sort column Y alphabetically",
+    "workbook": "Headers: A1=X | B1=Y\nData:\nA2:10 | B2:dog\nA3:5 | B3:cat\nA4:20 | B4:bird",
+    "mustHaveCode": true,
+    "requiredPatterns": [
+      "Range.Sort"
+    ],
+    "forbiddenPatterns": []
+  },
+  {
+    "id": "gen-L1-sorting-easy-024",
+    "level": 1,
+    "category": "sorting",
+    "prompt": "sort column X in descending order",
+    "workbook": "Headers: A1=X | B1=Y\nData:\nA2:100 | B2:hello\nA3:50 | B3:world\nA4:200 | B4:example",
+    "mustHaveCode": true,
+    "requiredPatterns": [
+      "Range.Sort"
+    ],
+    "forbiddenPatterns": []
+  },
+  {
+    "id": "gen-L1-formatting-easy-022",
+    "level": 1,
+    "category": "formatting",
+    "prompt": "make all cells in column A have a font size of 10",
+    "workbook": "Headers: A1=Name | B1=Age\nData:\nA2:John | B2:25\nA3:Jane | B3:30",
+    "mustHaveCode": true,
+    "requiredPatterns": [
+      "font.size"
+    ],
+    "forbiddenPatterns": []
+  },
+  {
+    "id": "gen-L1-formatting-easy-023",
+    "level": 1,
+    "category": "formatting",
+    "prompt": "center align the header row",
+    "workbook": "Headers: A1=Product | B1=Price\nData:\nA2:Product1 | B2:10.99\nA3:Product2 | B3:9.99",
+    "mustHaveCode": true,
+    "requiredPatterns": [
+      "alignment.horizontal"
+    ],
+    "forbiddenPatterns": []
+  },
+  {
+    "id": "gen-L1-formatting-easy-024",
+    "level": 1,
+    "category": "formatting",
+    "prompt": "make all cells in the data range have a font color of black",
+    "workbook": "Headers: A1=Date | B1=Sales\nData:\nA2:2022-01-01 | B2:100\nA3:2022-01-02 | B3:200",
+    "mustHaveCode": true,
+    "requiredPatterns": [
+      "font.color"
+    ],
+    "forbiddenPatterns": []
+  },
+  {
+    "id": "gen-L1-formulas-easy-019",
+    "level": 1,
+    "category": "formulas",
+    "prompt": "in cell A3 write a formula that shows the value of A1 plus 1",
+    "workbook": "Headers: A1=Value | B1=Result\nData:\nA2:10 | B2:",
+    "mustHaveCode": true,
+    "requiredPatterns": [
+      "=A1+1"
+    ],
+    "forbiddenPatterns": []
+  },
+  {
+    "id": "gen-L1-formulas-easy-020",
+    "level": 1,
+    "category": "formulas",
+    "prompt": "put a COUNT formula in cell B1 for the range A1:A2",
+    "workbook": "Headers: A1=X | B1=Count\nData:\nA2:val | B2:",
+    "mustHaveCode": true,
+    "requiredPatterns": [
+      "=COUNT(A1:A2)"
+    ],
+    "forbiddenPatterns": []
+  },
+  {
+    "id": "gen-L1-formulas-easy-021",
+    "level": 1,
+    "category": "formulas",
+    "prompt": "in cell B2 write a formula that shows the value of A2 multiplied by 2",
+    "workbook": "Headers: A1=Value | B1=Double\nData:\nA2:5 | B2:",
+    "mustHaveCode": true,
+    "requiredPatterns": [
+      "=A2*2"
+    ],
+    "forbiddenPatterns": []
+  },
+  {
+    "id": "gen-L1-conditional-formatting-easy-022",
+    "level": 1,
+    "category": "conditional formatting",
+    "prompt": "highlight cells in the X column green if equal to 1",
+    "workbook": "Headers: A1=X | B1=Y\nData:\nA2:1 | B2:10\nA3:2 | B3:20\nA4:1 | B4:30",
+    "mustHaveCode": true,
+    "requiredPatterns": [
+      "$A$2:$A$4"
+    ],
+    "forbiddenPatterns": []
+  },
+  {
+    "id": "gen-L1-conditional-formatting-easy-023",
+    "level": 1,
+    "category": "conditional formatting",
+    "prompt": "highlight cells in the Y column red if greater than 20",
+    "workbook": "Headers: A1=X | B1=Y\nData:\nA2:1 | B2:10\nA3:2 | B3:25\nA4:1 | B4:15",
+    "mustHaveCode": true,
+    "requiredPatterns": [
+      "$B$2:$B$4"
+    ],
+    "forbiddenPatterns": []
+  },
+  {
+    "id": "gen-L1-conditional-formatting-easy-024",
+    "level": 1,
+    "category": "conditional formatting",
+    "prompt": "highlight cells in the X column blue if less than 3",
+    "workbook": "Headers: A1=X | B1=Y\nData:\nA2:1 | B2:10\nA3:4 | B3:20\nA4:2 | B4:30",
+    "mustHaveCode": true,
+    "requiredPatterns": [
+      "$A$2:$A$4"
+    ],
+    "forbiddenPatterns": []
+  },
+  {
+    "id": "gen-L2-charts-easy-022",
+    "level": 2,
+    "category": "charts",
+    "prompt": "create a simple column chart using the data in A1:B3",
+    "workbook": "Headers: A1=Month | B1=Sales\nData:\nA2=Jan | B2=100\nA3=Feb | B3=120",
+    "mustHaveCode": true,
+    "requiredPatterns": [
+      "Excel.Charts"
+    ],
+    "forbiddenPatterns": []
+  },
+  {
+    "id": "gen-L2-charts-easy-023",
+    "level": 2,
+    "category": "charts",
+    "prompt": "create a line chart using the data in A1:B4, with a default title",
+    "workbook": "Headers: A1=Day | B1=Temperature\nData:\nA2=Mon | B2=20\nA3=Tue | B3=22\nA4=Wed | B4=25",
+    "mustHaveCode": true,
+    "requiredPatterns": [
+      "Excel.Charts"
+    ],
+    "forbiddenPatterns": []
+  },
+  {
+    "id": "gen-L2-charts-easy-024",
+    "level": 2,
+    "category": "charts",
+    "prompt": "create a simple pie chart using the data in A1:B2",
+    "workbook": "Headers: A1=Category | B1=Amount\nData:\nA2=A | B2=50\nA3=B | B3=30",
+    "mustHaveCode": true,
+    "requiredPatterns": [
+      "Excel.Charts"
+    ],
+    "forbiddenPatterns": []
+  },
+  {
+    "id": "gen-L1-data-manipulation-easy-022",
+    "level": 1,
+    "category": "data manipulation",
+    "prompt": "fill cell A1 with the value 'sample'",
+    "workbook": "Headers: A1=Name | B1=Age\nData:\nA2:John | B2:25",
+    "mustHaveCode": true,
+    "requiredPatterns": [
+      "Range.setValue"
+    ],
+    "forbiddenPatterns": []
+  },
+  {
+    "id": "gen-L1-data-manipulation-easy-023",
+    "level": 1,
+    "category": "data manipulation",
+    "prompt": "copy the value in cell A2 and paste it into cell B2",
+    "workbook": "Headers: A1=First | B1=Last\nData:\nA2:Alice | B2:",
+    "mustHaveCode": true,
+    "requiredPatterns": [
+      "Range.copy",
+      "Range.paste"
+    ],
+    "forbiddenPatterns": []
+  },
+  {
+    "id": "gen-L1-data-manipulation-easy-024",
+    "level": 1,
+    "category": "data manipulation",
+    "prompt": "clear the content of cell B1",
+    "workbook": "Headers: A1=City | B1=Country\nData:\nA2:NY | B2:USA",
+    "mustHaveCode": true,
+    "requiredPatterns": [
+      "Range.clear"
+    ],
+    "forbiddenPatterns": []
+  },
+  {
+    "id": "gen-L1-sheet-operations-easy-022",
+    "level": 1,
+    "category": "sheet operations",
+    "prompt": "select the cell with the value 'val' in the first column",
+    "workbook": "Headers: A1=X | B1=Y\nData:\nA2:val | B2:val\nA3:foo | B3:bar",
+    "mustHaveCode": true,
+    "requiredPatterns": [
+      "Worksheet.getActiveCell"
+    ],
+    "forbiddenPatterns": []
+  },
+  {
+    "id": "gen-L1-sheet-operations-easy-023",
+    "level": 1,
+    "category": "sheet operations",
+    "prompt": "make the first row bold",
+    "workbook": "Headers: A1=X | B1=Y\nData:\nA2:val | B2:val",
+    "mustHaveCode": true,
+    "requiredPatterns": [
+      "Range.font.bold"
+    ],
+    "forbiddenPatterns": []
+  },
+  {
+    "id": "gen-L1-sheet-operations-easy-024",
+    "level": 1,
+    "category": "sheet operations",
+    "prompt": "insert a new row above the existing data",
+    "workbook": "Headers: A1=X | B1=Y\nData:\nA2:val | B2:val",
+    "mustHaveCode": true,
+    "requiredPatterns": [
+      "Worksheet.insertRow"
+    ],
+    "forbiddenPatterns": []
+  },
+  {
+    "id": "gen-L1-question-handling-easy-022",
+    "level": 1,
+    "category": "question handling",
+    "prompt": "what is the value in the first column?",
+    "workbook": "Headers: A1=Name | B1=Age\nData:\nA2:John | B2:30",
+    "mustHaveCode": true,
+    "requiredPatterns": [
+      "Range.getValue"
+    ],
+    "forbiddenPatterns": []
+  },
+  {
+    "id": "gen-L1-question-handling-easy-023",
+    "level": 1,
+    "category": "question handling",
+    "prompt": "how many columns do I have with headers?",
+    "workbook": "Headers: A1=X | B1=Y | C1=Z\nData:\nA2:val | B2:val | C2:val",
+    "mustHaveCode": true,
+    "requiredPatterns": [
+      "Worksheet.getRange"
+    ],
+    "forbiddenPatterns": []
+  },
+  {
+    "id": "gen-L1-question-handling-easy-024",
+    "level": 1,
+    "category": "question handling",
+    "prompt": "what is the header in the first column?",
+    "workbook": "Headers: A1=ID | B1=Name\nData:\nA2:1 | B2:John",
+    "mustHaveCode": true,
+    "requiredPatterns": [
+      "Range.getValue"
+    ],
+    "forbiddenPatterns": []
+  },
+  {
+    "id": "gen-L1-edge-cases-easy-022",
+    "level": 1,
+    "category": "edge cases",
+    "prompt": "filter the X column to show only values greater than 0",
+    "workbook": "Headers: A1=X | B1=Y\nData:\nA2:1 | B2:hello\nA3:0 | B3:world\nA4:5 | B4:foo",
+    "mustHaveCode": true,
+    "requiredPatterns": [
+      "filter"
+    ],
+    "forbiddenPatterns": []
+  },
+  {
+    "id": "gen-L1-edge-cases-easy-023",
+    "level": 1,
+    "category": "edge cases",
+    "prompt": "filter the Y column to show only non-empty cells",
+    "workbook": "Headers: A1=X | B1=Y\nData:\nA2:10 | B2:\nA3:5 | B3:bar\nA4:1 | B4:baz",
+    "mustHaveCode": true,
+    "requiredPatterns": [
+      "filter"
+    ],
+    "forbiddenPatterns": []
+  },
+  {
+    "id": "gen-L1-edge-cases-easy-024",
+    "level": 1,
+    "category": "edge cases",
+    "prompt": "filter the X column to show only values equal to 1",
+    "workbook": "Headers: A1=X | B1=Y\nData:\nA2:1 | B2:hello\nA3:2 | B3:world\nA4:1 | B4:foo",
+    "mustHaveCode": true,
+    "requiredPatterns": [
+      "filter"
+    ],
+    "forbiddenPatterns": []
+  },
+  {
+    "id": "gen-L1-data-validation-easy-022",
+    "level": 1,
+    "category": "data validation",
+    "prompt": "restrict column A to only allow the value Yes",
+    "workbook": "Headers: A1=Response | B1=Name\nData:\nA2:Yes | B2:John\nA3:No | B3:Jane",
+    "mustHaveCode": true,
+    "requiredPatterns": [
+      "dataValidation"
+    ],
+    "forbiddenPatterns": []
+  },
+  {
+    "id": "gen-L1-data-validation-easy-023",
+    "level": 1,
+    "category": "data validation",
+    "prompt": "ensure column B only accepts numbers",
+    "workbook": "Headers: A1=Name | B1=Age\nData:\nA2:John | B2:25\nA3:Jane | B3:30",
+    "mustHaveCode": true,
+    "requiredPatterns": [
+      "dataValidation"
+    ],
+    "forbiddenPatterns": []
+  },
+  {
+    "id": "gen-L1-data-validation-easy-024",
+    "level": 1,
+    "category": "data validation",
+    "prompt": "limit column A to only allow text",
+    "workbook": "Headers: A1=Description | B1=Price\nData:\nA2:Apple | B2:1.99\nA3:Banana | B3:0.99",
+    "mustHaveCode": true,
+    "requiredPatterns": [
+      "dataValidation"
+    ],
+    "forbiddenPatterns": []
+  },
+  {
+    "id": "gen-L2-tables-easy-901",
+    "level": 2,
+    "category": "tables",
+    "prompt": "create a table from the data in A1:B2 and sort it by column A in ascending order",
+    "workbook": "Headers: A1=Name | B1=Age\nData:\nA2:John | B2:25\nA3:Alice | B3:30",
+    "mustHaveCode": true,
+    "requiredPatterns": [
+      "Table.sort"
+    ],
+    "forbiddenPatterns": []
+  },
+  {
+    "id": "gen-L2-tables-easy-902",
+    "level": 2,
+    "category": "tables",
+    "prompt": "create a table from the data in A1:B2 and add a new column with a formula that doubles the values in column B",
+    "workbook": "Headers: A1=Product | B1=Price\nData:\nA2=Apple | B2:10\nA3=Banana | B3:20",
+    "mustHaveCode": true,
+    "requiredPatterns": [
+      "Table.addColumn"
+    ],
+    "forbiddenPatterns": []
+  },
+  {
+    "id": "gen-L2-tables-easy-903",
+    "level": 2,
+    "category": "tables",
+    "prompt": "create a table from the data in A1:B2 and apply a filter to column B to only show rows where the value is greater than 10",
+    "workbook": "Headers: A1=City | B1=Population\nData:\nA2=New York | B2:10000\nA3=Los Angeles | B3:5000",
+    "mustHaveCode": true,
+    "requiredPatterns": [
+      "Table.filter"
+    ],
+    "forbiddenPatterns": []
+  },
+  {
+    "id": "gen-L2-named-ranges-easy-016",
+    "level": 2,
+    "category": "named ranges",
+    "prompt": "Create a named range called BasicRange that covers the range A1:B2",
+    "workbook": "Headers: A1=X | B1=Y\nData:\nA2:10 | B2:20\nA3:30 | B3:40",
+    "mustHaveCode": true,
+    "requiredPatterns": [
+      "Range.define"
+    ],
+    "forbiddenPatterns": []
+  },
+  {
+    "id": "gen-L2-named-ranges-easy-017",
+    "level": 2,
+    "category": "named ranges",
+    "prompt": "Create a named range called SimpleList that covers the range A1:A3",
+    "workbook": "Headers: A1=Name | B1=Age\nData:\nA2:John | B2:25\nA3:Jane | B3:30\nA4:Bob | B4:35",
+    "mustHaveCode": true,
+    "requiredPatterns": [
+      "Range.define"
+    ],
+    "forbiddenPatterns": []
+  },
+  {
+    "id": "gen-L2-named-ranges-easy-018",
+    "level": 2,
+    "category": "named ranges",
+    "prompt": "Create a named range called FlatData that covers the range B1:C2",
+    "workbook": "Headers: A1=ID | B1=Name | C1=Age\nData:\nA2:1 | B2:John | C2:25\nA3:2 | B3:Jane | C3:30",
+    "mustHaveCode": true,
+    "requiredPatterns": [
+      "Range.define"
+    ],
+    "forbiddenPatterns": []
+  },
+  {
+    "id": "gen-L1-Hyperlinks-easy-022",
+    "level": 1,
+    "category": "Hyperlinks",
+    "prompt": "Create a hyperlink in cell A1 to https://www.example.com",
+    "workbook": "Headers: A1=Name | B1=Link\nData:\nA2:John | B2:",
+    "mustHaveCode": true,
+    "requiredPatterns": [
+      "Office.context.document"
+    ],
+    "forbiddenPatterns": []
+  },
+  {
+    "id": "gen-L1-Hyperlinks-easy-023",
+    "level": 1,
+    "category": "Hyperlinks",
+    "prompt": "Add a hyperlink with the text 'Home' to cell B2 that links to https://www.office.com",
+    "workbook": "Headers: A1=Category | B1=URL\nData:\nA2:Office | B2:",
+    "mustHaveCode": true,
+    "requiredPatterns": [
+      "context.document.hyperlinks"
+    ],
+    "forbiddenPatterns": []
+  },
+  {
+    "id": "gen-L1-Hyperlinks-easy-024",
+    "level": 1,
+    "category": "Hyperlinks",
+    "prompt": "Create a hyperlink in cell A3 to https://www.example.net with the display text 'Example'",
+    "workbook": "Headers: A1=ID | B1=Link\nData:\nA2:1 | B2:\nA3:2 | B3:",
+    "mustHaveCode": true,
+    "requiredPatterns": [
+      "Office.context.document"
+    ],
+    "forbiddenPatterns": []
+  },
+  {
+    "id": "gen-L2-Comments-easy-029",
+    "level": 2,
+    "category": "Comments",
+    "prompt": "Add a comment to cell A1 with the text 'New Comment'",
+    "workbook": "Headers: A1=X | B1=Y\nData:\nA2:10 | B2:20",
+    "mustHaveCode": true,
+    "requiredPatterns": [
+      "comments.add"
+    ],
+    "forbiddenPatterns": []
+  },
+  {
+    "id": "gen-L2-Comments-easy-030",
+    "level": 2,
+    "category": "Comments",
+    "prompt": "Delete the comment from cell A1 if it exists",
+    "workbook": "Headers: A1=X | B1=Y\nData:\nA2:10 | B2:20",
+    "mustHaveCode": true,
+    "requiredPatterns": [
+      "comments.delete"
+    ],
+    "forbiddenPatterns": []
+  },
+  {
+    "id": "gen-L2-Comments-easy-031",
+    "level": 2,
+    "category": "Comments",
+    "prompt": "Update the comment in cell A1 to 'Updated Comment' if a comment already exists",
+    "workbook": "Headers: A1=X | B1=Y\nData:\nA2:10 | B2:20",
+    "mustHaveCode": true,
+    "requiredPatterns": [
+      "comments.update"
+    ],
+    "forbiddenPatterns": []
+  },
+  {
+    "id": "gen-L2-Sparklines-easy-022",
+    "level": 2,
+    "category": "Sparklines",
+    "prompt": "Create a sparkline in cell C2 to show the trend of values in cells A2:A5",
+    "workbook": "Headers: A1=X | B1=Y\nData:\nA2:10 | B2:20\nA3:15 | B3:25\nA4:12 | B4:22\nA5:18 | B5:28",
+    "mustHaveCode": true,
+    "requiredPatterns": [
+      "sparkline"
+    ],
+    "forbiddenPatterns": []
+  },
+  {
+    "id": "gen-L2-Sparklines-easy-023",
+    "level": 2,
+    "category": "Sparklines",
+    "prompt": "Add a sparkline to cell D2 to display the values in cells A2:A3",
+    "workbook": "Headers: A1=X | B1=Y\nData:\nA2:5 | B2:10\nA3:8 | B3:15",
+    "mustHaveCode": true,
+    "requiredPatterns": [
+      "sparkline"
+    ],
+    "forbiddenPatterns": []
+  },
+  {
+    "id": "gen-L2-Sparklines-easy-024",
+    "level": 2,
+    "category": "Sparklines",
+    "prompt": "Create a sparkline in cell E2 to show the trend of values in cells A2:A4",
+    "workbook": "Headers: A1=X | B1=Y\nData:\nA2:20 | B2:30\nA3:25 | B3:35\nA4:22 | B4:32",
+    "mustHaveCode": true,
+    "requiredPatterns": [
+      "sparkline"
+    ],
+    "forbiddenPatterns": []
+  },
+  {
+    "id": "gen-L2-Page-Layout-easy-032",
+    "level": 2,
+    "category": "Page Layout",
+    "prompt": "Set the page orientation to portrait for the current worksheet.",
+    "workbook": "Headers: A1=Name | B1=Age\nData:\nA2:John | B2:30\nA3:Jane | B3:25",
+    "mustHaveCode": true,
+    "requiredPatterns": [
+      "page orientation"
+    ],
+    "forbiddenPatterns": []
+  },
+  {
+    "id": "gen-L2-Page-Layout-easy-033",
+    "level": 2,
+    "category": "Page Layout",
+    "prompt": "Set the top margin to 0.5 inches for all worksheets in the workbook.",
+    "workbook": "Headers: A1=Product | B1=Price\nData:\nA2:Product1 | B2:10.99\nA3:Product2 | B3:9.99",
+    "mustHaveCode": true,
+    "requiredPatterns": [
+      "margin"
+    ],
+    "forbiddenPatterns": []
+  },
+  {
+    "id": "gen-L2-Page-Layout-easy-034",
+    "level": 2,
+    "category": "Page Layout",
+    "prompt": "Set the scale to 100% for the current worksheet.",
+    "workbook": "Headers: A1=Date | B1=Sales\nData:\nA2:2022-01-01 | B2:100\nA3:2022-01-02 | B3:120",
+    "mustHaveCode": true,
+    "requiredPatterns": [
+      "scale"
+    ],
+    "forbiddenPatterns": []
+  },
+  {
+    "id": "gen-L1-Shapes-easy-022",
+    "level": 1,
+    "category": "Shapes",
+    "prompt": "Add a square shape to cell A1",
+    "workbook": "Headers: A1=X | B1=Y\nData:\nA2:10 | B2:20",
+    "mustHaveCode": true,
+    "requiredPatterns": [
+      "addShape"
+    ],
+    "forbiddenPatterns": []
+  },
+  {
+    "id": "gen-L1-Shapes-easy-023",
+    "level": 1,
+    "category": "Shapes",
+    "prompt": "Insert a circle shape in cell B2",
+    "workbook": "Headers: A1=X | B1=Y\nData:\nA2:val1 | B2:val2",
+    "mustHaveCode": true,
+    "requiredPatterns": [
+      "insertShape"
+    ],
+    "forbiddenPatterns": []
+  },
+  {
+    "id": "gen-L1-Shapes-easy-024",
+    "level": 1,
+    "category": "Shapes",
+    "prompt": "Add a rectangle shape to cell A2",
+    "workbook": "Headers: A1=X | B1=Y\nData:\nA2:5 | B2:10",
+    "mustHaveCode": true,
+    "requiredPatterns": [
+      "addRectangle"
+    ],
+    "forbiddenPatterns": []
   }
 ]
