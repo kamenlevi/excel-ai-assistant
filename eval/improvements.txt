@@ -9,56 +9,9 @@ sheet.getRange(`B${lastRow + 1}`).formulas = [["=SUM(B2:B" + lastRow + ")"]];
 await context.sync();
 ```
 
-For filtering, utilize the `autoFilter` method with specific criteria.
+When setting page layout properties, use the correct units (inches, not points).
 ```javascript
 const sheet = workbook.worksheets.getActiveWorksheet();
-const usedRange = sheet.getUsedRange();
-usedRange.load("values");
-await context.sync();
-const filterCriteria = { criteria: "Engineering" };
-usedRange.autoFilter.apply(filterCriteria);
+sheet.pageLayout.topMargin = 1; // 1 inch
 await context.sync();
 ```
-
-When setting page layout properties, ensure to use the correct units.
-```javascript
-const sheet = workbook.worksheets.getActiveWorksheet();
-sheet.pageSetup.topMargin = 1 * 72; // 1 inch in points
-await context.sync();
-```
-
-To create a named range based on specific conditions, use the `add` method with a conditional statement.
-```javascript
-const sheet = workbook.worksheets.getActiveWorksheet();
-const usedRange = sheet.getUsedRange();
-usedRange.load("values");
-await context.sync();
-const rows = usedRange.values;
-const namedRange = [];
-for (let i = 1; i < rows.length; i++) {
-  if (rows[i][0] > 1000) {
-    namedRange.push(rows[i]);
-  }
-}
-const namedRangeAddress = "C2:E" + (namedRange.length + 1);
-workbook.names.add("QuarterlySales", namedRangeAddress);
-await context.sync();
-```
-
-For sorting, use the `sort` method with the correct column index and sorting order.
-```javascript
-const sheet = workbook.worksheets.getActiveWorksheet();
-const usedRange = sheet.getUsedRange();
-usedRange.load("values");
-await context.sync();
-const hdr = usedRange.values[0].map(h => String(h).toLowerCase().trim());
-const col = hdr.indexOf("y");
-if (col === -1) throw new Error("Column 'Y' not found.");
-usedRange.sort.apply([{ key: col, ascending: true }]);
-await context.sync();
-```
-
-To add a comment to a cell based on a condition, use the `comments.add` method.
-```javascript
-const sheet = workbook.worksheets.getActiveWorksheet();
-const usedRange = sheet.getUsed
