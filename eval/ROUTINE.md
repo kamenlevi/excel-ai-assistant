@@ -40,7 +40,8 @@ npm run eval
 ```
 This sends test prompts to the live Llama 3.3 70b API via OpenRouter and scores each
 response 0–100. The budget hard limit is $0.50 — the script enforces this automatically.
-The script also auto-patches `server.js` when categories fail (<70/100).
+The script auto-patches `eval/improvements.txt` when categories fail (<70/100); those
+improvements are appended to the system prompt in `server.js` at runtime.
 
 **6. Analyse results**
 - Results are saved to `eval/results/<timestamp>.json`
@@ -53,12 +54,9 @@ If the eval patched `server.js` (printed "SYSTEM PROMPT PATCHED"), review the ch
 - Verify it actually addresses the failures
 - If it introduced anything wrong, fix it manually
 
-**8. Update README scores table**
-Update the "Latest eval scores" table in `README.md` with the scores from this run.
-
-**9. Commit and push**
+**8. Commit and push**
 ```
-git add server.js eval/progress.json eval/generated-cases.json README.md
+git add server.js public/ eval/progress.json eval/generated-cases.json eval/RESULTS.md eval/last-run.txt eval/results/
 git commit -m "eval: $(date +%Y-%m-%d) — overall <X>/100, <brief summary of changes>"
 git push
 ```
@@ -69,7 +67,7 @@ git push
 
 | Category | Level | What it checks |
 |---|---|---|
-| Filtering | 1+ | Uses `applyColumnFilter` helper, correct column name |
+| Filtering | 1+ | Uses `applyColumnFilter` / `clearFilters` helpers |
 | Sorting | 1+ | Uses `sortByColumn` helper, correct direction |
 | Formatting | 1+ | Generates valid format API calls |
 | Formulas | 1+ | Correct formula syntax and cell references |
@@ -79,15 +77,23 @@ git push
 | Sheet operations | 1+ | `freezePanes`, `autofitColumns` |
 | Question handling | 1+ | Does NOT generate code for pure questions |
 | Edge cases | 1+ | Column not found → helpful error, not silent failure |
+| Data validation | 1+ | Uses `dataValidation` API |
+| Tables | 1+ | `tables.add`, `showTotals`, etc. |
+| Named ranges | 1+ | Uses `names.add` correctly |
+| Hyperlinks | 1+ | Sets `range.hyperlink` correctly |
+| Comments | 1+ | Uses `comments.add` / `comments.delete` |
+| Sparklines | 1+ | Uses sparkline group APIs |
+| Page Layout | 1+ | Uses `pageLayout` / `pageSetup` APIs |
+| Shapes | 1+ | Uses `shapes.addGeometricShape` etc. |
 
 Each category advances to the next level when it averages 95+/100. Harder cases are
-auto-generated when a level is mastered.
+auto-generated when a level is mastered. Max 5 cases run per category per level.
 
 ---
 
 ## Cost estimate per session
 
-- ~19 test cases × ~1500 tokens in + ~400 tokens out = ~$0.004
-- ~19 judge calls × ~800 tokens in + ~150 tokens out = ~$0.002
+- ~76 test cases × ~1500 tokens in + ~400 tokens out = ~$0.017
+- ~76 judge calls × ~800 tokens in + ~150 tokens out = ~$0.008
 - Auto-patch generation (if needed) = ~$0.002
-- **Total: ~$0.01–0.03 per session** (well under the $0.50 limit)
+- **Total: ~$0.02–0.03 per session** (well under the $0.50 limit)

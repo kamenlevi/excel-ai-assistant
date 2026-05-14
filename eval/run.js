@@ -24,8 +24,9 @@ const COST_PER_1M_OUT  = 0.30;
 const BUDGET_USD       = 0.50;
 const MASTERY_THRESHOLD      = 95;
 const NEW_CAT_THRESHOLD      = 95;  // overall avg to spawn a brand-new category
-const NEW_CAT_L2_THRESHOLD   = 90;  // overall avg to spawn a level-2-style category
 const STUCK_RUNS_THRESHOLD   = 3;   // runs without leveling up before we ease the cases
+const MAX_CASES_PER_CAT      = 5;   // max cases to run per category per level
+const MAX_CATEGORIES         = 20;  // hard cap on total categories
 
 const PATHS = {
   cases:     path.join(__dirname, 'cases.json'),
@@ -64,12 +65,30 @@ async function callLLM(messages, model = MODEL, maxTokens = 1024) {
 }
 
 // ── Load files ────────────────────────────────────────────────────────────────
-function loadCases() {
+function loadCases(progress = {}) {
   const base = JSON.parse(fs.readFileSync(PATHS.cases, 'utf8'));
   const gen  = fs.existsSync(PATHS.generated)
     ? JSON.parse(fs.readFileSync(PATHS.generated, 'utf8'))
     : [];
-  return [...base, ...gen];
+
+  // Group by category::level
+  const byKey = {};
+  for (const tc of [...base, ...gen]) {
+    const key = `${tc.category}::${tc.level ?? 1}`;
+    if (!byKey[key]) byKey[key] = [];
+    byKey[key].push(tc);
+  }
+
+  // Only run cases at the current level for each category, capped at MAX_CASES_PER_CAT
+  const result = [];
+  for (const [key, cases] of Object.entries(byKey)) {
+    const sep = key.lastIndexOf('::');
+    const cat = key.slice(0, sep);
+    const lvl = parseInt(key.slice(sep + 2));
+    if (lvl !== (progress[cat]?.level ?? 1)) continue;
+    result.push(...cases.slice(-MAX_CASES_PER_CAT));
+  }
+  return result;
 }
 
 function loadProgress() {
@@ -209,15 +228,29 @@ Return ONLY the new text to add. No explanation, no preamble.`,
   return resp.trim();
 }
 
-// ── Apply improvements to eval/improvements.txt (safe — no template literals) ─
+// ── Apply improvements directly into server.js between marker comments ────────
 function applyImprovements(newText) {
-  const impFile = path.join(__dirname, 'improvements.txt');
-  const oldText = fs.existsSync(impFile) ? fs.readFileSync(impFile, 'utf8').trim() : '';
+  const serverFile = path.join(__dirname, '../server.js');
+  const src        = fs.readFileSync(serverFile, 'utf8');
+  const startMark  = '// EVAL-IMPROVEMENTS-START';
+  const endMark    = '// EVAL-IMPROVEMENTS-END';
+  const startIdx   = src.indexOf(startMark);
+  const endIdx     = src.indexOf(endMark);
 
-  fs.writeFileSync(impFile, newText + '\n');
+  if (startIdx === -1 || endIdx === -1) {
+    console.warn('  Could not find EVAL-IMPROVEMENTS markers in server.js — skipping patch');
+    return;
+  }
+
+  const oldText = src.slice(startIdx + startMark.length, endIdx).trim();
+  // Backticks would break the template literal — replace with single quotes
+  const safeText = newText.replace(/`/g, "'");
+  const updated = src.slice(0, startIdx + startMark.length)
+    + '\n' + safeText + '\n'
+    + src.slice(endIdx);
 
   console.log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-  console.log('  SYSTEM PROMPT PATCHED (eval/improvements.txt)');
+  console.log('  SYSTEM PROMPT PATCHED (server.js)');
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
   if (oldText) {
     for (const line of oldText.split('\n')) console.log(`  - ${line}`);
@@ -225,8 +258,10 @@ function applyImprovements(newText) {
     console.log('  BEFORE: (empty)');
   }
   console.log('AFTER:');
-  for (const line of newText.split('\n')) console.log(`  + ${line}`);
+  for (const line of safeText.split('\n')) console.log(`  + ${line}`);
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
+
+  fs.writeFileSync(serverFile, updated);
 }
 
 // ── Auto-generate a brand new category when existing ones are doing well ───────
@@ -243,6 +278,11 @@ Pick ONE new Excel feature category not in that list (e.g. data validation, spar
 
 Generate exactly 2 level-1 test cases for it — simple, realistic prompts a real user would ask.
 Each case must be solvable via Office JavaScript API (ExcelApi 1.1–1.17). No VBA, no pivot tables.
+
+IMPORTANT — set requiredPatterns to methods the AI will ACTUALLY call. Note this assistant uses
+custom helpers: applyColumnFilter / clearFilters for filtering, sortByColumn for sorting.
+For all other categories use real Office JS method names (e.g. charts.add, conditionalFormats.add,
+dataValidation, tables.add, names.add, freezePanes, autofitColumns, pageSetup, shapes.addGeometricShape).
 
 Return ONLY a valid JSON object with this shape:
 {
@@ -288,7 +328,10 @@ async function runCase(tc, systemPrompt) {
   try {
     aiResponse = await callLLM(messages, MODEL, 1024);
     code       = extractCode(aiResponse);
-    patterns   = checkPatterns(code, tc.requiredPatterns, tc.forbiddenPatterns);
+    // For question cases (mustHaveCode:false), patterns describe expected
+    // content in the response itself, not in a code block.
+    const patternTarget = tc.mustHaveCode === false ? aiResponse : code;
+    patterns   = checkPatterns(patternTarget, tc.requiredPatterns, tc.forbiddenPatterns);
     verdict    = await judge(tc, aiResponse, code);
   } catch (err) {
     if (err.message.startsWith('BUDGET_EXCEEDED')) throw err;
@@ -330,6 +373,12 @@ async function generateHarderCases(category, currentLevel, existingCases, allCat
 
 The AI just scored 95+/100 on ALL these level ${currentLevel} "${category}" cases:
 ${masteredCases}
+
+IMPORTANT — this assistant has custom helper functions. Use them in requiredPatterns:
+- Filtering: applyColumnFilter(columnName, value), clearFilters()
+- Sorting:   sortByColumn(columnName, ascending)
+- All other categories use standard Office JS API (e.g. charts.add, conditionalFormats.add, freezePanes, autofitColumns, tables.add, names.add, dataValidation, etc.)
+Set requiredPatterns to the actual method/pattern the AI will call, not raw autoFilter or Range.sort.
 
 Generate exactly 4 NEW test cases at level ${nextLevel} for the "${category}" category that are SIGNIFICANTLY HARDER. They must:
 1. Be in the same category but test more complex, realistic, or edge-case scenarios
@@ -380,6 +429,12 @@ async function generateEasierCases(category, currentLevel, existingCases) {
 The AI has been STUCK on level ${currentLevel} of the "${category}" category across multiple runs.
 These are the current cases it keeps failing:
 ${stuckCases}
+
+IMPORTANT — this assistant has custom helper functions. Use them in requiredPatterns:
+- Filtering: applyColumnFilter(columnName, value), clearFilters()
+- Sorting:   sortByColumn(columnName, ascending)
+- All other categories use standard Office JS API (e.g. charts.add, conditionalFormats.add, freezePanes, autofitColumns, tables.add, names.add, dataValidation, etc.)
+Set requiredPatterns to the actual method/pattern the AI will call, not raw autoFilter or Range.sort.
 
 Generate exactly 3 NEW test cases at level ${currentLevel} for "${category}" that are EASIER and more approachable. They must:
 1. Test the same core category skill but with simpler scenarios
@@ -539,10 +594,10 @@ function printResults(results, prev) {
 async function main() {
   if (!OPENROUTER_KEY) { console.error('OPENROUTER_KEY not set'); process.exit(1); }
 
-  const allCases     = loadCases();
   const systemPrompt = loadSystemPrompt();
   const prev         = loadLastResults();
   const progress     = loadProgress();
+  const allCases     = loadCases(progress);
 
   console.log(`\nRunning ${allCases.length} eval cases  |  model: ${MODEL}  |  budget: $${BUDGET_USD}\n`);
 
@@ -579,6 +634,7 @@ async function main() {
   }
 
   let newCasesGenerated = [];
+  const replaceKeys = new Set(); // category::level keys whose generated cases should be replaced
   const categoryStatus  = Object.entries(byCategory).map(([cat, items]) => {
     const currentLevel = progress[cat]?.level ?? 1;
     // Only look at cases at the current level for this category
@@ -617,6 +673,7 @@ async function main() {
         try {
           const easierCases = await generateEasierCases(cat, currentLevel, allCases);
           newCasesGenerated = [...newCasesGenerated, ...easierCases];
+          replaceKeys.add(`${cat}::${currentLevel}`);
           progress[cat].runsAtLevel = 0;
         } catch (err) {
           if (err.message.startsWith('BUDGET_EXCEEDED')) {
@@ -632,26 +689,8 @@ async function main() {
   // ── Auto-generate a new category based on overall avg thresholds ────────────
   const overallAvg = results.reduce((s, r) => s + r.score, 0) / results.length;
   const existingCategories = Object.keys(byCategory);
-  if (overallAvg >= NEW_CAT_THRESHOLD) {
+  if (overallAvg >= NEW_CAT_THRESHOLD && existingCategories.length < MAX_CATEGORIES) {
     console.log(`\n📂 Overall avg ${overallAvg.toFixed(1)} >= ${NEW_CAT_THRESHOLD} — generating a new category...`);
-    try {
-      const newCat = await generateNewCategory(existingCategories);
-      if (newCat) {
-        newCasesGenerated = [...newCasesGenerated, ...newCat.cases];
-        if (!progress[newCat.category]) {
-          progress[newCat.category] = { level: 1, masteredAt: null };
-        }
-        console.log(`  Added new category: "${newCat.category}" (${newCat.cases.length} cases)`);
-      }
-    } catch (err) {
-      if (err.message.startsWith('BUDGET_EXCEEDED')) {
-        console.log('Budget hit — skipping new category generation.');
-      } else {
-        console.warn(`New category generation failed: ${err.message}`);
-      }
-    }
-  } else if (overallAvg >= NEW_CAT_L2_THRESHOLD) {
-    console.log(`\n📂 Overall avg ${overallAvg.toFixed(1)} >= ${NEW_CAT_L2_THRESHOLD} — generating a level-2 category...`);
     try {
       const newCat = await generateNewCategory(existingCategories);
       if (newCat) {
@@ -659,7 +698,7 @@ async function main() {
         if (!progress[newCat.category]) {
           progress[newCat.category] = { level: 1, masteredAt: null, runsAtLevel: 0 };
         }
-        console.log(`  Added new category (L2 threshold): "${newCat.category}" (${newCat.cases.length} cases)`);
+        console.log(`  Added new category: "${newCat.category}" (${newCat.cases.length} cases)`);
       }
     } catch (err) {
       if (err.message.startsWith('BUDGET_EXCEEDED')) {
@@ -674,8 +713,12 @@ async function main() {
     const existing  = fs.existsSync(PATHS.generated)
       ? JSON.parse(fs.readFileSync(PATHS.generated, 'utf8'))
       : [];
-    fs.writeFileSync(PATHS.generated, JSON.stringify([...existing, ...newCasesGenerated], null, 2));
-    console.log(`\nSaved ${newCasesGenerated.length} new generated cases to eval/generated-cases.json`);
+    const kept = replaceKeys.size > 0
+      ? existing.filter(c => !replaceKeys.has(`${c.category}::${c.level ?? 1}`))
+      : existing;
+    fs.writeFileSync(PATHS.generated, JSON.stringify([...kept, ...newCasesGenerated], null, 2));
+    const replacedCount = existing.length - kept.length;
+    console.log(`\nSaved ${newCasesGenerated.length} new generated cases to eval/generated-cases.json${replacedCount > 0 ? ` (replaced ${replacedCount} old cases)` : ''}`);
   }
 
   saveProgress(progress);

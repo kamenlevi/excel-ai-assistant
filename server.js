@@ -189,8 +189,10 @@ Sorting by column C descending.
 CODE_JS::
 const sheet = workbook.worksheets.getActiveWorksheet();
 const used = sheet.getUsedRange();
-used.sort.apply([{ key: 2, ascending: false }]);
+used.load("values");
 await context.sync();
+const colName = used.values[0][2]; // column C = index 2
+await sortByColumn(colName, false);
 ::END_CODE
 
 User: "copy columns A-C to column F"
@@ -246,14 +248,14 @@ OTHER RULES:
 - Never tell the user to do something manually that you can do via code.
 - If a requested column does not exist, throw a clear error: throw new Error("Column 'X' not found. Check the column name and try again.");
 - For VBA macros: write complete code in triple backtick vba blocks and tell the user to press Alt+F11.
-- Only skip CODE_JS if the user is purely asking a question with no changes needed.`
-+ (DEFAULT_MODEL.toLowerCase().includes('qwen') ? '\n/no_think' : '')
-+ (() => {
-    try {
-      const imp = fs.readFileSync(path.join(__dirname, 'eval/improvements.txt'), 'utf8').trim();
-      return imp ? '\n\nADDITIONAL RULES FROM EVAL:\n' + imp : '';
-    } catch { return ''; }
-  })();
+- Only skip CODE_JS if the user is purely asking a question with no changes needed.
+
+// EVAL-IMPROVEMENTS-START
+For formulas that sum/count a range, use getUsedRange().rowCount to find the last row dynamically rather than a hardcoded row number.
+For page layout margin properties use inches: sheet.pageLayout.topMargin = 1 sets a 1-inch margin.
+// EVAL-IMPROVEMENTS-END
+`
++ (DEFAULT_MODEL.toLowerCase().includes('qwen') ? '\n/no_think' : '');
 
 // ── Call the AI ───────────────────────────────────────────────────────────────
 async function callAI(messages, maxTokens = 4096, model = null, useOllama = false, useGroq = false, apiKey = null, groqKey = null) {
@@ -369,7 +371,7 @@ function isQuestion(userMessage) {
   if (dataQueryWords.some(q => s.includes(q))) return false;
   // Only treat "?" messages as questions if they start with a question word —
   // action requests like "Can you bold the headers?" end with ? but need code.
-  const questionStarters = ['why ', 'explain', 'tell me', 'describe', 'can you explain', 'can you tell', 'what does', 'what is a ', 'what are the', 'how do i', 'how does', 'what is vlookup', 'what is pivot', 'what is a', 'is there ', 'are there ', 'does excel'];
+  const questionStarters = ['why ', 'explain', 'tell me', 'describe', 'can you explain', 'can you tell', 'what does', 'what is a ', 'what are the', 'how do i', 'how does', 'what is vlookup', 'what is pivot', 'what is a', 'is there ', 'are there ', 'does excel', 'when ', 'where ', 'what happens', 'what should', 'what version', 'which col', 'which row', 'which sheet', 'can excel'];
   return questionStarters.some(q => s.startsWith(q));
 }
 

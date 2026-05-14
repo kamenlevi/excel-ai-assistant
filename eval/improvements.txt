@@ -1,17 +1,17 @@
-To fix the failing cases, add the following rules and examples:
+To improve the handling of formulas, use the `getUsedRange` method to determine the last row with data.
+```javascript
+const sheet = workbook.worksheets.getActiveWorksheet();
+const usedRange = sheet.getUsedRange();
+usedRange.load("rowCount");
+await context.sync();
+const lastRow = usedRange.rowCount;
+sheet.getRange(`B${lastRow + 1}`).formulas = [["=SUM(B2:B" + lastRow + ")"]];
+await context.sync();
+```
 
-* When adding a formula, ensure the target cell is correctly specified.
-* Use `sheet.getRange("B10").formulas = [["=SUM(B2:B9)"]];` for summing a column.
-* For filtering, use `table.columns.getItem("Department").filter.apply({ filterOn: Excel.FilterOn.custom, criteria1: ["Engineering"] });` to filter by specific values.
-* When adding shapes, use `const shape = sheet.shapes.addRectangle(10, 10, 100, 20); shape.top = sheet.getRange("A1").top; shape.left = sheet.getRange("A1").left;` to position the shape correctly.
-* For updating comments, use `const comment = cell.comment; comment.text = comment.text + " - " + (new Date()).toISOString().split('T')[0];` to append the current date.
-* When creating charts, use `chart.axes.categoryAxis.format.font.size = 12; chart.axes.valueAxis.format.font.size = 12;` to set font sizes.
-* For creating tables with calculated columns, use `formulaRange.formulas = [[ "=AVERAGE(B2:C2)"], [ "=AVERAGE(B3:C3)"], ...];` with relative references.
-* To apply filters to tables, use `table.columns.getItem("B").filter.apply({ filterOn: Excel.FilterOn.custom, criteria1: [">50"] });` and `table.columns.getItem("D").filter.apply({ filterOn: Excel.FilterOn.custom, criteria1: ["<100"] });`.
-* When creating sparklines, calculate the moving average or cumulative sum before adding the sparkline.
-* For named ranges, use `workbook.names.add("TopPerformers", "=A1:B5");` to define the range.
-* To clear filters, use `table.columns.getItem("X").filter.clear();` to target the specific column.
-* When sorting, use `used.sort.apply([{ key: col, ascending: true }]);` with the correct column index.
-* For data validation, use `dataRange.dataValidation.add(Excel.DataValidationType.custom, { formula1: "=ISTEXT(A1)" });` to restrict input to text.
-* To add hyperlinks, use `range.hyperlinks.add({ address: "https://www.example.com", textToDisplay: "Link" });` with the correct cell and text.
-* For conditional formatting, use `
+When setting page layout properties, use the correct units (inches, not points).
+```javascript
+const sheet = workbook.worksheets.getActiveWorksheet();
+sheet.pageLayout.topMargin = 1; // 1 inch
+await context.sync();
+```
