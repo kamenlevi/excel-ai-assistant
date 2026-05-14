@@ -1,62 +1,64 @@
-To improve the handling of conditional formatting, add the following example:
+To improve the handling of formulas, use the `getUsedRange` method to determine the last row with data.
 ```javascript
-// Highlight cells in the Score column red if below 50
 const sheet = workbook.worksheets.getActiveWorksheet();
-const used = sheet.getUsedRange();
-used.load("values");
+const usedRange = sheet.getUsedRange();
+usedRange.load("rowCount");
 await context.sync();
-const rows = used.values;
-const hdr = rows[0].map(h => String(h).toLowerCase().trim());
-const col = hdr.indexOf("score");
-if (col === -1) throw new Error("Column 'Score' not found.");
-const conditionalFormat = used.conditionalFormats.add(Excel.ConditionalFormatType.cellValue);
-conditionalFormat.formula = `=${used.columns[col].address} < 50`;
-conditionalFormat.font.color = "#FF0000";
+const lastRow = usedRange.rowCount;
+sheet.getRange(`B${lastRow + 1}`).formulas = [["=SUM(B2:B" + lastRow + ")"]];
 await context.sync();
 ```
 
-For filtering, include this rule:
+For filtering, utilize the `autoFilter` method with specific criteria.
 ```javascript
-// Filter the Department column to show only Engineering
 const sheet = workbook.worksheets.getActiveWorksheet();
-const used = sheet.getUsedRange();
-used.load("values");
+const usedRange = sheet.getUsedRange();
+usedRange.load("values");
 await context.sync();
-const hdr = used.values[0].map(h => String(h).toLowerCase().trim());
-const col = hdr.indexOf("department");
-if (col === -1) throw new Error("Column 'Department' not found.");
-used.autoFilter.apply({ column: col + 1, criteria1: "Engineering" });
+const filterCriteria = { criteria: "Engineering" };
+usedRange.autoFilter.apply(filterCriteria);
 await context.sync();
 ```
 
-To address hyperlink removal, add:
+When setting page layout properties, ensure to use the correct units.
 ```javascript
-// Remove the hyperlink from cell A1
 const sheet = workbook.worksheets.getActiveWorksheet();
-const hyperlink = sheet.getRange("A1").hyperlinks.getItemAt(0);
-if (hyperlink) {
-  hyperlink.delete();
-  await context.sync();
+sheet.pageSetup.topMargin = 1 * 72; // 1 inch in points
+await context.sync();
+```
+
+To create a named range based on specific conditions, use the `add` method with a conditional statement.
+```javascript
+const sheet = workbook.worksheets.getActiveWorksheet();
+const usedRange = sheet.getUsedRange();
+usedRange.load("values");
+await context.sync();
+const rows = usedRange.values;
+const namedRange = [];
+for (let i = 1; i < rows.length; i++) {
+  if (rows[i][0] > 1000) {
+    namedRange.push(rows[i]);
+  }
 }
-```
-
-For sparkline creation with specific data points, include:
-```javascript
-// Add a sparkline to cell D2 to display the high and low points of the data in cells B2:B10
-const sheet = workbook.worksheets.getActiveWorksheet();
-const dataRange = sheet.getRange("B2:B10");
-const sparklineRange = sheet.getRange("D2");
-sparklineRange.sparklines.add(Excel.SparklineType.line, dataRange);
+const namedRangeAddress = "C2:E" + (namedRange.length + 1);
+workbook.names.add("QuarterlySales", namedRangeAddress);
 await context.sync();
 ```
 
-To fix shape insertion, add:
+For sorting, use the `sort` method with the correct column index and sorting order.
 ```javascript
-// Insert a circle shape in the top-right corner of the worksheet
 const sheet = workbook.worksheets.getActiveWorksheet();
-const used = sheet.getUsedRange();
-const shape = sheet.shapes.add(Excel.ShapeType.oval, used.columnCount + 1, 1);
-shape.height = 20;
-shape.width = 20;
+const usedRange = sheet.getUsedRange();
+usedRange.load("values");
 await context.sync();
-``
+const hdr = usedRange.values[0].map(h => String(h).toLowerCase().trim());
+const col = hdr.indexOf("y");
+if (col === -1) throw new Error("Column 'Y' not found.");
+usedRange.sort.apply([{ key: col, ascending: true }]);
+await context.sync();
+```
+
+To add a comment to a cell based on a condition, use the `comments.add` method.
+```javascript
+const sheet = workbook.worksheets.getActiveWorksheet();
+const usedRange = sheet.getUsed
