@@ -312,7 +312,10 @@ async function runCase(tc, systemPrompt) {
   try {
     aiResponse = await callLLM(messages, MODEL, 1024);
     code       = extractCode(aiResponse);
-    patterns   = checkPatterns(code, tc.requiredPatterns, tc.forbiddenPatterns);
+    // For question cases (mustHaveCode:false), patterns describe expected
+    // content in the response itself, not in a code block.
+    const patternTarget = tc.mustHaveCode === false ? aiResponse : code;
+    patterns   = checkPatterns(patternTarget, tc.requiredPatterns, tc.forbiddenPatterns);
     verdict    = await judge(tc, aiResponse, code);
   } catch (err) {
     if (err.message.startsWith('BUDGET_EXCEEDED')) throw err;
