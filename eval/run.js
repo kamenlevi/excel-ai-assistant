@@ -24,8 +24,9 @@ const COST_PER_1M_OUT  = 0.30;
 const BUDGET_USD       = 0.50;
 const MASTERY_THRESHOLD      = 95;
 const NEW_CAT_THRESHOLD      = 95;  // overall avg to spawn a brand-new category
-const NEW_CAT_L2_THRESHOLD   = 90;  // overall avg to spawn a level-2-style category
 const STUCK_RUNS_THRESHOLD   = 3;   // runs without leveling up before we ease the cases
+const MAX_CASES_PER_CAT      = 5;   // max cases to run per category per level
+const MAX_CATEGORIES         = 20;  // hard cap on total categories
 
 const PATHS = {
   cases:     path.join(__dirname, 'cases.json'),
@@ -64,12 +65,30 @@ async function callLLM(messages, model = MODEL, maxTokens = 1024) {
 }
 
 // ── Load files ────────────────────────────────────────────────────────────────
-function loadCases() {
+function loadCases(progress = {}) {
   const base = JSON.parse(fs.readFileSync(PATHS.cases, 'utf8'));
   const gen  = fs.existsSync(PATHS.generated)
     ? JSON.parse(fs.readFileSync(PATHS.generated, 'utf8'))
     : [];
-  return [...base, ...gen];
+
+  // Group by category::level
+  const byKey = {};
+  for (const tc of [...base, ...gen]) {
+    const key = `${tc.category}::${tc.level ?? 1}`;
+    if (!byKey[key]) byKey[key] = [];
+    byKey[key].push(tc);
+  }
+
+  // Only run cases at the current level for each category, capped at MAX_CASES_PER_CAT
+  const result = [];
+  for (const [key, cases] of Object.entries(byKey)) {
+    const sep = key.lastIndexOf('::');
+    const cat = key.slice(0, sep);
+    const lvl = parseInt(key.slice(sep + 2));
+    if (lvl !== (progress[cat]?.level ?? 1)) continue;
+    result.push(...cases.slice(-MAX_CASES_PER_CAT));
+  }
+  return result;
 }
 
 function loadProgress() {
@@ -539,10 +558,10 @@ function printResults(results, prev) {
 async function main() {
   if (!OPENROUTER_KEY) { console.error('OPENROUTER_KEY not set'); process.exit(1); }
 
-  const allCases     = loadCases();
   const systemPrompt = loadSystemPrompt();
   const prev         = loadLastResults();
   const progress     = loadProgress();
+  const allCases     = loadCases(progress);
 
   console.log(`\nRunning ${allCases.length} eval cases  |  model: ${MODEL}  |  budget: $${BUDGET_USD}\n`);
 
@@ -579,6 +598,7 @@ async function main() {
   }
 
   let newCasesGenerated = [];
+  const replaceKeys = new Set(); // category::level keys whose generated cases should be replaced
   const categoryStatus  = Object.entries(byCategory).map(([cat, items]) => {
     const currentLevel = progress[cat]?.level ?? 1;
     // Only look at cases at the current level for this category
@@ -617,6 +637,7 @@ async function main() {
         try {
           const easierCases = await generateEasierCases(cat, currentLevel, allCases);
           newCasesGenerated = [...newCasesGenerated, ...easierCases];
+          replaceKeys.add(`${cat}::${currentLevel}`);
           progress[cat].runsAtLevel = 0;
         } catch (err) {
           if (err.message.startsWith('BUDGET_EXCEEDED')) {
@@ -632,26 +653,8 @@ async function main() {
   // ── Auto-generate a new category based on overall avg thresholds ────────────
   const overallAvg = results.reduce((s, r) => s + r.score, 0) / results.length;
   const existingCategories = Object.keys(byCategory);
-  if (overallAvg >= NEW_CAT_THRESHOLD) {
+  if (overallAvg >= NEW_CAT_THRESHOLD && existingCategories.length < MAX_CATEGORIES) {
     console.log(`\n📂 Overall avg ${overallAvg.toFixed(1)} >= ${NEW_CAT_THRESHOLD} — generating a new category...`);
-    try {
-      const newCat = await generateNewCategory(existingCategories);
-      if (newCat) {
-        newCasesGenerated = [...newCasesGenerated, ...newCat.cases];
-        if (!progress[newCat.category]) {
-          progress[newCat.category] = { level: 1, masteredAt: null };
-        }
-        console.log(`  Added new category: "${newCat.category}" (${newCat.cases.length} cases)`);
-      }
-    } catch (err) {
-      if (err.message.startsWith('BUDGET_EXCEEDED')) {
-        console.log('Budget hit — skipping new category generation.');
-      } else {
-        console.warn(`New category generation failed: ${err.message}`);
-      }
-    }
-  } else if (overallAvg >= NEW_CAT_L2_THRESHOLD) {
-    console.log(`\n📂 Overall avg ${overallAvg.toFixed(1)} >= ${NEW_CAT_L2_THRESHOLD} — generating a level-2 category...`);
     try {
       const newCat = await generateNewCategory(existingCategories);
       if (newCat) {
@@ -659,7 +662,7 @@ async function main() {
         if (!progress[newCat.category]) {
           progress[newCat.category] = { level: 1, masteredAt: null, runsAtLevel: 0 };
         }
-        console.log(`  Added new category (L2 threshold): "${newCat.category}" (${newCat.cases.length} cases)`);
+        console.log(`  Added new category: "${newCat.category}" (${newCat.cases.length} cases)`);
       }
     } catch (err) {
       if (err.message.startsWith('BUDGET_EXCEEDED')) {
@@ -674,8 +677,12 @@ async function main() {
     const existing  = fs.existsSync(PATHS.generated)
       ? JSON.parse(fs.readFileSync(PATHS.generated, 'utf8'))
       : [];
-    fs.writeFileSync(PATHS.generated, JSON.stringify([...existing, ...newCasesGenerated], null, 2));
-    console.log(`\nSaved ${newCasesGenerated.length} new generated cases to eval/generated-cases.json`);
+    const kept = replaceKeys.size > 0
+      ? existing.filter(c => !replaceKeys.has(`${c.category}::${c.level ?? 1}`))
+      : existing;
+    fs.writeFileSync(PATHS.generated, JSON.stringify([...kept, ...newCasesGenerated], null, 2));
+    const replacedCount = existing.length - kept.length;
+    console.log(`\nSaved ${newCasesGenerated.length} new generated cases to eval/generated-cases.json${replacedCount > 0 ? ` (replaced ${replacedCount} old cases)` : ''}`);
   }
 
   saveProgress(progress);
