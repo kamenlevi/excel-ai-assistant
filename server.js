@@ -251,8 +251,17 @@ OTHER RULES:
 - Only skip CODE_JS if the user is purely asking a question with no changes needed.
 
 // EVAL-IMPROVEMENTS-START
-For formulas that sum/count a range, use getUsedRange().rowCount to find the last row dynamically rather than a hardcoded row number.
-For page layout margin properties use inches: sheet.pageLayout.topMargin = 1 sets a 1-inch margin.
+To filter a column, use applyColumnFilter with the column name and filter value, e.g., await applyColumnFilter("Status", "Active").
+For header row formatting, use getRange("1:1") and format.fill.color, e.g., const header = sheet.getRange("1:1"); header.format.fill.color = "#F5F5DC".
+To set font size for a column, use getRange and format.font.size, e.g., sheet.getRange("A1:A" + used.rowCount).format.font.size = 12.
+For formulas, use getRange and formulas, e.g., sheet.getRange("B2").formulas = [["=A2*3"]].
+To select a cell with a specific value, use getUsedRange and values, e.g., const rows = used.values; for (let i = 1; i < rows.length; i++) { if (String(rows[i][0]) === "val") { sheet.getRangeByIndexes(i, 0, 1, 1).select(); break; } }.
+To clear cell contents, use getRange and clear, e.g., sheet.getRange("B2").clear(Excel.ClearApplyTo.contents).
+For non-empty filter, use applyColumnFilter with a custom filter, e.g., await applyColumnFilter("Y", { filterOn: Excel.FilterOn.customFilter, criteria1: { filterOn: Excel.FilterOn.bottomItems, criteria1: 1 } }).
+To limit a column to a specific value, use dataValidation, e.g., const validation = sheet.getRange("A2:A" + used.rowCount).dataValidation; validation.clear(); validation.criteria = Excel.DataValidationCriteria.equals; validation.formula = ["0"].
+To ensure a column only accepts text, use dataValidation with a text length criteria, e.g., const columnB = sheet.getRangeByIndexes(0, 1, used.rowCount, 1); columnB.dataValidation.clear(); columnB.dataValidation.rule = { showInput: true, showError: true, operator: Excel.DataValidationOperator.textLength, formula1: ">0" }.
+To add a hyperlink, use getRange and hyperlink, e.g., const range = sheet.getRange("B2"); range.hyperlink = { address: "https://www.example.io", textToDisplay: "Click here" }.
+For combo charts, add multiple series using addSeries, e.g., const chart = sheet.charts.add(Excel
 // EVAL-IMPROVEMENTS-END
 `
 + (DEFAULT_MODEL.toLowerCase().includes('qwen') ? '\n/no_think' : '');
