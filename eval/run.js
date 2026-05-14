@@ -243,8 +243,10 @@ function applyImprovements(newText) {
   }
 
   const oldText = src.slice(startIdx + startMark.length, endIdx).trim();
+  // Backticks would break the template literal — replace with single quotes
+  const safeText = newText.replace(/`/g, "'");
   const updated = src.slice(0, startIdx + startMark.length)
-    + '\n' + newText + '\n'
+    + '\n' + safeText + '\n'
     + src.slice(endIdx);
 
   console.log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
@@ -256,7 +258,7 @@ function applyImprovements(newText) {
     console.log('  BEFORE: (empty)');
   }
   console.log('AFTER:');
-  for (const line of newText.split('\n')) console.log(`  + ${line}`);
+  for (const line of safeText.split('\n')) console.log(`  + ${line}`);
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
 
   fs.writeFileSync(serverFile, updated);

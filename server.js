@@ -189,8 +189,10 @@ Sorting by column C descending.
 CODE_JS::
 const sheet = workbook.worksheets.getActiveWorksheet();
 const used = sheet.getUsedRange();
-used.sort.apply([{ key: 2, ascending: false }]);
+used.load("values");
 await context.sync();
+const colName = used.values[0][2]; // column C = index 2
+await sortByColumn(colName, false);
 ::END_CODE
 
 User: "copy columns A-C to column F"
@@ -369,7 +371,7 @@ function isQuestion(userMessage) {
   if (dataQueryWords.some(q => s.includes(q))) return false;
   // Only treat "?" messages as questions if they start with a question word —
   // action requests like "Can you bold the headers?" end with ? but need code.
-  const questionStarters = ['why ', 'explain', 'tell me', 'describe', 'can you explain', 'can you tell', 'what does', 'what is a ', 'what are the', 'how do i', 'how does', 'what is vlookup', 'what is pivot', 'what is a', 'is there ', 'are there ', 'does excel'];
+  const questionStarters = ['why ', 'explain', 'tell me', 'describe', 'can you explain', 'can you tell', 'what does', 'what is a ', 'what are the', 'how do i', 'how does', 'what is vlookup', 'what is pivot', 'what is a', 'is there ', 'are there ', 'does excel', 'when ', 'where ', 'what happens', 'what should', 'what version', 'which col', 'which row', 'which sheet', 'can excel'];
   return questionStarters.some(q => s.startsWith(q));
 }
 

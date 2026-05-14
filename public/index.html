@@ -1147,7 +1147,7 @@ async function sendMessage() {
   if(loading)return;
   closePlus();
 
-  if(attached){text+=(text?'\n\n':''+'[Attached: '+attached.name+']\n'+attached.content.slice(0,8000));clearAttach();}
+  if(attached){text+=(text?'\n\n':'')+'[Attached: '+attached.name+']\n'+attached.content.slice(0,8000);clearAttach();}
 
   // ── Pre-send cost check ──
   const allowed = await checkCostBefore(text);
