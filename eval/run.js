@@ -263,6 +263,11 @@ Pick ONE new Excel feature category not in that list (e.g. data validation, spar
 Generate exactly 2 level-1 test cases for it — simple, realistic prompts a real user would ask.
 Each case must be solvable via Office JavaScript API (ExcelApi 1.1–1.17). No VBA, no pivot tables.
 
+IMPORTANT — set requiredPatterns to methods the AI will ACTUALLY call. Note this assistant uses
+custom helpers: applyColumnFilter / clearFilters for filtering, sortByColumn for sorting.
+For all other categories use real Office JS method names (e.g. charts.add, conditionalFormats.add,
+dataValidation, tables.add, names.add, freezePanes, autofitColumns, pageSetup, shapes.addGeometricShape).
+
 Return ONLY a valid JSON object with this shape:
 {
   "category": "<new category name>",
@@ -350,6 +355,12 @@ async function generateHarderCases(category, currentLevel, existingCases, allCat
 The AI just scored 95+/100 on ALL these level ${currentLevel} "${category}" cases:
 ${masteredCases}
 
+IMPORTANT — this assistant has custom helper functions. Use them in requiredPatterns:
+- Filtering: applyColumnFilter(columnName, value), clearFilters()
+- Sorting:   sortByColumn(columnName, ascending)
+- All other categories use standard Office JS API (e.g. charts.add, conditionalFormats.add, freezePanes, autofitColumns, tables.add, names.add, dataValidation, etc.)
+Set requiredPatterns to the actual method/pattern the AI will call, not raw autoFilter or Range.sort.
+
 Generate exactly 4 NEW test cases at level ${nextLevel} for the "${category}" category that are SIGNIFICANTLY HARDER. They must:
 1. Be in the same category but test more complex, realistic, or edge-case scenarios
 2. Not repeat any existing test idea
@@ -399,6 +410,12 @@ async function generateEasierCases(category, currentLevel, existingCases) {
 The AI has been STUCK on level ${currentLevel} of the "${category}" category across multiple runs.
 These are the current cases it keeps failing:
 ${stuckCases}
+
+IMPORTANT — this assistant has custom helper functions. Use them in requiredPatterns:
+- Filtering: applyColumnFilter(columnName, value), clearFilters()
+- Sorting:   sortByColumn(columnName, ascending)
+- All other categories use standard Office JS API (e.g. charts.add, conditionalFormats.add, freezePanes, autofitColumns, tables.add, names.add, dataValidation, etc.)
+Set requiredPatterns to the actual method/pattern the AI will call, not raw autoFilter or Range.sort.
 
 Generate exactly 3 NEW test cases at level ${currentLevel} for "${category}" that are EASIER and more approachable. They must:
 1. Test the same core category skill but with simpler scenarios
