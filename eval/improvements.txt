@@ -1,61 +1,17 @@
-To address the failing cases, the following rules and examples can be added:
+To fix the failing cases, add the following rules and examples:
 
-* When formatting a column as currency, ensure the correct column index is used.
-```javascript
-// Format column B as currency with 2 decimal places
-const priceColumn = sheet.getRangeByIndexes(0, 1, used.rowCount, 1);
-priceColumn.numberFormat = [["\$#,##0.00"]];
-```
-
-* When filtering a column, use the correct Office JS API and specify the column name.
-```javascript
-// Filter the Department column to show only Engineering
-const table = sheet.tables.getItem("Table1");
-const filter = table.columns.getItem("Department").filter;
-filter.clear();
-filter.apply({ filterOn: Excel.FilterOn.custom, criteria1: "Engineering" });
-```
-
-* When removing a hyperlink, target the correct cell.
-```javascript
-// Remove the hyperlink from cell A1
-const range = sheet.getRange("A1");
-range.hyperlink = null;
-```
-
-* When updating a comment, target the correct cell and use the correct comment properties.
-```javascript
-// Update the comment in cell A1 to include the current date
-const cell = sheet.getRange("A1");
-cell.load("comment");
-await context.sync();
-if (cell.comment) {
-  const date = new Date();
-  const formattedDate = date.toLocaleDateString();
-  cell.comment.text = cell.comment.text + " - " + formattedDate;
-}
-```
-
-* When copying a comment to multiple cells, use the correct target range and compare values correctly.
-```javascript
-// Copy the comment from cell A1 to all cells in the range B2:B5 that have the same value as cell A1
-const commentRange = sheet.getRange("A1");
-commentRange.load("comment");
-await context.sync();
-const comment = commentRange.comment;
-const targetRange = sheet.getRange("B2:B5");
-targetRange.load("values");
-await context.sync();
-const values = targetRange.values;
-for (let i = 0; i < values.length; i++) {
-  if (values[i][0] === sheet.getRange("A1").value) {
-    const cell = sheet.getRangeByIndexes(i + 1, 1, 1, 1);
-    cell.comment = comment;
-  }
-}
-```
-
-* When creating a stacked area chart, use the correct chart type and data range.
-```javascript
-// Create a stacked area chart using the data in A1:C10
-const dataRange = sheet.get
+* When adding a formula, ensure the target cell is correctly specified.
+* Use `sheet.getRange("B10").formulas = [["=SUM(B2:B9)"]];` for summing a column.
+* For filtering, use `table.columns.getItem("Department").filter.apply({ filterOn: Excel.FilterOn.custom, criteria1: ["Engineering"] });` to filter by specific values.
+* When adding shapes, use `const shape = sheet.shapes.addRectangle(10, 10, 100, 20); shape.top = sheet.getRange("A1").top; shape.left = sheet.getRange("A1").left;` to position the shape correctly.
+* For updating comments, use `const comment = cell.comment; comment.text = comment.text + " - " + (new Date()).toISOString().split('T')[0];` to append the current date.
+* When creating charts, use `chart.axes.categoryAxis.format.font.size = 12; chart.axes.valueAxis.format.font.size = 12;` to set font sizes.
+* For creating tables with calculated columns, use `formulaRange.formulas = [[ "=AVERAGE(B2:C2)"], [ "=AVERAGE(B3:C3)"], ...];` with relative references.
+* To apply filters to tables, use `table.columns.getItem("B").filter.apply({ filterOn: Excel.FilterOn.custom, criteria1: [">50"] });` and `table.columns.getItem("D").filter.apply({ filterOn: Excel.FilterOn.custom, criteria1: ["<100"] });`.
+* When creating sparklines, calculate the moving average or cumulative sum before adding the sparkline.
+* For named ranges, use `workbook.names.add("TopPerformers", "=A1:B5");` to define the range.
+* To clear filters, use `table.columns.getItem("X").filter.clear();` to target the specific column.
+* When sorting, use `used.sort.apply([{ key: col, ascending: true }]);` with the correct column index.
+* For data validation, use `dataRange.dataValidation.add(Excel.DataValidationType.custom, { formula1: "=ISTEXT(A1)" });` to restrict input to text.
+* To add hyperlinks, use `range.hyperlinks.add({ address: "https://www.example.com", textToDisplay: "Link" });` with the correct cell and text.
+* For conditional formatting, use `
