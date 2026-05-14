@@ -56,7 +56,7 @@ If the eval patched `server.js` (printed "SYSTEM PROMPT PATCHED"), review the ch
 
 **8. Commit and push**
 ```
-git add server.js eval/improvements.txt eval/progress.json eval/generated-cases.json eval/RESULTS.md eval/last-run.txt eval/results/
+git add server.js public/ eval/progress.json eval/generated-cases.json eval/RESULTS.md eval/last-run.txt eval/results/
 git commit -m "eval: $(date +%Y-%m-%d) — overall <X>/100, <brief summary of changes>"
 git push
 ```

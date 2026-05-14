@@ -246,14 +246,14 @@ OTHER RULES:
 - Never tell the user to do something manually that you can do via code.
 - If a requested column does not exist, throw a clear error: throw new Error("Column 'X' not found. Check the column name and try again.");
 - For VBA macros: write complete code in triple backtick vba blocks and tell the user to press Alt+F11.
-- Only skip CODE_JS if the user is purely asking a question with no changes needed.`
-+ (DEFAULT_MODEL.toLowerCase().includes('qwen') ? '\n/no_think' : '')
-+ (() => {
-    try {
-      const imp = fs.readFileSync(path.join(__dirname, 'eval/improvements.txt'), 'utf8').trim();
-      return imp ? '\n\nADDITIONAL RULES FROM EVAL:\n' + imp : '';
-    } catch { return ''; }
-  })();
+- Only skip CODE_JS if the user is purely asking a question with no changes needed.
+
+// EVAL-IMPROVEMENTS-START
+For formulas that sum/count a range, use getUsedRange().rowCount to find the last row dynamically rather than a hardcoded row number.
+For page layout margin properties use inches: sheet.pageLayout.topMargin = 1 sets a 1-inch margin.
+// EVAL-IMPROVEMENTS-END
+`
++ (DEFAULT_MODEL.toLowerCase().includes('qwen') ? '\n/no_think' : '');
 
 // ── Call the AI ───────────────────────────────────────────────────────────────
 async function callAI(messages, maxTokens = 4096, model = null, useOllama = false, useGroq = false, apiKey = null, groqKey = null) {

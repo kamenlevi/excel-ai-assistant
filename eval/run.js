@@ -228,15 +228,27 @@ Return ONLY the new text to add. No explanation, no preamble.`,
   return resp.trim();
 }
 
-// ── Apply improvements to eval/improvements.txt (safe — no template literals) ─
+// ── Apply improvements directly into server.js between marker comments ────────
 function applyImprovements(newText) {
-  const impFile = path.join(__dirname, 'improvements.txt');
-  const oldText = fs.existsSync(impFile) ? fs.readFileSync(impFile, 'utf8').trim() : '';
+  const serverFile = path.join(__dirname, '../server.js');
+  const src        = fs.readFileSync(serverFile, 'utf8');
+  const startMark  = '// EVAL-IMPROVEMENTS-START';
+  const endMark    = '// EVAL-IMPROVEMENTS-END';
+  const startIdx   = src.indexOf(startMark);
+  const endIdx     = src.indexOf(endMark);
 
-  fs.writeFileSync(impFile, newText + '\n');
+  if (startIdx === -1 || endIdx === -1) {
+    console.warn('  Could not find EVAL-IMPROVEMENTS markers in server.js — skipping patch');
+    return;
+  }
+
+  const oldText = src.slice(startIdx + startMark.length, endIdx).trim();
+  const updated = src.slice(0, startIdx + startMark.length)
+    + '\n' + newText + '\n'
+    + src.slice(endIdx);
 
   console.log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-  console.log('  SYSTEM PROMPT PATCHED (eval/improvements.txt)');
+  console.log('  SYSTEM PROMPT PATCHED (server.js)');
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
   if (oldText) {
     for (const line of oldText.split('\n')) console.log(`  - ${line}`);
@@ -246,6 +258,8 @@ function applyImprovements(newText) {
   console.log('AFTER:');
   for (const line of newText.split('\n')) console.log(`  + ${line}`);
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
+
+  fs.writeFileSync(serverFile, updated);
 }
 
 // ── Auto-generate a brand new category when existing ones are doing well ───────
