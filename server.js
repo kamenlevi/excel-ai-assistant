@@ -251,14 +251,62 @@ OTHER RULES:
 - Only skip CODE_JS if the user is purely asking a question with no changes needed.
 
 // EVAL-IMPROVEMENTS-START
-To highlight cells in a specific color, use the exact color code, e.g., "#0000FF" for blue.
-For conditional formatting, use helpers like getUsedRange and load instead of manual iteration.
-When clearing cell contents, consider the header row, e.g., sheet.getRange("B2").clear(Excel.ClearApplyTo.contents).
-To answer questions about header contents, load the used range values and access the first row, e.g., const header = used.values[0][0].
-For data validation allowing all numbers, use criteria equals to any number, e.g., columnA.dataValidation.criteria = Excel.DataValidationCriteria.number; columnA.dataValidation.operator = Excel.DataValidationOperator.notEqual; columnA.dataValidation.formula1 = "NaN".
-To create a combo chart with correct series types, add series individually, e.g., chart.series.add(lineDataRange, Excel.ChartSeriesType.line); chart.series.add(columnDataRange, Excel.ChartSeriesType.columnClustered).
-When adding shapes, position them relative to a cell, e.g., const shape = sheet.shapes.addShape(Excel.ShapeType.rectangle, sheet.getRange("A1").getAbsolutePosition().left, sheet.getRange("A1").getAbsolutePosition().top, 100, 50).
-To create a named range, use the address property with the sheet name, e.g., namedRange.address = "Sheet1!$B$1:$C$1".
+When filtering, consider the worksheet and load status context, and handle potential errors, e.g., 
+'''javascript
+const sheet = workbook.worksheets.getActiveWorksheet();
+const used = sheet.getUsedRange();
+used.load("values");
+await context.sync();
+const hdr = used.values[0].map(h => String(h).toLowerCase().trim());
+const col = hdr.indexOf("y");
+if (col === -1) throw new Error("Column 'Y' not found.");
+await applyColumnFilter("Y", "val");
+
+To clear filters on a specific column, use the clearFilters method on the worksheet, e.g., 
+'''javascript
+const sheet = workbook.worksheets.getActiveWorksheet();
+sheet.getRange("X:X").clear(Excel.ClearApplyTo.filters);
+
+For sorting, ensure correct implementation and case sensitivity, e.g., 
+'''javascript
+const sheet = workbook.worksheets.getActiveWorksheet();
+const used = sheet.getUsedRange();
+used.load("values");
+await context.sync();
+const hdr = used.values[0].map(h => String(h).toLowerCase().trim());
+const col = hdr.indexOf("x");
+if (col === -1) throw new Error("Column 'X' not found.");
+await sheet.sort.apply({
+  columns: [col],
+  key: col,
+  ascending: true,
+  headerRow: true
+});
+
+When adding borders, ensure correct range and border styles, e.g., 
+'''javascript
+const sheet = workbook.worksheets.getActiveWorksheet();
+const used = sheet.getUsedRange();
+used.load("rowCount, columnCount");
+await context.sync();
+const borderRange = sheet.getRange("A1:" + getColumnName(used.columnCount) + used.rowCount);
+borderRange.format.borders.getItem(Excel.BorderIndex.edgeTop).style = Excel.BorderStyle.thin;
+
+For conditional formatting, use built-in functions and error handling, e.g., 
+'''javascript
+const sheet = workbook.worksheets.getActiveWorksheet();
+const used = sheet.getUsedRange();
+used.load("values");
+await context.sync();
+const scores = used.values.slice(1).map(r => r[1]);
+const hdr = used.values[0].map(h => String(h).toLowerCase().trim());
+const col = hdr.indexOf("score");
+if (col === -1) throw new Error("Column 'Score' not found.");
+const conditionalFormat = sheet.conditionalFormats.add(Excel.ConditionalFormatType.cellValue);
+conditionalFormat.formula1 = "=A2<50";
+conditionalFormat.font.color = "#FF0000";
+
+To delete a row, use the delete method on
 // EVAL-IMPROVEMENTS-END
 `
 + (DEFAULT_MODEL.toLowerCase().includes('qwen') ? '\n/no_think' : '');
