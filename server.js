@@ -251,17 +251,14 @@ OTHER RULES:
 - Only skip CODE_JS if the user is purely asking a question with no changes needed.
 
 // EVAL-IMPROVEMENTS-START
-To filter a column, use applyColumnFilter with the column name and filter value, e.g., await applyColumnFilter("Status", "Active").
-For header row formatting, use getRange("1:1") and format.fill.color, e.g., const header = sheet.getRange("1:1"); header.format.fill.color = "#F5F5DC".
-To set font size for a column, use getRange and format.font.size, e.g., sheet.getRange("A1:A" + used.rowCount).format.font.size = 12.
-For formulas, use getRange and formulas, e.g., sheet.getRange("B2").formulas = [["=A2*3"]].
-To select a cell with a specific value, use getUsedRange and values, e.g., const rows = used.values; for (let i = 1; i < rows.length; i++) { if (String(rows[i][0]) === "val") { sheet.getRangeByIndexes(i, 0, 1, 1).select(); break; } }.
-To clear cell contents, use getRange and clear, e.g., sheet.getRange("B2").clear(Excel.ClearApplyTo.contents).
-For non-empty filter, use applyColumnFilter with a custom filter, e.g., await applyColumnFilter("Y", { filterOn: Excel.FilterOn.customFilter, criteria1: { filterOn: Excel.FilterOn.bottomItems, criteria1: 1 } }).
-To limit a column to a specific value, use dataValidation, e.g., const validation = sheet.getRange("A2:A" + used.rowCount).dataValidation; validation.clear(); validation.criteria = Excel.DataValidationCriteria.equals; validation.formula = ["0"].
-To ensure a column only accepts text, use dataValidation with a text length criteria, e.g., const columnB = sheet.getRangeByIndexes(0, 1, used.rowCount, 1); columnB.dataValidation.clear(); columnB.dataValidation.rule = { showInput: true, showError: true, operator: Excel.DataValidationOperator.textLength, formula1: ">0" }.
-To add a hyperlink, use getRange and hyperlink, e.g., const range = sheet.getRange("B2"); range.hyperlink = { address: "https://www.example.io", textToDisplay: "Click here" }.
-For combo charts, add multiple series using addSeries, e.g., const chart = sheet.charts.add(Excel
+To highlight cells in a specific color, use the exact color code, e.g., "#0000FF" for blue.
+For conditional formatting, use helpers like getUsedRange and load instead of manual iteration.
+When clearing cell contents, consider the header row, e.g., sheet.getRange("B2").clear(Excel.ClearApplyTo.contents).
+To answer questions about header contents, load the used range values and access the first row, e.g., const header = used.values[0][0].
+For data validation allowing all numbers, use criteria equals to any number, e.g., columnA.dataValidation.criteria = Excel.DataValidationCriteria.number; columnA.dataValidation.operator = Excel.DataValidationOperator.notEqual; columnA.dataValidation.formula1 = "NaN".
+To create a combo chart with correct series types, add series individually, e.g., chart.series.add(lineDataRange, Excel.ChartSeriesType.line); chart.series.add(columnDataRange, Excel.ChartSeriesType.columnClustered).
+When adding shapes, position them relative to a cell, e.g., const shape = sheet.shapes.addShape(Excel.ShapeType.rectangle, sheet.getRange("A1").getAbsolutePosition().left, sheet.getRange("A1").getAbsolutePosition().top, 100, 50).
+To create a named range, use the address property with the sheet name, e.g., namedRange.address = "Sheet1!$B$1:$C$1".
 // EVAL-IMPROVEMENTS-END
 `
 + (DEFAULT_MODEL.toLowerCase().includes('qwen') ? '\n/no_think' : '');
