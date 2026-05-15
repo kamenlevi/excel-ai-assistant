@@ -251,23 +251,7 @@ OTHER RULES:
 - Only skip CODE_JS if the user is purely asking a question with no changes needed.
 
 // EVAL-IMPROVEMENTS-START
-When filtering, consider the worksheet and load status context, and handle potential errors, e.g., 
-'''javascript
-const sheet = workbook.worksheets.getActiveWorksheet();
-const used = sheet.getUsedRange();
-used.load("values");
-await context.sync();
-const hdr = used.values[0].map(h => String(h).toLowerCase().trim());
-const col = hdr.indexOf("y");
-if (col === -1) throw new Error("Column 'Y' not found.");
-await applyColumnFilter("Y", "val");
-
-To clear filters on a specific column, use the clearFilters method on the worksheet, e.g., 
-'''javascript
-const sheet = workbook.worksheets.getActiveWorksheet();
-sheet.getRange("X:X").clear(Excel.ClearApplyTo.filters);
-
-For sorting, ensure correct implementation and case sensitivity, e.g., 
+When sorting, use the built-in sort method, e.g., 
 '''javascript
 const sheet = workbook.worksheets.getActiveWorksheet();
 const used = sheet.getUsedRange();
@@ -276,37 +260,56 @@ await context.sync();
 const hdr = used.values[0].map(h => String(h).toLowerCase().trim());
 const col = hdr.indexOf("x");
 if (col === -1) throw new Error("Column 'X' not found.");
-await sheet.sort.apply({
+sheet.sort.apply({
   columns: [col],
   key: col,
   ascending: true,
   headerRow: true
 });
 
-When adding borders, ensure correct range and border styles, e.g., 
-'''javascript
-const sheet = workbook.worksheets.getActiveWorksheet();
-const used = sheet.getUsedRange();
-used.load("rowCount, columnCount");
-await context.sync();
-const borderRange = sheet.getRange("A1:" + getColumnName(used.columnCount) + used.rowCount);
-borderRange.format.borders.getItem(Excel.BorderIndex.edgeTop).style = Excel.BorderStyle.thin;
-
-For conditional formatting, use built-in functions and error handling, e.g., 
+To check if a column is empty, directly address the user's request, e.g., 
 '''javascript
 const sheet = workbook.worksheets.getActiveWorksheet();
 const used = sheet.getUsedRange();
 used.load("values");
 await context.sync();
-const scores = used.values.slice(1).map(r => r[1]);
 const hdr = used.values[0].map(h => String(h).toLowerCase().trim());
-const col = hdr.indexOf("score");
-if (col === -1) throw new Error("Column 'Score' not found.");
-const conditionalFormat = sheet.conditionalFormats.add(Excel.ConditionalFormatType.cellValue);
-conditionalFormat.formula1 = "=A2<50";
-conditionalFormat.font.color = "#FF0000";
+const col = hdr.indexOf("a");
+if (col === -1) throw new Error("Column 'A' not found.");
+const isEmpty = used.values.slice(1).every(r => !r[col] || String(r[col]).trim() === "");
+return "Column A is " + (isEmpty ? "empty" : "not empty") + ".";
 
-To delete a row, use the delete method on
+For filtering, use the applyColumnFilter helper, e.g., 
+'''javascript
+const sheet = workbook.worksheets.getActiveWorksheet();
+const used = sheet.getUsedRange();
+used.load("values");
+await context.sync();
+const hdr = used.values[0].map(h => String(h).toLowerCase().trim());
+const col = hdr.indexOf("department");
+if (col === -1) throw new Error("Column 'Department' not found.");
+sheet.getRange().autoFilter.apply({
+  filters: [{ column: col, filterType: Excel.FilterType.custom, criteria1: "Engineering" }]
+});
+
+To clear all filters, use the clearFilters method, e.g., 
+'''javascript
+const sheet = workbook.worksheets.getActiveWorksheet();
+sheet.autoFilter.clear();
+
+For data validation, use the dataValidation method, e.g., 
+'''javascript
+const sheet = workbook.worksheets.getActiveWorksheet();
+const used = sheet.getUsedRange();
+used.load("values");
+await context.sync();
+const hdr = used.values[0].map(h => String(h).toLowerCase().trim());
+const col = hdr.indexOf("b");
+if (col === -1) throw new Error("Column 'B' not found.");
+const dataValidation = sheet.getDataValidation();
+dataValidation.clear();
+dataValidation.add({
+  type: Excel.DataValidation
 // EVAL-IMPROVEMENTS-END
 `
 + (DEFAULT_MODEL.toLowerCase().includes('qwen') ? '\n/no_think' : '');
