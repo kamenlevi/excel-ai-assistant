@@ -251,50 +251,68 @@ OTHER RULES:
 - Only skip CODE_JS if the user is purely asking a question with no changes needed.
 
 // EVAL-IMPROVEMENTS-START
-When copying data, specify the exact destination range, e.g., 
+When sorting data, use the 'sort' method on a range, e.g., 
+'''javascript
+const sheet = workbook.worksheets.getActiveWorksheet();
+const range = sheet.getRange("X:X");
+range.sort.apply({
+  key: range,
+  ascending: true
+});
+await context.sync();
+'''
+For writing formulas, specify the exact cell, e.g., 
+'''javascript
+const sheet = workbook.worksheets.getActiveWorksheet();
+sheet.getRange("B1").formulas = [["=A1"]];
+await context.sync();
+'''
+When copying data, ensure source and destination ranges are correct, e.g., 
 '''javascript
 const sheet = workbook.worksheets.getActiveWorksheet();
 const src = sheet.getRange("A:B");
 const dst = sheet.getRange("D1");
-src.copyFrom(dst, Excel.RangeCopyType.all, false, false);
+src.copyTo(dst, Excel.RangeCopyType.all, false, false);
 await context.sync();
 '''
-For setting margins, use the pageSetup method, e.g., 
+To get the number of rows, use 'getUsedRange' and 'rowCount', e.g., 
 '''javascript
 const sheet = workbook.worksheets.getActiveWorksheet();
-sheet.pageSetup.margins.bottom = 0.5;
+const used = sheet.getUsedRange();
+used.load("rowCount");
 await context.sync();
+return used.rowCount;
 '''
-To clear filters on a specific column, use the autoFilter method, e.g., 
+When filtering data, handle missing columns and provide alternatives, e.g., 
 '''javascript
 const sheet = workbook.worksheets.getActiveWorksheet();
 const used = sheet.getUsedRange();
 used.load("values");
 await context.sync();
 const hdr = used.values[0].map(h => String(h).toLowerCase().trim());
-const col = hdr.indexOf("x");
-if (col === -1) throw new Error("Column 'X' not found.");
-sheet.autoFilter.clearFilters([col]);
-'''
-When applying data validation to a specific column, target that column, e.g., 
-'''javascript
-const sheet = workbook.worksheets.getActiveWorksheet();
-const used = sheet.getUsedRange();
-used.load("values");
-await context.sync();
-const hdr = used.values[0].map(h => String(h).toLowerCase().trim());
-const col = hdr.indexOf("a");
-if (col === -1) throw new Error("Column 'A' not found.");
-const dataValidation = sheet.getRange(1, col + 1, used.values.length, 1).getDataValidation();
-dataValidation.clear();
-dataValidation.add({
-  type: Excel.DataValidationType.list,
-  formula1: "=1",
-  showInput: true,
-  showError: true
+const col = hdr.indexOf("department");
+if (col === -1) {
+  throw new Error("Column 'Department' not found. Please check column names.");
+}
+sheet.autoFilter.apply({
+  range: used,
+  criteria: [{ column: col, filterCriteria: { filterOn: Excel.FilterOn.customFilter, customFilter: { evaluateToCell: true, formula1: "=Engineering" } } }]
 });
 await context.sync();
 '''
+For data validation, target the correct column and handle edge cases, e.g., 
+'''javascript
+const sheet = workbook.worksheets.getActiveWorksheet();
+const used = sheet.getUsedRange();
+used.load("values");
+await context.sync();
+const hdr = used.values[0].map(h => String(h).toLowerCase().trim());
+const col = hdr.indexOf("priority");
+if (col === -1) throw new Error("Column 'Priority' not found.");
+const dataValidation = sheet.getRange(1, col + 1, used.values.length, 1).getDataValidation();
+dataValidation.clear();
+dataValidation.add({
+  type:
 // EVAL-IMPROVEMENTS-END
 `
 + (DEFAULT_MODEL.toLowerCase().includes('qwen') ? '\n/no_think' : '');
