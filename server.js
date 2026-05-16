@@ -251,68 +251,69 @@ OTHER RULES:
 - Only skip CODE_JS if the user is purely asking a question with no changes needed.
 
 // EVAL-IMPROVEMENTS-START
-When sorting data, use the 'sort' method on a range, e.g., 
+When filtering data, avoid using non-existent methods like 'applyColumnFilter'. Instead, use the 'autoFilter' method on the worksheet.
 '''javascript
 const sheet = workbook.worksheets.getActiveWorksheet();
-const range = sheet.getRange("X:X");
-range.sort.apply({
-  key: range,
-  ascending: true
+const used = sheet.getUsedRange();
+used.load("values");
+await context.sync();
+const hdr = used.values[0].map(h => String(h).toLowerCase().trim());
+const col = hdr.indexOf("x");
+if (col === -1) {
+  throw new Error("Column 'X' not found. Please check column names.");
+}
+sheet.autoFilter.apply({
+  range: used,
+  criteria: [{ column: col, filterCriteria: { filterOn: Excel.FilterOn.customFilter, customFilter: { evaluateToCell: true, formula1: '=val' } } }]
 });
 await context.sync();
 '''
-For writing formulas, specify the exact cell, e.g., 
+For sorting, ensure the range is valid before calling the 'sort' method.
 '''javascript
 const sheet = workbook.worksheets.getActiveWorksheet();
-sheet.getRange("B1").formulas = [["=A1"]];
-await context.sync();
+const range = sheet.getRange("X:X");
+if (range !== null && range !== undefined) {
+  range.sort.apply({
+    key: range,
+    ascending: true
+  });
+  await context.sync();
+} else {
+  throw new Error("Invalid range for sorting.");
+}
 '''
-When copying data, ensure source and destination ranges are correct, e.g., 
+When creating formulas, check if the worksheet is actively selected before executing the formula insertion.
+'''javascript
+const sheet = workbook.worksheets.getActiveWorksheet();
+if (sheet !== null && sheet !== undefined) {
+  sheet.getRange("A2").formulas = [["=A1*2"]];
+  await context.sync();
+} else {
+  throw new Error("No active worksheet selected.");
+}
+'''
+To copy data, consider potential existing data in the destination range.
 '''javascript
 const sheet = workbook.worksheets.getActiveWorksheet();
 const src = sheet.getRange("A:B");
 const dst = sheet.getRange("D1");
-src.copyTo(dst, Excel.RangeCopyType.all, false, false);
-await context.sync();
-'''
-To get the number of rows, use 'getUsedRange' and 'rowCount', e.g., 
-'''javascript
-const sheet = workbook.worksheets.getActiveWorksheet();
-const used = sheet.getUsedRange();
-used.load("rowCount");
-await context.sync();
-return used.rowCount;
-'''
-When filtering data, handle missing columns and provide alternatives, e.g., 
-'''javascript
-const sheet = workbook.worksheets.getActiveWorksheet();
-const used = sheet.getUsedRange();
-used.load("values");
-await context.sync();
-const hdr = used.values[0].map(h => String(h).toLowerCase().trim());
-const col = hdr.indexOf("department");
-if (col === -1) {
-  throw new Error("Column 'Department' not found. Please check column names.");
+if (dst.getUsedRange().rowCount === 0 && dst.getUsedRange().columnCount === 0) {
+  src.copyTo(dst, Excel.RangeCopyType.all, false, false);
+  await context.sync();
+} else {
+  throw new Error("Destination range is not empty.");
 }
-sheet.autoFilter.apply({
-  range: used,
-  criteria: [{ column: col, filterCriteria: { filterOn: Excel.FilterOn.customFilter, customFilter: { evaluateToCell: true, formula1: "=Engineering" } } }]
-});
-await context.sync();
 '''
-For data validation, target the correct column and handle edge cases, e.g., 
+For auto-fitting column widths, use the 'autofitColumns' method on the range.
 '''javascript
 const sheet = workbook.worksheets.getActiveWorksheet();
 const used = sheet.getUsedRange();
-used.load("values");
+used.autofitColumns();
 await context.sync();
-const hdr = used.values[0].map(h => String(h).toLowerCase().trim());
-const col = hdr.indexOf("priority");
-if (col === -1) throw new Error("Column 'Priority' not found.");
-const dataValidation = sheet.getRange(1, col + 1, used.values.length, 1).getDataValidation();
-dataValidation.clear();
-dataValidation.add({
-  type:
+'''
+When answering questions about functions, provide clear explanations and examples without unnecessary code.
+'''javascript
+The V
 // EVAL-IMPROVEMENTS-END
 `
 + (DEFAULT_MODEL.toLowerCase().includes('qwen') ? '\n/no_think' : '');
