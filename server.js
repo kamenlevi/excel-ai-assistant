@@ -251,49 +251,81 @@ OTHER RULES:
 - Only skip CODE_JS if the user is purely asking a question with no changes needed.
 
 // EVAL-IMPROVEMENTS-START
-When clearing filters, use the 'autoFilter.clear()' method.
+When adding formulas, ensure the correct cell address is used.
+'''javascript
+const sheet = workbook.worksheets.getActiveWorksheet();
+sheet.getRange("B1").formulas = [["=A1+2"]];
+await context.sync();
+'''
+For conditional formatting, use the 'format.conditional' method.
+'''javascript
+const sheet = workbook.worksheets.getActiveWorksheet();
+const range = sheet.getRange("A1:A10");
+range.format.conditional.format = {
+  type: Excel.ConditionalFormatType.cellValue,
+  operator: Excel.ConditionalFormatOperator.lessThan,
+  formula1: "50",
+  format: {
+    fill: {
+      color: "FF0000"
+    }
+  }
+};
+await context.sync();
+'''
+When copying data, use the 'getRange' and 'copyFrom' methods.
+'''javascript
+const sheet = workbook.worksheets.getActiveWorksheet();
+const src = sheet.getRange("A:B");
+const dst = sheet.getRange("D:D");
+src.copyFrom(dst);
+await context.sync();
+'''
+To auto-fit column widths, use the 'autoFit' method.
+'''javascript
+const sheet = workbook.worksheets.getActiveWorksheet();
+const used = sheet.getUsedRange();
+used.format.autofitColumns();
+await context.sync();
+'''
+For filtering, use the 'autoFilter' method with the correct criteria.
 '''javascript
 const sheet = workbook.worksheets.getActiveWorksheet();
 const autoFilter = sheet.autoFilter;
-autoFilter.clear();
-await context.sync();
-'''
-For sorting, ensure the correct range is loaded and used.
-'''javascript
-const range = sheet.getRange("X:X");
-range.load("values");
-await context.sync();
-range.sort.apply({
-  key: range,
-  ascending: true
+autoFilter.apply({
+  criteria: {
+    filterOn: Excel.FilterOn.values,
+    operator: Excel.FilterOperator.greaterThan,
+    values: [5]
+  },
+  column: "X:X"
 });
+await context.sync();
 '''
-When writing to a cell, ensure the correct cell address is used.
+When creating hyperlinks, use the 'hyperlinks.add' method.
 '''javascript
 const sheet = workbook.worksheets.getActiveWorksheet();
-sheet.getRange("A1").values = [["Header"]];
+const range = sheet.getRange("A1");
+range.hyperlinks.add({
+  address: "https://www.example.com",
+  textToDisplay: "Link"
+});
 await context.sync();
 '''
-For checking if a cell is empty, load the cell value and check for null or empty string.
+To set page layout options, use the 'pageSetup' method.
 '''javascript
-const cell = sheet.getRange("B2");
-cell.load("values");
+const sheet = workbook.worksheets.getActiveWorksheet();
+sheet.pageSetup.bottomMargin = 0.5 * 72;
 await context.sync();
-const isEmpty = cell.values[0][0] === null || cell.values[0][0] === "";
 '''
-When creating a table, ensure the correct range is used based on the workbook context.
+For data validation, use the 'dataValidation' method with the correct rule.
 '''javascript
-const tableRange = sheet.getRange("A1:A3");
-const table = sheet.tables.add(tableRange, true);
-await context.sync();
-'''
-For creating a sparkline, consider the trend of multiple values.
-'''javascript
-const dataRange = sheet.getRange("A1:A10");
-const sparklineRange = sheet.getRange("E1");
-sparklineRange.sparklines.add(Excel.SparklineType.line, dataRange);
-await context.sync();
-'''
+const sheet = workbook.worksheets.getActiveWorksheet();
+const range = sheet.getRange("B:B");
+range.dataValidation.clear();
+range.dataValidation.rule = {
+  showInput: true,
+  showError: true,
 // EVAL-IMPROVEMENTS-END
 `
 + (DEFAULT_MODEL.toLowerCase().includes('qwen') ? '\n/no_think' : '');
