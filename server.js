@@ -251,7 +251,34 @@ OTHER RULES:
 - Only skip CODE_JS if the user is purely asking a question with no changes needed.
 
 // EVAL-IMPROVEMENTS-START
-When filtering data, avoid using non-existent methods like 'applyColumnFilter'. Instead, use the 'autoFilter' method on the worksheet.
+When filtering data, use the actual value from the request instead of a literal string.
+'''javascript
+const filterValue = "val"; // assuming 'val' is the actual value from the request
+sheet.autoFilter.apply({
+  range: used,
+  criteria: [{ column: col, filterCriteria: { filterOn: Excel.FilterOn.customFilter, customFilter: { evaluateToCell: true, formula1: '=${filterValue}' } } }]
+});
+'''
+For sorting, use the 'sortBy' helper method instead of manual implementation.
+'''javascript
+const sheet = workbook.worksheets.getActiveWorksheet();
+const range = sheet.getRange("X:X");
+range.sort.apply({
+  key: range,
+  ascending: true
+});
+'''
+When adding borders, use the correct method signatures and variable declarations.
+'''javascript
+const borderRange = sheet.getRange("A1:" + String.fromCharCode(64 + used.columnCount) + used.rowCount);
+borderRange.format.borders.getItem(Excel.BorderIndex.edgeTop).style = Excel.BorderStyle.medium;
+'''
+When writing formulas, ensure the correct cell is targeted.
+'''javascript
+const sheet = workbook.worksheets.getActiveWorksheet();
+sheet.getRange("B1").formulas = [["=A1"]];
+'''
+For conditional formatting, use available helpers and handle potential errors.
 '''javascript
 const sheet = workbook.worksheets.getActiveWorksheet();
 const used = sheet.getUsedRange();
@@ -259,61 +286,30 @@ used.load("values");
 await context.sync();
 const hdr = used.values[0].map(h => String(h).toLowerCase().trim());
 const col = hdr.indexOf("x");
-if (col === -1) {
-  throw new Error("Column 'X' not found. Please check column names.");
-}
-sheet.autoFilter.apply({
-  range: used,
-  criteria: [{ column: col, filterCriteria: { filterOn: Excel.FilterOn.customFilter, customFilter: { evaluateToCell: true, formula1: '=val' } } }]
+if (col === -1) throw new Error("Column 'X' not found.");
+used.format.conditional.format.add(Excel.ConditionalFormatType.cellValue, {
+  formula1: '=X1<2',
+  format: { fill: { color: "00FF00" } }
 });
-await context.sync();
 '''
-For sorting, ensure the range is valid before calling the 'sort' method.
+When freezing panes, use the correct method and parameters.
 '''javascript
 const sheet = workbook.worksheets.getActiveWorksheet();
-const range = sheet.getRange("X:X");
-if (range !== null && range !== undefined) {
-  range.sort.apply({
-    key: range,
-    ascending: true
-  });
-  await context.sync();
-} else {
-  throw new Error("Invalid range for sorting.");
-}
+sheet.freezePanes.apply("A2", true);
 '''
-When creating formulas, check if the worksheet is actively selected before executing the formula insertion.
-'''javascript
-const sheet = workbook.worksheets.getActiveWorksheet();
-if (sheet !== null && sheet !== undefined) {
-  sheet.getRange("A2").formulas = [["=A1*2"]];
-  await context.sync();
-} else {
-  throw new Error("No active worksheet selected.");
-}
-'''
-To copy data, consider potential existing data in the destination range.
-'''javascript
-const sheet = workbook.worksheets.getActiveWorksheet();
-const src = sheet.getRange("A:B");
-const dst = sheet.getRange("D1");
-if (dst.getUsedRange().rowCount === 0 && dst.getUsedRange().columnCount === 0) {
-  src.copyTo(dst, Excel.RangeCopyType.all, false, false);
-  await context.sync();
-} else {
-  throw new Error("Destination range is not empty.");
-}
-'''
-For auto-fitting column widths, use the 'autofitColumns' method on the range.
+For autofitting columns, check if the used range is valid before autofitting.
 '''javascript
 const sheet = workbook.worksheets.getActiveWorksheet();
 const used = sheet.getUsedRange();
-used.autofitColumns();
-await context.sync();
+if (used!== null && used!== undefined) {
+  used.autofitColumns();
+  await context.sync();
+} else {
+  throw new Error("Invalid used range for autofitting.");
+}
 '''
-When answering questions about functions, provide clear explanations and examples without unnecessary code.
+When adding hyperlinks, use the correct method and parameters.
 '''javascript
-The V
 // EVAL-IMPROVEMENTS-END
 `
 + (DEFAULT_MODEL.toLowerCase().includes('qwen') ? '\n/no_think' : '');
