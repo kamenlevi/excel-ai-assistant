@@ -251,65 +251,49 @@ OTHER RULES:
 - Only skip CODE_JS if the user is purely asking a question with no changes needed.
 
 // EVAL-IMPROVEMENTS-START
-When filtering data, use the actual value from the request instead of a literal string.
-'''javascript
-const filterValue = "val"; // assuming 'val' is the actual value from the request
-sheet.autoFilter.apply({
-  range: used,
-  criteria: [{ column: col, filterCriteria: { filterOn: Excel.FilterOn.customFilter, customFilter: { evaluateToCell: true, formula1: '=${filterValue}' } } }]
-});
-'''
-For sorting, use the 'sortBy' helper method instead of manual implementation.
+When clearing filters, use the 'autoFilter.clear()' method.
 '''javascript
 const sheet = workbook.worksheets.getActiveWorksheet();
+const autoFilter = sheet.autoFilter;
+autoFilter.clear();
+await context.sync();
+'''
+For sorting, ensure the correct range is loaded and used.
+'''javascript
 const range = sheet.getRange("X:X");
+range.load("values");
+await context.sync();
 range.sort.apply({
   key: range,
   ascending: true
 });
 '''
-When adding borders, use the correct method signatures and variable declarations.
-'''javascript
-const borderRange = sheet.getRange("A1:" + String.fromCharCode(64 + used.columnCount) + used.rowCount);
-borderRange.format.borders.getItem(Excel.BorderIndex.edgeTop).style = Excel.BorderStyle.medium;
-'''
-When writing formulas, ensure the correct cell is targeted.
+When writing to a cell, ensure the correct cell address is used.
 '''javascript
 const sheet = workbook.worksheets.getActiveWorksheet();
-sheet.getRange("B1").formulas = [["=A1"]];
-'''
-For conditional formatting, use available helpers and handle potential errors.
-'''javascript
-const sheet = workbook.worksheets.getActiveWorksheet();
-const used = sheet.getUsedRange();
-used.load("values");
+sheet.getRange("A1").values = [["Header"]];
 await context.sync();
-const hdr = used.values[0].map(h => String(h).toLowerCase().trim());
-const col = hdr.indexOf("x");
-if (col === -1) throw new Error("Column 'X' not found.");
-used.format.conditional.format.add(Excel.ConditionalFormatType.cellValue, {
-  formula1: '=X1<2',
-  format: { fill: { color: "00FF00" } }
-});
 '''
-When freezing panes, use the correct method and parameters.
+For checking if a cell is empty, load the cell value and check for null or empty string.
 '''javascript
-const sheet = workbook.worksheets.getActiveWorksheet();
-sheet.freezePanes.apply("A2", true);
+const cell = sheet.getRange("B2");
+cell.load("values");
+await context.sync();
+const isEmpty = cell.values[0][0] === null || cell.values[0][0] === "";
 '''
-For autofitting columns, check if the used range is valid before autofitting.
+When creating a table, ensure the correct range is used based on the workbook context.
 '''javascript
-const sheet = workbook.worksheets.getActiveWorksheet();
-const used = sheet.getUsedRange();
-if (used!== null && used!== undefined) {
-  used.autofitColumns();
-  await context.sync();
-} else {
-  throw new Error("Invalid used range for autofitting.");
-}
+const tableRange = sheet.getRange("A1:A3");
+const table = sheet.tables.add(tableRange, true);
+await context.sync();
 '''
-When adding hyperlinks, use the correct method and parameters.
+For creating a sparkline, consider the trend of multiple values.
 '''javascript
+const dataRange = sheet.getRange("A1:A10");
+const sparklineRange = sheet.getRange("E1");
+sparklineRange.sparklines.add(Excel.SparklineType.line, dataRange);
+await context.sync();
+'''
 // EVAL-IMPROVEMENTS-END
 `
 + (DEFAULT_MODEL.toLowerCase().includes('qwen') ? '\n/no_think' : '');
