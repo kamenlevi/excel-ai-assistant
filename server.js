@@ -251,68 +251,65 @@ OTHER RULES:
 - Only skip CODE_JS if the user is purely asking a question with no changes needed.
 
 // EVAL-IMPROVEMENTS-START
-When sorting, ensure the column index is correct and handle errors.
+When renaming a sheet, ensure the new name is correctly assigned.
 '''javascript
 const sheet = workbook.worksheets.getActiveWorksheet();
-const used = sheet.getUsedRange();
-used.load("values");
-await context.sync();
-const colIndex = used.values[0].indexOf("Name");
-if (colIndex === -1) throw new Error("Column 'Name' not found.");
-sheet.getRange("A:A").sortBy([[{ key: colIndex, order: Excel.SortOrder.asc }]]);
+sheet.name = "Data";
 await context.sync();
 '''
-For single-row data, adjust the range accordingly.
+For selecting a sheet, use the 'activate' method.
+'''javascript
+const sheet = workbook.worksheets.getItem(0);
+sheet.activate();
+await context.sync();
+'''
+To filter a column, use the 'autoFilter' method.
+'''javascript
+const sheet = workbook.worksheets.getActiveWorksheet();
+const filter = sheet.getRange("A:A").autoFilter;
+filter.apply({ criteria: "Engineering" });
+await context.sync();
+'''
+When creating a table, specify the correct range and header row.
+'''javascript
+const sheet = workbook.worksheets.getActiveWorksheet();
+const table = sheet.tables.add("A1:B1", true);
+table.headerRowRange.values = [["X", "Y"]];
+await context.sync();
+'''
+For sparklines, include the entire data range.
+'''javascript
+const sheet = workbook.worksheets.getActiveWorksheet();
+const sparklineGroup = sheet.sparklineGroups.add();
+const sparkline = sparklineGroup.sparklines.add();
+sparkline.dataRange = sheet.getRange("A1:A2");
+sparkline.location = sheet.getRange("D1");
+await context.sync();
+'''
+To delete and add comments, handle existing comments correctly.
+'''javascript
+const sheet = workbook.worksheets.getActiveWorksheet();
+const cell = sheet.getRange("A1");
+cell.comments.load();
+await context.sync();
+if (cell.comments.items.length > 0) {
+  cell.comments.items[0].delete();
+  await context.sync();
+}
+const newComment = cell.addComment("New Comment");
+await context.sync();
+'''
+When adding shapes, consider the data range and adjust accordingly.
 '''javascript
 const sheet = workbook.worksheets.getActiveWorksheet();
 const used = sheet.getUsedRange();
 used.load("values");
 await context.sync();
 if (used.values.length === 1) {
-  sheet.getRange("X1").sortBy([[{ key: 0, order: Excel.SortOrder.asc }]]);
-} else {
-  sheet.getRange("X:X").sortBy([[{ key: 0, order: Excel.SortOrder.asc }]]);
+  const shape = sheet.shapes.addShape(Excel.ShapeType.rectangle, sheet.getRange("A1").getBoundingRect());
+  await context.sync();
 }
-await context.sync();
 '''
-To add formulas, specify the correct cell range.
-'''javascript
-const sheet = workbook.worksheets.getActiveWorksheet();
-sheet.getRange("B1").formulas = [["=A1+1"]];
-await context.sync();
-'''
-For conditional formatting, use efficient methods and handle errors.
-'''javascript
-const sheet = workbook.worksheets.getActiveWorksheet();
-const used = sheet.getUsedRange();
-used.load("values");
-await context.sync();
-const hdr = used.values[0].map(h => String(h).toLowerCase().trim());
-const colIndex = hdr.indexOf("y");
-if (colIndex === -1) throw new Error("Column 'Y' not found.");
-const range = sheet.getRange('${String.fromCharCode(65 + colIndex)}:${String.fromCharCode(65 + colIndex)}');
-range.format.conditional.format = {
-  type: Excel.ConditionalFormatType.cellValue,
-  operator: Excel.ConditionalOperator.greaterThan,
-  formula1: "15",
-  format: {
-    fill: {
-      color: { argb: "FF0000FF" }
-    }
-  }
-};
-await context.sync();
-'''
-To check for data in a row, return a boolean value.
-'''javascript
-const sheet = workbook.worksheets.getActiveWorksheet();
-const used = sheet.getUsedRange();
-used.load("values");
-await context.sync();
-const firstRow = used.values[0];
-return firstRow.some(cell => cell !== null && cell !== undefined && cell !== "");
-'''
-For filtering, use the '
 // EVAL-IMPROVEMENTS-END
 `
 + (DEFAULT_MODEL.toLowerCase().includes('qwen') ? '\n/no_think' : '');
