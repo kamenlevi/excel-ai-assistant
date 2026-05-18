@@ -251,67 +251,68 @@ OTHER RULES:
 - Only skip CODE_JS if the user is purely asking a question with no changes needed.
 
 // EVAL-IMPROVEMENTS-START
-When sorting, specify the column and order.
+When sorting, ensure the column index is correct and handle errors.
 '''javascript
 const sheet = workbook.worksheets.getActiveWorksheet();
-sheet.getRange("Y:Y").sortBy([[{ key: "Y", order: Excel.SortOrder.asc }]]);
+const used = sheet.getUsedRange();
+used.load("values");
+await context.sync();
+const colIndex = used.values[0].indexOf("Name");
+if (colIndex === -1) throw new Error("Column 'Name' not found.");
+sheet.getRange("A:A").sortBy([[{ key: colIndex, order: Excel.SortOrder.asc }]]);
 await context.sync();
 '''
-For filtering text values, use the 'autoFilter' method with the correct criteria.
+For single-row data, adjust the range accordingly.
 '''javascript
 const sheet = workbook.worksheets.getActiveWorksheet();
-const autoFilter = sheet.autoFilter;
-autoFilter.apply({
-  criteria: {
-    filterOn: Excel.FilterOn.values,
-    operator: Excel.FilterOperator.equals,
-    values: ["hello"]
-  },
-  column: "Y:Y"
-});
+const used = sheet.getUsedRange();
+used.load("values");
+await context.sync();
+if (used.values.length === 1) {
+  sheet.getRange("X1").sortBy([[{ key: 0, order: Excel.SortOrder.asc }]]);
+} else {
+  sheet.getRange("X:X").sortBy([[{ key: 0, order: Excel.SortOrder.asc }]]);
+}
 await context.sync();
 '''
-To make a column wider, adjust the existing width.
+To add formulas, specify the correct cell range.
 '''javascript
 const sheet = workbook.worksheets.getActiveWorksheet();
-const colB = sheet.getRange("B:B");
-colB.format.columnWidth = colB.format.columnWidth + 1;
+sheet.getRange("B1").formulas = [["=A1+1"]];
 await context.sync();
 '''
-When creating tables, specify the exact range.
+For conditional formatting, use efficient methods and handle errors.
 '''javascript
 const sheet = workbook.worksheets.getActiveWorksheet();
-const table = sheet.tables.add("A1:B1", true);
+const used = sheet.getUsedRange();
+used.load("values");
 await context.sync();
-'''
-For sparklines, consider the data range and type.
-'''javascript
-const sheet = workbook.worksheets.getActiveWorksheet();
-const sparklineRange = sheet.getRange("E1");
-const dataRange = sheet.getRange("A1");
-sparklineRange.sparklines.add(Excel.SparklineType.line, dataRange, "inline");
-await context.sync();
-'''
-To insert shapes with specific properties, set the shape's properties.
-'''javascript
-const sheet = workbook.worksheets.getActiveWorksheet();
-const shape = sheet.shapes.addShape(Excel.ShapeType.oval, "A1");
-shape.text = "Header";
-await context.sync();
-'''
-For data validation of whole numbers, use the correct formula.
-'''javascript
-const sheet = workbook.worksheets.getActiveWorksheet();
-const range = sheet.getRange("B:B");
-range.dataValidation.clear();
-range.dataValidation.rule = {
-  showInput: true,
-  showError: true,
-  operator: Excel.DataValidationOperator.equal,
-  formula1: "=INT(B1)=B1"
+const hdr = used.values[0].map(h => String(h).toLowerCase().trim());
+const colIndex = hdr.indexOf("y");
+if (colIndex === -1) throw new Error("Column 'Y' not found.");
+const range = sheet.getRange('${String.fromCharCode(65 + colIndex)}:${String.fromCharCode(65 + colIndex)}');
+range.format.conditional.format = {
+  type: Excel.ConditionalFormatType.cellValue,
+  operator: Excel.ConditionalOperator.greaterThan,
+  formula1: "15",
+  format: {
+    fill: {
+      color: { argb: "FF0000FF" }
+    }
+  }
 };
 await context.sync();
 '''
+To check for data in a row, return a boolean value.
+'''javascript
+const sheet = workbook.worksheets.getActiveWorksheet();
+const used = sheet.getUsedRange();
+used.load("values");
+await context.sync();
+const firstRow = used.values[0];
+return firstRow.some(cell => cell !== null && cell !== undefined && cell !== "");
+'''
+For filtering, use the '
 // EVAL-IMPROVEMENTS-END
 `
 + (DEFAULT_MODEL.toLowerCase().includes('qwen') ? '\n/no_think' : '');
