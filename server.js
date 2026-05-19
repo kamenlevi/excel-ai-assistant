@@ -251,65 +251,73 @@ OTHER RULES:
 - Only skip CODE_JS if the user is purely asking a question with no changes needed.
 
 // EVAL-IMPROVEMENTS-START
-When renaming a sheet, ensure the new name is correctly assigned.
-'''javascript
-const sheet = workbook.worksheets.getActiveWorksheet();
-sheet.name = "Data";
-await context.sync();
-'''
-For selecting a sheet, use the 'activate' method.
-'''javascript
-const sheet = workbook.worksheets.getItem(0);
-sheet.activate();
-await context.sync();
-'''
-To filter a column, use the 'autoFilter' method.
+To clear all filters, use the 'autoFilter' method to clear existing filters.
 '''javascript
 const sheet = workbook.worksheets.getActiveWorksheet();
 const filter = sheet.getRange("A:A").autoFilter;
-filter.apply({ criteria: "Engineering" });
+filter.clear();
 await context.sync();
 '''
-When creating a table, specify the correct range and header row.
+For sorting, utilize the 'sort' method with the correct API parameters.
 '''javascript
 const sheet = workbook.worksheets.getActiveWorksheet();
-const table = sheet.tables.add("A1:B1", true);
-table.headerRowRange.values = [["X", "Y"]];
+const sort = sheet.getRange("X:X").sort;
+sort.apply({
+  key: 0,
+  ascending: true,
+  header: Excel.SortOn.value
+});
 await context.sync();
 '''
-For sparklines, include the entire data range.
-'''javascript
-const sheet = workbook.worksheets.getActiveWorksheet();
-const sparklineGroup = sheet.sparklineGroups.add();
-const sparkline = sparklineGroup.sparklines.add();
-sparkline.dataRange = sheet.getRange("A1:A2");
-sparkline.location = sheet.getRange("D1");
-await context.sync();
-'''
-To delete and add comments, handle existing comments correctly.
-'''javascript
-const sheet = workbook.worksheets.getActiveWorksheet();
-const cell = sheet.getRange("A1");
-cell.comments.load();
-await context.sync();
-if (cell.comments.items.length > 0) {
-  cell.comments.items[0].delete();
-  await context.sync();
-}
-const newComment = cell.addComment("New Comment");
-await context.sync();
-'''
-When adding shapes, consider the data range and adjust accordingly.
+To make the header row bold, target the first row of the used range.
 '''javascript
 const sheet = workbook.worksheets.getActiveWorksheet();
 const used = sheet.getUsedRange();
-used.load("values");
+used.getRange("1:1").format.font.bold = true;
 await context.sync();
-if (used.values.length === 1) {
-  const shape = sheet.shapes.addShape(Excel.ShapeType.rectangle, sheet.getRange("A1").getBoundingRect());
-  await context.sync();
-}
 '''
+For changing font size, correctly declare variables and use the 'format' property.
+'''javascript
+const sheet = workbook.worksheets.getActiveWorksheet();
+const range = sheet.getRange("A1");
+range.format.font.size = 14;
+await context.sync();
+'''
+When writing formulas, ensure the correct cell and formula are targeted.
+'''javascript
+const sheet = workbook.worksheets.getActiveWorksheet();
+sheet.getRange("C1").formulas = [["=A1"]];
+await context.sync();
+'''
+To clear content in a column, use the 'clear' method with the correct applyTo parameter.
+'''javascript
+const sheet = workbook.worksheets.getActiveWorksheet();
+const used = sheet.getUsedRange();
+sheet.getRange("C1:C" + used.rowCount).clear(Excel.ClearApplyTo.contents);
+await context.sync();
+'''
+For freezing panes, consider the entire row and use the 'freezePanes' method correctly.
+'''javascript
+const sheet = workbook.worksheets.getActiveWorksheet();
+sheet.freezePanes("A2");
+await context.sync();
+'''
+When explaining functions like VLOOKUP, provide clear descriptions without unnecessary code.
+'''javascript
+// VLOOKUP function description
+'''
+To filter a specific column, apply the filter criteria to the correct column.
+'''javascript
+const sheet = workbook.worksheets.getActiveWorksheet();
+const filter = sheet.getRange("Department:Department").autoFilter;
+filter.apply({ criteria: "Engineering" });
+await context.sync();
+'''
+For data validation, use the 'dataValidation' method to restrict input values.
+'''javascript
+const sheet = workbook.worksheets.getActiveWorksheet();
+const validation = sheet.getRange("A:A").dataValidation;
+validation.clear
 // EVAL-IMPROVEMENTS-END
 `
 + (DEFAULT_MODEL.toLowerCase().includes('qwen') ? '\n/no_think' : '');
