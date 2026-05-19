@@ -251,14 +251,14 @@ OTHER RULES:
 - Only skip CODE_JS if the user is purely asking a question with no changes needed.
 
 // EVAL-IMPROVEMENTS-START
-To clear filters on a specific column, use the 'autoFilter' method with the correct column range.
+To filter a column, use the 'autoFilter' method with the correct filter criteria.
 '''javascript
 const sheet = workbook.worksheets.getActiveWorksheet();
-const filter = sheet.getRange("X:X").autoFilter;
-filter.clear();
+const filter = sheet.getRange("Y:Y").autoFilter;
+filter.apply({ criteria: { filterOn: Excel.FilterOn.values, values: ["val"] } });
 await context.sync();
 '''
-For sorting a specific column, specify the column range and sorting order.
+For sorting, specify the column range and sorting order.
 '''javascript
 const sheet = workbook.worksheets.getActiveWorksheet();
 const sort = sheet.getRange("X:X").sort;
@@ -269,47 +269,46 @@ sort.apply({
 });
 await context.sync();
 '''
-To highlight cells based on a condition, use the 'format' property with conditional logic.
+To add borders, use the 'format' property with border styles.
+'''javascript
+const sheet = workbook.worksheets.getActiveWorksheet();
+const used = sheet.getUsedRange();
+used.format.borders.getItem(Excel.BorderIndex.edgeTop).style = Excel.BorderStyle.medium;
+used.format.borders.getItem(Excel.BorderIndex.edgeBottom).style = Excel.BorderStyle.medium;
+used.format.borders.getItem(Excel.BorderIndex.edgeLeft).style = Excel.BorderStyle.medium;
+used.format.borders.getItem(Excel.BorderIndex.edgeRight).style = Excel.BorderStyle.medium;
+await context.sync();
+'''
+To add a formula, specify the correct cell range and formula.
+'''javascript
+const sheet = workbook.worksheets.getActiveWorksheet();
+sheet.getRange("B1").formulas = [["=A1+2"]];
+await context.sync();
+'''
+To highlight cells conditionally, use the 'format' property with conditional logic.
 '''javascript
 const sheet = workbook.worksheets.getActiveWorksheet();
 const used = sheet.getUsedRange();
 used.load("values");
 await context.sync();
-const scores = used.values.slice(1).map(r => r[1]);
+const values = used.values.slice(1).map(r => r[0]);
 const hdr = used.values[0].map(h => String(h).toLowerCase().trim());
-const col = hdr.indexOf("score");
-if (col === -1) throw new Error("Column 'Score' not found.");
-for (let i = 0; i < scores.length; i++) {
-  if (scores[i] < 50) {
+const col = hdr.indexOf("x");
+if (col === -1) throw new Error(".");
+for (let i = 0; i < values.length; i++) {
+  if (values[i] < 10) {
     const cell = sheet.getRange((i + 2) + ":" + (i + 2));
-    cell.format.fill.color = "FF0000";
+    cell.format.fill.color = "0000FF";
   }
 }
 await context.sync();
 '''
-To copy data to a specific column, use the 'copyFrom' method with the correct source and destination ranges.
+To check if a cell is empty, use the 'isEmpty' property.
 '''javascript
 const sheet = workbook.worksheets.getActiveWorksheet();
-const src = sheet.getRange("A:B");
-const dst = sheet.getRange("D1");
-dst.resize(src.rowCount, src.columnCount).copyFrom(src, Excel.RangeCopyType.all, false, false);
-await context.sync();
-'''
-To freeze the top row, use the 'freezePanes' method with the correct row index.
-'''javascript
-const sheet = workbook.worksheets.getActiveWorksheet();
-sheet.freezePanes("A2");
-await context.sync();
-'''
-To get the header in a column, use the 'getRange' method with the correct column range.
-'''javascript
-const sheet = workbook.worksheets.getActiveWorksheet();
-const header = sheet.getRange("A1").values;
-await context.sync();
-'''
-To filter a column to show specific values, use the 'autoFilter' method with the correct filter criteria.
-'''javascript
-const sheet = workbook.worksheets.getActive
+const cell = sheet.getRange("A1");
+cell.load("values");
+await
 // EVAL-IMPROVEMENTS-END
 `
 + (DEFAULT_MODEL.toLowerCase().includes('qwen') ? '\n/no_think' : '');
