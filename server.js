@@ -251,14 +251,14 @@ OTHER RULES:
 - Only skip CODE_JS if the user is purely asking a question with no changes needed.
 
 // EVAL-IMPROVEMENTS-START
-To clear all filters, use the 'autoFilter' method to clear existing filters.
+To clear filters on a specific column, use the 'autoFilter' method with the correct column range.
 '''javascript
 const sheet = workbook.worksheets.getActiveWorksheet();
-const filter = sheet.getRange("A:A").autoFilter;
+const filter = sheet.getRange("X:X").autoFilter;
 filter.clear();
 await context.sync();
 '''
-For sorting, utilize the 'sort' method with the correct API parameters.
+For sorting a specific column, specify the column range and sorting order.
 '''javascript
 const sheet = workbook.worksheets.getActiveWorksheet();
 const sort = sheet.getRange("X:X").sort;
@@ -269,55 +269,47 @@ sort.apply({
 });
 await context.sync();
 '''
-To make the header row bold, target the first row of the used range.
+To highlight cells based on a condition, use the 'format' property with conditional logic.
 '''javascript
 const sheet = workbook.worksheets.getActiveWorksheet();
 const used = sheet.getUsedRange();
-used.getRange("1:1").format.font.bold = true;
+used.load("values");
+await context.sync();
+const scores = used.values.slice(1).map(r => r[1]);
+const hdr = used.values[0].map(h => String(h).toLowerCase().trim());
+const col = hdr.indexOf("score");
+if (col === -1) throw new Error("Column 'Score' not found.");
+for (let i = 0; i < scores.length; i++) {
+  if (scores[i] < 50) {
+    const cell = sheet.getRange((i + 2) + ":" + (i + 2));
+    cell.format.fill.color = "FF0000";
+  }
+}
 await context.sync();
 '''
-For changing font size, correctly declare variables and use the 'format' property.
+To copy data to a specific column, use the 'copyFrom' method with the correct source and destination ranges.
 '''javascript
 const sheet = workbook.worksheets.getActiveWorksheet();
-const range = sheet.getRange("A1");
-range.format.font.size = 14;
+const src = sheet.getRange("A:B");
+const dst = sheet.getRange("D1");
+dst.resize(src.rowCount, src.columnCount).copyFrom(src, Excel.RangeCopyType.all, false, false);
 await context.sync();
 '''
-When writing formulas, ensure the correct cell and formula are targeted.
-'''javascript
-const sheet = workbook.worksheets.getActiveWorksheet();
-sheet.getRange("C1").formulas = [["=A1"]];
-await context.sync();
-'''
-To clear content in a column, use the 'clear' method with the correct applyTo parameter.
-'''javascript
-const sheet = workbook.worksheets.getActiveWorksheet();
-const used = sheet.getUsedRange();
-sheet.getRange("C1:C" + used.rowCount).clear(Excel.ClearApplyTo.contents);
-await context.sync();
-'''
-For freezing panes, consider the entire row and use the 'freezePanes' method correctly.
+To freeze the top row, use the 'freezePanes' method with the correct row index.
 '''javascript
 const sheet = workbook.worksheets.getActiveWorksheet();
 sheet.freezePanes("A2");
 await context.sync();
 '''
-When explaining functions like VLOOKUP, provide clear descriptions without unnecessary code.
-'''javascript
-// VLOOKUP function description
-'''
-To filter a specific column, apply the filter criteria to the correct column.
+To get the header in a column, use the 'getRange' method with the correct column range.
 '''javascript
 const sheet = workbook.worksheets.getActiveWorksheet();
-const filter = sheet.getRange("Department:Department").autoFilter;
-filter.apply({ criteria: "Engineering" });
+const header = sheet.getRange("A1").values;
 await context.sync();
 '''
-For data validation, use the 'dataValidation' method to restrict input values.
+To filter a column to show specific values, use the 'autoFilter' method with the correct filter criteria.
 '''javascript
-const sheet = workbook.worksheets.getActiveWorksheet();
-const validation = sheet.getRange("A:A").dataValidation;
-validation.clear
+const sheet = workbook.worksheets.getActive
 // EVAL-IMPROVEMENTS-END
 `
 + (DEFAULT_MODEL.toLowerCase().includes('qwen') ? '\n/no_think' : '');
