@@ -251,63 +251,51 @@ OTHER RULES:
 - Only skip CODE_JS if the user is purely asking a question with no changes needed.
 
 // EVAL-IMPROVEMENTS-START
-To clear filters on a specific column, use the 'autoFilter' method with the 'clear' option.
-'''javascript
-const sheet = workbook.worksheets.getActiveWorksheet();
-const filter = sheet.getRange("X:X").autoFilter;
-filter.clear();
-await context.sync();
-'''
-For sorting, ensure the column range is correctly identified and the sorting order is specified.
-'''javascript
-const sheet = workbook.worksheets.getActiveWorksheet();
-const sort = sheet.getRange("Name:Name").sort;
-sort.apply({
-  key: 0,
-  ascending: true,
-  header: Excel.SortOn.value
-});
-await context.sync();
-'''
-To underline text in a header row, use the 'format' property with font styles.
-'''javascript
-const sheet = workbook.worksheets.getActiveWorksheet();
-const header = sheet.getRange("1:1");
-header.format.font.underline = true;
-await context.sync();
-'''
-To highlight cells conditionally based on a specific column value, use the 'format' property with conditional logic and correct column identification.
+For sorting with a single unique value, ensure the code handles this edge case by checking for unique values before sorting.
 '''javascript
 const sheet = workbook.worksheets.getActiveWorksheet();
 const used = sheet.getUsedRange();
 used.load("values");
 await context.sync();
-const values = used.values.slice(1).map(r => r[1]);
-const hdr = used.values[0].map(h => String(h).toLowerCase().trim());
-const col = hdr.indexOf("score");
-if (col === -1) throw new Error("Column 'Score' not found.");
-for (let i = 0; i < values.length; i++) {
-  if (values[i] < 50) {
-    const cell = sheet.getRange((i + 2) + ":" + (i + 2)).getOffset(0, col);
-    cell.format.fill.color = "FF0000";
-  }
+const values = used.values.map(r => r[0]);
+if (new Set(values).size === 1) {
+  console.log("No need to sort, only one unique value.");
+} else {
+  const sort = sheet.getRange("X:X").sort;
+  sort.apply({
+    key: 0,
+    ascending: true,
+    header: Excel.SortOn.value
+  });
+  await context.sync();
 }
-await context.sync();
 '''
-To set a cell value, use the 'values' property directly on the cell range.
+When writing formulas, ensure the correct cell range is targeted.
 '''javascript
 const sheet = workbook.worksheets.getActiveWorksheet();
-sheet.getRange("A1").values = [["Header"]];
+sheet.getRange("C1").formulas = [["=A1"]];
 await context.sync();
 '''
-To filter a column to show specific values, use the 'autoFilter' method with the correct filter criteria.
+For activating a specific sheet, use the 'activate' method on the workbook.
+'''javascript
+const sheet = workbook.worksheets.getItem("Sheet1");
+sheet.activate();
+await context.sync();
+'''
+To create a table with a specific number of rows, ensure the range reflects the correct dimensions.
 '''javascript
 const sheet = workbook.worksheets.getActiveWorksheet();
-const filter = sheet.getRange("Department:Department").autoFilter;
-filter.apply({ criteria: { filterOn: Excel.FilterOn.values, values: ["Engineering"] } });
+const table = sheet.tables.add("A1:A1", true);
 await context.sync();
 '''
-To restrict a column to specific values, use data validation with the 'dataValidation
+For inserting shapes, ensure the shape is properly positioned and formatted.
+'''javascript
+const sheet = workbook.worksheets.getActiveWorksheet();
+const shape = sheet.shapes.addRectangle(0, 0, 100, 20);
+shape.top = sheet.getRange("A1").top;
+shape.left = sheet.getRange("A1").left;
+await context.sync();
+'''
 // EVAL-IMPROVEMENTS-END
 `
 + (DEFAULT_MODEL.toLowerCase().includes('qwen') ? '\n/no_think' : '');
