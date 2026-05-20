@@ -251,51 +251,74 @@ OTHER RULES:
 - Only skip CODE_JS if the user is purely asking a question with no changes needed.
 
 // EVAL-IMPROVEMENTS-START
-For sorting with a single unique value, ensure the code handles this edge case by checking for unique values before sorting.
+When filtering data, use the 'autoFilter' method instead of 'applyColumnFilter'.
 '''javascript
 const sheet = workbook.worksheets.getActiveWorksheet();
-const used = sheet.getUsedRange();
-used.load("values");
+const filter = sheet.getRange("X:X").autoFilter;
+filter.apply({
+  criteria1: "val",
+  operator: Excel.FilterOperator.equals
+});
 await context.sync();
-const values = used.values.map(r => r[0]);
-if (new Set(values).size === 1) {
-  console.log("No need to sort, only one unique value.");
-} else {
-  const sort = sheet.getRange("X:X").sort;
-  sort.apply({
-    key: 0,
-    ascending: true,
-    header: Excel.SortOn.value
+'''
+For conditional formatting, use the 'conditionalFormats' method to apply formatting rules.
+'''javascript
+const sheet = workbook.worksheets.getActiveWorksheet();
+const range = sheet.getRange("X:X");
+range.conditionalFormats.add(Excel.ConditionalFormatType.cellValue,
+  {
+    operator: Excel.ConditionalOperator.lessThan,
+    formula1: "3",
+    font: {
+      color: { argb: "FF0000FF" }
+    }
   });
-  await context.sync();
-}
+await context.sync();
 '''
-When writing formulas, ensure the correct cell range is targeted.
+When copying data, specify the correct destination range to avoid overwriting adjacent columns.
 '''javascript
 const sheet = workbook.worksheets.getActiveWorksheet();
-sheet.getRange("C1").formulas = [["=A1"]];
+const src = sheet.getRange("A:B");
+const dst = sheet.getRange("D1");
+src.copyFrom(dst, Excel.RangeCopyType.all, false, false);
 await context.sync();
 '''
-For activating a specific sheet, use the 'activate' method on the workbook.
-'''javascript
-const sheet = workbook.worksheets.getItem("Sheet1");
-sheet.activate();
-await context.sync();
-'''
-To create a table with a specific number of rows, ensure the range reflects the correct dimensions.
+For data validation, ensure the rule is set to validate whole numbers within a range.
 '''javascript
 const sheet = workbook.worksheets.getActiveWorksheet();
-const table = sheet.tables.add("A1:A1", true);
+const range = sheet.getRange("B:B");
+range.dataValidation.clear();
+range.dataValidation.rule = {
+  showInput: true,
+  showError: true,
+  operator: Excel.DataValidationOperator.between,
+  formula1: "=1",
+  formula2: "=100"
+};
+range.dataValidation.error = {
+  title: "Invalid score",
+  message: "Please enter a whole number between 1 and 100"
+};
 await context.sync();
 '''
-For inserting shapes, ensure the shape is properly positioned and formatted.
+When describing Excel functions, provide concrete examples and context.
+'''javascript
+// VLOOKUP example
+const sheet = workbook.worksheets.getActiveWorksheet();
+const range = sheet.getRange("A1:B2");
+range.formulas = [["=VLOOKUP(A2, B:C, 2, FALSE)"]];
+await context.sync();
+'''
+To get the value in the first column of the first row, use the 'getRange' method with specific coordinates.
 '''javascript
 const sheet = workbook.worksheets.getActiveWorksheet();
-const shape = sheet.shapes.addRectangle(0, 0, 100, 20);
-shape.top = sheet.getRange("A1").top;
-shape.left = sheet.getRange("A1").left;
+const value = sheet.getRange("A1").values;
 await context.sync();
 '''
+For filtering a specific column, use the 'autoFilter' method with the correct criteria.
+'''javascript
+const sheet = workbook.worksheets.getActiveWorksheet();
+const filter =
 // EVAL-IMPROVEMENTS-END
 `
 + (DEFAULT_MODEL.toLowerCase().includes('qwen') ? '\n/no_think' : '');
