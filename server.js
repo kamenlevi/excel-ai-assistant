@@ -251,17 +251,17 @@ OTHER RULES:
 - Only skip CODE_JS if the user is purely asking a question with no changes needed.
 
 // EVAL-IMPROVEMENTS-START
-To filter a column, use the 'autoFilter' method with the correct filter criteria.
+To clear filters on a specific column, use the 'autoFilter' method with the 'clear' option.
 '''javascript
 const sheet = workbook.worksheets.getActiveWorksheet();
-const filter = sheet.getRange("Y:Y").autoFilter;
-filter.apply({ criteria: { filterOn: Excel.FilterOn.values, values: ["val"] } });
+const filter = sheet.getRange("X:X").autoFilter;
+filter.clear();
 await context.sync();
 '''
-For sorting, specify the column range and sorting order.
+For sorting, ensure the column range is correctly identified and the sorting order is specified.
 '''javascript
 const sheet = workbook.worksheets.getActiveWorksheet();
-const sort = sheet.getRange("X:X").sort;
+const sort = sheet.getRange("Name:Name").sort;
 sort.apply({
   key: 0,
   ascending: true,
@@ -269,46 +269,45 @@ sort.apply({
 });
 await context.sync();
 '''
-To add borders, use the 'format' property with border styles.
+To underline text in a header row, use the 'format' property with font styles.
 '''javascript
 const sheet = workbook.worksheets.getActiveWorksheet();
-const used = sheet.getUsedRange();
-used.format.borders.getItem(Excel.BorderIndex.edgeTop).style = Excel.BorderStyle.medium;
-used.format.borders.getItem(Excel.BorderIndex.edgeBottom).style = Excel.BorderStyle.medium;
-used.format.borders.getItem(Excel.BorderIndex.edgeLeft).style = Excel.BorderStyle.medium;
-used.format.borders.getItem(Excel.BorderIndex.edgeRight).style = Excel.BorderStyle.medium;
+const header = sheet.getRange("1:1");
+header.format.font.underline = true;
 await context.sync();
 '''
-To add a formula, specify the correct cell range and formula.
-'''javascript
-const sheet = workbook.worksheets.getActiveWorksheet();
-sheet.getRange("B1").formulas = [["=A1+2"]];
-await context.sync();
-'''
-To highlight cells conditionally, use the 'format' property with conditional logic.
+To highlight cells conditionally based on a specific column value, use the 'format' property with conditional logic and correct column identification.
 '''javascript
 const sheet = workbook.worksheets.getActiveWorksheet();
 const used = sheet.getUsedRange();
 used.load("values");
 await context.sync();
-const values = used.values.slice(1).map(r => r[0]);
+const values = used.values.slice(1).map(r => r[1]);
 const hdr = used.values[0].map(h => String(h).toLowerCase().trim());
-const col = hdr.indexOf("x");
-if (col === -1) throw new Error(".");
+const col = hdr.indexOf("score");
+if (col === -1) throw new Error("Column 'Score' not found.");
 for (let i = 0; i < values.length; i++) {
-  if (values[i] < 10) {
-    const cell = sheet.getRange((i + 2) + ":" + (i + 2));
-    cell.format.fill.color = "0000FF";
+  if (values[i] < 50) {
+    const cell = sheet.getRange((i + 2) + ":" + (i + 2)).getOffset(0, col);
+    cell.format.fill.color = "FF0000";
   }
 }
 await context.sync();
 '''
-To check if a cell is empty, use the 'isEmpty' property.
+To set a cell value, use the 'values' property directly on the cell range.
 '''javascript
 const sheet = workbook.worksheets.getActiveWorksheet();
-const cell = sheet.getRange("A1");
-cell.load("values");
-await
+sheet.getRange("A1").values = [["Header"]];
+await context.sync();
+'''
+To filter a column to show specific values, use the 'autoFilter' method with the correct filter criteria.
+'''javascript
+const sheet = workbook.worksheets.getActiveWorksheet();
+const filter = sheet.getRange("Department:Department").autoFilter;
+filter.apply({ criteria: { filterOn: Excel.FilterOn.values, values: ["Engineering"] } });
+await context.sync();
+'''
+To restrict a column to specific values, use data validation with the 'dataValidation
 // EVAL-IMPROVEMENTS-END
 `
 + (DEFAULT_MODEL.toLowerCase().includes('qwen') ? '\n/no_think' : '');
