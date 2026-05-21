@@ -251,48 +251,67 @@ OTHER RULES:
 - Only skip CODE_JS if the user is purely asking a question with no changes needed.
 
 // EVAL-IMPROVEMENTS-START
-When sorting data, handle cases with single unique values or identical rows by checking the data range before applying the sort.
+When clearing filters, specify the column to target using the 'clearFilters' method on the 'autoFilter' object.
 '''javascript
 const sheet = workbook.worksheets.getActiveWorksheet();
-const range = sheet.getRange("X:X");
-if (range.values.length > 1 && new Set(range.values).size > 1) {
-  await range.sort.apply({
-    key: range,
-    ascending: true
-  });
+const autoFilter = sheet.getAutoFilter();
+autoFilter.clearFilters("X");
+await context.sync();
+'''
+For sorting, use the 'sort' method on the range object with the correct column index.
+'''javascript
+const sheet = workbook.worksheets.getActiveWorksheet();
+const range = sheet.getRange("A:B");
+range.sort.apply({
+  key: range.getColumn(1),
+  ascending: true
+});
+await context.sync();
+'''
+When highlighting cells conditionally, use a loop to iterate over the cells and apply formatting.
+'''javascript
+const sheet = workbook.worksheets.getActiveWorksheet();
+const used = sheet.getUsedRange();
+used.load("values");
+await context.sync();
+const values = used.values;
+const hdr = values[0].map(h => String(h).toLowerCase().trim());
+const colIndex = hdr.indexOf("score");
+for (let i = 1; i < values.length; i++) {
+  if (Number(values[i][colIndex]) < 50) {
+    sheet.getRangeByIndexes(i, colIndex, 1, 1).format.fill.color = "#FF0000";
+  }
 }
 await context.sync();
 '''
-For error handling, utilize Office JS API error objects to provide informative error messages.
-'''javascript
-try {
-  // code
-} catch (error) {
-  console.log('Error: ${error.message}');
-}
-'''
-When setting page layout options, consider the specific data range to ensure proper fit.
+To set a cell value, use the 'values' property on the range object.
 '''javascript
 const sheet = workbook.worksheets.getActiveWorksheet();
-const range = sheet.getRange("A1:B10");
-sheet.pageSetup.fitToPages = 1;
+sheet.getRange("B1").values = [["Total"]];
 await context.sync();
 '''
-To add sparklines, specify the data range and sparkline type.
+For selecting the entire sheet, use the 'getRange' method with the 'worksheet' dimensions.
 '''javascript
 const sheet = workbook.worksheets.getActiveWorksheet();
-const sparklineRange = sheet.getRange("D1");
-const dataRange = sheet.getRange("A1:A4");
-sparklineRange.sparklines.add(Excel.SparklineType.line, dataRange);
+const range = sheet.getRange("A1:" + sheet.dimensions.address);
 await context.sync();
 '''
-When making headers bold, ensure the range is correctly selected.
+When describing functions like VLOOKUP, provide a clear description without unnecessary code.
+'''javascript
+The VLOOKUP function looks up a value in a table and returns a corresponding value from another column.
+'''
+To filter a column, use the 'apply' method on the 'autoFilter' object with the correct criteria.
 '''javascript
 const sheet = workbook.worksheets.getActiveWorksheet();
-const header = sheet.getRange("A1:B1");
-header.format.font.bold = true;
+const autoFilter = sheet.getAutoFilter();
+autoFilter.apply("Department", "Engineering");
 await context.sync();
 '''
+To create a sparkline, specify the data range and sparkline type.
+'''javascript
+const sheet = workbook.worksheets.getActiveWorksheet();
+const sparklineRange = sheet.getRange("B1");
+const dataRange =
 // EVAL-IMPROVEMENTS-END
 `
 + (DEFAULT_MODEL.toLowerCase().includes('qwen') ? '\n/no_think' : '');
