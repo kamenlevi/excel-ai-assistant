@@ -251,74 +251,48 @@ OTHER RULES:
 - Only skip CODE_JS if the user is purely asking a question with no changes needed.
 
 // EVAL-IMPROVEMENTS-START
-When filtering data, use the 'autoFilter' method instead of 'applyColumnFilter'.
-'''javascript
-const sheet = workbook.worksheets.getActiveWorksheet();
-const filter = sheet.getRange("X:X").autoFilter;
-filter.apply({
-  criteria1: "val",
-  operator: Excel.FilterOperator.equals
-});
-await context.sync();
-'''
-For conditional formatting, use the 'conditionalFormats' method to apply formatting rules.
+When sorting data, handle cases with single unique values or identical rows by checking the data range before applying the sort.
 '''javascript
 const sheet = workbook.worksheets.getActiveWorksheet();
 const range = sheet.getRange("X:X");
-range.conditionalFormats.add(Excel.ConditionalFormatType.cellValue,
-  {
-    operator: Excel.ConditionalOperator.lessThan,
-    formula1: "3",
-    font: {
-      color: { argb: "FF0000FF" }
-    }
+if (range.values.length > 1 && new Set(range.values).size > 1) {
+  await range.sort.apply({
+    key: range,
+    ascending: true
   });
+}
 await context.sync();
 '''
-When copying data, specify the correct destination range to avoid overwriting adjacent columns.
+For error handling, utilize Office JS API error objects to provide informative error messages.
+'''javascript
+try {
+  // code
+} catch (error) {
+  console.log('Error: ${error.message}');
+}
+'''
+When setting page layout options, consider the specific data range to ensure proper fit.
 '''javascript
 const sheet = workbook.worksheets.getActiveWorksheet();
-const src = sheet.getRange("A:B");
-const dst = sheet.getRange("D1");
-src.copyFrom(dst, Excel.RangeCopyType.all, false, false);
+const range = sheet.getRange("A1:B10");
+sheet.pageSetup.fitToPages = 1;
 await context.sync();
 '''
-For data validation, ensure the rule is set to validate whole numbers within a range.
+To add sparklines, specify the data range and sparkline type.
 '''javascript
 const sheet = workbook.worksheets.getActiveWorksheet();
-const range = sheet.getRange("B:B");
-range.dataValidation.clear();
-range.dataValidation.rule = {
-  showInput: true,
-  showError: true,
-  operator: Excel.DataValidationOperator.between,
-  formula1: "=1",
-  formula2: "=100"
-};
-range.dataValidation.error = {
-  title: "Invalid score",
-  message: "Please enter a whole number between 1 and 100"
-};
+const sparklineRange = sheet.getRange("D1");
+const dataRange = sheet.getRange("A1:A4");
+sparklineRange.sparklines.add(Excel.SparklineType.line, dataRange);
 await context.sync();
 '''
-When describing Excel functions, provide concrete examples and context.
+When making headers bold, ensure the range is correctly selected.
 '''javascript
-// VLOOKUP example
 const sheet = workbook.worksheets.getActiveWorksheet();
-const range = sheet.getRange("A1:B2");
-range.formulas = [["=VLOOKUP(A2, B:C, 2, FALSE)"]];
+const header = sheet.getRange("A1:B1");
+header.format.font.bold = true;
 await context.sync();
 '''
-To get the value in the first column of the first row, use the 'getRange' method with specific coordinates.
-'''javascript
-const sheet = workbook.worksheets.getActiveWorksheet();
-const value = sheet.getRange("A1").values;
-await context.sync();
-'''
-For filtering a specific column, use the 'autoFilter' method with the correct criteria.
-'''javascript
-const sheet = workbook.worksheets.getActiveWorksheet();
-const filter =
 // EVAL-IMPROVEMENTS-END
 `
 + (DEFAULT_MODEL.toLowerCase().includes('qwen') ? '\n/no_think' : '');
