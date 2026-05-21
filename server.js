@@ -251,67 +251,54 @@ OTHER RULES:
 - Only skip CODE_JS if the user is purely asking a question with no changes needed.
 
 // EVAL-IMPROVEMENTS-START
-When clearing filters, specify the column to target using the 'clearFilters' method on the 'autoFilter' object.
+When filtering, use the 'apply' method on the 'autoFilter' object with the correct column and criteria.
 '''javascript
 const sheet = workbook.worksheets.getActiveWorksheet();
 const autoFilter = sheet.getAutoFilter();
-autoFilter.clearFilters("X");
+autoFilter.apply("X", "val");
 await context.sync();
 '''
-For sorting, use the 'sort' method on the range object with the correct column index.
+For sorting, use the 'sort' method on the range object with the correct column header.
 '''javascript
 const sheet = workbook.worksheets.getActiveWorksheet();
 const range = sheet.getRange("A:B");
+const hdr = range.values[0].map(h => String(h).trim());
+const colIndex = hdr.indexOf("X");
 range.sort.apply({
-  key: range.getColumn(1),
+  key: range.getColumn(colIndex + 1),
   ascending: true
 });
 await context.sync();
 '''
-When highlighting cells conditionally, use a loop to iterate over the cells and apply formatting.
+To adjust column width, use the 'columnWidth' property on the range object.
 '''javascript
-const sheet = workbook.worksheets.getActiveWorksheet();
-const used = sheet.getUsedRange();
-used.load("values");
-await context.sync();
-const values = used.values;
-const hdr = values[0].map(h => String(h).toLowerCase().trim());
-const colIndex = hdr.indexOf("score");
-for (let i = 1; i < values.length; i++) {
-  if (Number(values[i][colIndex]) < 50) {
-    sheet.getRangeByIndexes(i, colIndex, 1, 1).format.fill.color = "#FF0000";
-  }
-}
+const sheet = workbook.workbooks.getActiveWorksheet();
+const column = sheet.getRange("B:B");
+column.columnWidth = 8.5;
 await context.sync();
 '''
-To set a cell value, use the 'values' property on the range object.
-'''javascript
-const sheet = workbook.worksheets.getActiveWorksheet();
-sheet.getRange("B1").values = [["Total"]];
-await context.sync();
-'''
-For selecting the entire sheet, use the 'getRange' method with the 'worksheet' dimensions.
-'''javascript
-const sheet = workbook.worksheets.getActiveWorksheet();
-const range = sheet.getRange("A1:" + sheet.dimensions.address);
-await context.sync();
-'''
-When describing functions like VLOOKUP, provide a clear description without unnecessary code.
-'''javascript
-The VLOOKUP function looks up a value in a table and returns a corresponding value from another column.
-'''
-To filter a column, use the 'apply' method on the 'autoFilter' object with the correct criteria.
-'''javascript
-const sheet = workbook.worksheets.getActiveWorksheet();
-const autoFilter = sheet.getAutoFilter();
-autoFilter.apply("Department", "Engineering");
-await context.sync();
-'''
-To create a sparkline, specify the data range and sparkline type.
+When creating a sparkline, specify the entire data range.
 '''javascript
 const sheet = workbook.worksheets.getActiveWorksheet();
 const sparklineRange = sheet.getRange("B1");
-const dataRange =
+const dataRange = sheet.getRange("A1:A2");
+sparklineRange.sparklines.add(Excel.SparklineType.line, dataRange);
+await context.sync();
+'''
+To insert a shape at a specific cell, use the 'addShape' method with correct positioning.
+'''javascript
+const sheet = workbook.worksheets.getActiveWorksheet();
+const shape = sheet.shapes.addShape(Excel.ShapeType.oval, 0, 0, 100, 50);
+shape.top = sheet.getRange("A1").top;
+shape.left = sheet.getRange("A1").left;
+await context.sync();
+'''
+To create a named range, use the 'add' method on the 'names' object with the correct range address.
+'''javascript
+const workbook = context.workbook;
+workbook.names.add("SingleValue", "=Sheet1!$B$2");
+await context.sync();
+'''
 // EVAL-IMPROVEMENTS-END
 `
 + (DEFAULT_MODEL.toLowerCase().includes('qwen') ? '\n/no_think' : '');
