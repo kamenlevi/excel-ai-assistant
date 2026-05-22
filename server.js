@@ -251,39 +251,48 @@ OTHER RULES:
 - Only skip CODE_JS if the user is purely asking a question with no changes needed.
 
 // EVAL-IMPROVEMENTS-START
-When sorting, consider using the 'sortBy' method for simplicity and error handling.
+When sorting, use the 'sort' method with the correct column index.
 '''javascript
 const sheet = workbook.worksheets.getActiveWorksheet();
-const range = sheet.getRange("A:A");
+const range = sheet.getRange("Y:Y");
 range.sort.apply({
   key: 0,
-  ascending: true
+  ascending: false
 });
 await context.sync();
 '''
-For filtering, ensure proper error handling and use of 'autoFilter' object.
+For conditional formatting, use the 'conditionalFormats' object.
+'''javascript
+const sheet = workbook.worksheets.getActiveWorksheet();
+const range = sheet.getRange("Y:Y");
+range.conditionalFormats.add(Excel.ConditionalFormatType.cellValue,
+  {
+    operator: Excel.ConditionalOperator.greaterThan,
+    values: [0]
+  },
+  {
+    fill: { color: "yellow" }
+  }
+);
+await context.sync();
+'''
+To clear filters, use the 'clear' method of the 'autoFilter' object.
+'''javascript
+const sheet = workbook.worksheets.getActiveWorksheet();
+const autoFilter = sheet.getAutoFilter();
+autoFilter.clear();
+await context.sync();
+'''
+When applying filters, ensure the column exists and handle errors.
 '''javascript
 try {
   const sheet = workbook.worksheets.getActiveWorksheet();
   const autoFilter = sheet.getAutoFilter();
-  autoFilter.apply("Department", "Engineering");
+  autoFilter.apply("Y", { operator: Excel.FilterOperator.contains, values: ["e"] });
   await context.sync();
 } catch (error) {
   console.log(error);
 }
-'''
-To filter by values, use the 'apply' method with the correct criteria.
-'''javascript
-const sheet = workbook.worksheets.getActiveWorksheet();
-const autoFilter = sheet.getAutoFilter();
-autoFilter.apply("X", { operator: Excel.FilterOperator.lessThan, values: [5] });
-await context.sync();
-'''
-When adding formulas, ensure the correct cell range is targeted.
-'''javascript
-const sheet = workbook.worksheets.getActiveWorksheet();
-sheet.getRange("B1").formulas = [["=A1+1"]];
-await context.sync();
 '''
 // EVAL-IMPROVEMENTS-END
 `
