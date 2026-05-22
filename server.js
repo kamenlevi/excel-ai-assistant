@@ -251,52 +251,65 @@ OTHER RULES:
 - Only skip CODE_JS if the user is purely asking a question with no changes needed.
 
 // EVAL-IMPROVEMENTS-START
-When filtering, use the 'apply' method on the 'autoFilter' object with the correct column and criteria.
+When sorting, use the correct column index and range.
 '''javascript
 const sheet = workbook.worksheets.getActiveWorksheet();
-const autoFilter = sheet.getAutoFilter();
-autoFilter.apply("X", "val");
-await context.sync();
-'''
-For sorting, use the 'sort' method on the range object with the correct column header.
-'''javascript
-const sheet = workbook.worksheets.getActiveWorksheet();
-const range = sheet.getRange("A:B");
+const range = sheet.getRange("A:A");
 const hdr = range.values[0].map(h => String(h).trim());
-const colIndex = hdr.indexOf("X");
+const colIndex = hdr.indexOf("Name");
 range.sort.apply({
-  key: range.getColumn(colIndex + 1),
+  key: range.getColumn(colIndex),
   ascending: true
 });
 await context.sync();
 '''
-To adjust column width, use the 'columnWidth' property on the range object.
+For conditional formatting, use the 'format.conditional' property.
 '''javascript
-const sheet = workbook.workbooks.getActiveWorksheet();
-const column = sheet.getRange("B:B");
-column.columnWidth = 8.5;
+const sheet = workbook.worksheets.getActiveWorksheet();
+const range = sheet.getRange("A:A");
+range.format.conditional = {
+  formula: "=A1<50",
+  fontColor: "red"
+};
 await context.sync();
 '''
-When creating a sparkline, specify the entire data range.
+To filter a column, use the 'autoFilter' object with the correct criteria.
+'''javascript
+const sheet = workbook.worksheets.getActiveWorksheet();
+const autoFilter = sheet.getAutoFilter();
+autoFilter.apply("Department", "Engineering");
+await context.sync();
+'''
+When restricting input, use the 'dataValidation' property.
+'''javascript
+const sheet = workbook.worksheets.getActiveWorksheet();
+const range = sheet.getRange("A:A");
+range.dataValidation = {
+  type: Excel.DataValidationType.list,
+  formula1: '"yes"'
+};
+await context.sync();
+'''
+To create a hyperlink, use the 'hyperlink' property with address and display text.
+'''javascript
+const sheet = workbook.worksheets.getActiveWorksheet();
+const range = sheet.getRange("B1");
+range.hyperlink = { address: "https://www.example.org", display: "Click here" };
+await context.sync();
+'''
+For creating a table, use the 'tables.add' method with the correct range.
+'''javascript
+const sheet = workbook.worksheets.getActiveWorksheet();
+const tableRange = sheet.getRange("A1:B1");
+const table = sheet.tables.add(tableRange, true);
+await context.sync();
+'''
+When creating a sparkline, specify the correct data range.
 '''javascript
 const sheet = workbook.worksheets.getActiveWorksheet();
 const sparklineRange = sheet.getRange("B1");
 const dataRange = sheet.getRange("A1:A2");
 sparklineRange.sparklines.add(Excel.SparklineType.line, dataRange);
-await context.sync();
-'''
-To insert a shape at a specific cell, use the 'addShape' method with correct positioning.
-'''javascript
-const sheet = workbook.worksheets.getActiveWorksheet();
-const shape = sheet.shapes.addShape(Excel.ShapeType.oval, 0, 0, 100, 50);
-shape.top = sheet.getRange("A1").top;
-shape.left = sheet.getRange("A1").left;
-await context.sync();
-'''
-To create a named range, use the 'add' method on the 'names' object with the correct range address.
-'''javascript
-const workbook = context.workbook;
-workbook.names.add("SingleValue", "=Sheet1!$B$2");
 await context.sync();
 '''
 // EVAL-IMPROVEMENTS-END
