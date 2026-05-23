@@ -251,49 +251,78 @@ OTHER RULES:
 - Only skip CODE_JS if the user is purely asking a question with no changes needed.
 
 // EVAL-IMPROVEMENTS-START
-When sorting, use the 'sort' method with the correct column index.
+When sorting, identify the column index based on the header name.
 '''javascript
-const sheet = workbook.worksheets.getActiveWorksheet();
-const range = sheet.getRange("Y:Y");
+const hdr = used.values[0].map(h => String(h).toLowerCase().trim());
+const colIndex = hdr.indexOf("name");
+const range = sheet.getRange(colIndex + 1 + ":" + colIndex + 1);
 range.sort.apply({
   key: 0,
-  ascending: false
+  ascending: true
 });
-await context.sync();
 '''
-For conditional formatting, use the 'conditionalFormats' object.
+For formulas, ensure the correct cell reference is used.
 '''javascript
 const sheet = workbook.worksheets.getActiveWorksheet();
-const range = sheet.getRange("Y:Y");
-range.conditionalFormats.add(Excel.ConditionalFormatType.cellValue,
-  {
-    operator: Excel.ConditionalOperator.greaterThan,
-    values: [0]
-  },
-  {
-    fill: { color: "yellow" }
-  }
-);
+sheet.getRange("B1").formulas = [["=A1+1"]];
 await context.sync();
 '''
-To clear filters, use the 'clear' method of the 'autoFilter' object.
+When writing formulas, use the correct cell reference and formula syntax.
 '''javascript
 const sheet = workbook.worksheets.getActiveWorksheet();
-const autoFilter = sheet.getAutoFilter();
-autoFilter.clear();
+sheet.getRange("C1").formulas = [["=A1*2"]];
 await context.sync();
 '''
-When applying filters, ensure the column exists and handle errors.
+For conditional formatting, handle potential errors and use available helpers.
 '''javascript
 try {
   const sheet = workbook.worksheets.getActiveWorksheet();
-  const autoFilter = sheet.getAutoFilter();
-  autoFilter.apply("Y", { operator: Excel.FilterOperator.contains, values: ["e"] });
+  const used = sheet.getUsedRange();
+  used.load("values");
+  await context.sync();
+  const values = used.values;
+  const hdr = values[0].map(h => String(h).toLowerCase().trim());
+  const colIndex = hdr.indexOf("x");
+  const range = sheet.getRange(colIndex + 1 + ":" + colIndex + 1);
+  range.conditionalFormats.add(Excel.ConditionalFormatType.cellValue,
+    {
+      operator: Excel.ConditionalOperator.lessThan,
+      values: [5]
+    },
+    {
+      fill: { color: "blue" }
+    }
+  );
   await context.sync();
 } catch (error) {
   console.log(error);
 }
 '''
+To filter a column, first clear any existing filters.
+'''javascript
+const sheet = workbook.worksheets.getActiveWorksheet();
+const autoFilter = sheet.getAutoFilter();
+autoFilter.clear();
+autoFilter.apply("Department", { operator: Excel.FilterOperator.equals, values: ["Engineering"] });
+await context.sync();
+'''
+When restricting column values, use data validation APIs.
+'''javascript
+const sheet = workbook.worksheets.getActiveWorksheet();
+const range = sheet.getRange("A:A");
+range.dataValidation.clear();
+range.dataValidation.rule = {
+  showInput: true,
+  showError: true,
+  operator: Excel.DataValidationOperator.equals,
+  values: ["no"]
+};
+await context.sync();
+'''
+For shapes, specify the correct position relative to a cell.
+'''javascript
+const sheet = workbook.worksheets.getActiveWorksheet();
+const
 // EVAL-IMPROVEMENTS-END
 `
 + (DEFAULT_MODEL.toLowerCase().includes('qwen') ? '\n/no_think' : '');
