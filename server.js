@@ -251,78 +251,38 @@ OTHER RULES:
 - Only skip CODE_JS if the user is purely asking a question with no changes needed.
 
 // EVAL-IMPROVEMENTS-START
-When sorting, identify the column index based on the header name.
+When sorting, use the correct Office JS API to sort a range.
 '''javascript
-const hdr = used.values[0].map(h => String(h).toLowerCase().trim());
-const colIndex = hdr.indexOf("name");
-const range = sheet.getRange(colIndex + 1 + ":" + colIndex + 1);
+const range = sheet.getRange("A:A");
 range.sort.apply({
   key: 0,
   ascending: true
 });
-'''
-For formulas, ensure the correct cell reference is used.
-'''javascript
-const sheet = workbook.worksheets.getActiveWorksheet();
-sheet.getRange("B1").formulas = [["=A1+1"]];
 await context.sync();
 '''
-When writing formulas, use the correct cell reference and formula syntax.
+To handle missing columns, check the column index before sorting.
 '''javascript
-const sheet = workbook.worksheets.getActiveWorksheet();
-sheet.getRange("C1").formulas = [["=A1*2"]];
-await context.sync();
+if (colIndex === -1) throw new Error('Column not found. Check the column name and try again.');
 '''
-For conditional formatting, handle potential errors and use available helpers.
+For filtering, use the autoFilter API to filter a column.
 '''javascript
-try {
-  const sheet = workbook.worksheets.getActiveWorksheet();
-  const used = sheet.getUsedRange();
-  used.load("values");
-  await context.sync();
-  const values = used.values;
-  const hdr = values[0].map(h => String(h).toLowerCase().trim());
-  const colIndex = hdr.indexOf("x");
-  const range = sheet.getRange(colIndex + 1 + ":" + colIndex + 1);
-  range.conditionalFormats.add(Excel.ConditionalFormatType.cellValue,
-    {
-      operator: Excel.ConditionalOperator.lessThan,
-      values: [5]
-    },
-    {
-      fill: { color: "blue" }
-    }
-  );
-  await context.sync();
-} catch (error) {
-  console.log(error);
-}
-'''
-To filter a column, first clear any existing filters.
-'''javascript
-const sheet = workbook.worksheets.getActiveWorksheet();
 const autoFilter = sheet.getAutoFilter();
 autoFilter.clear();
-autoFilter.apply("Department", { operator: Excel.FilterOperator.equals, values: ["Engineering"] });
+autoFilter.apply("X", { operator: Excel.FilterOperator.equals, values: ["0"] });
 await context.sync();
 '''
-When restricting column values, use data validation APIs.
+When adding comments, use the getActiveCell method to get the active cell.
 '''javascript
-const sheet = workbook.worksheets.getActiveWorksheet();
-const range = sheet.getRange("A:A");
-range.dataValidation.clear();
-range.dataValidation.rule = {
-  showInput: true,
-  showError: true,
-  operator: Excel.DataValidationOperator.equals,
-  values: ["no"]
-};
+const comment = workbook.getActiveCell().comments.add();
+comment.text = "Active Cell Comment";
 await context.sync();
 '''
-For shapes, specify the correct position relative to a cell.
+To insert shapes, dynamically size the shape to fit a cell.
 '''javascript
-const sheet = workbook.worksheets.getActiveWorksheet();
-const
+const cell = sheet.getRange("A1");
+const shape = sheet.shapes.addRectangle(cell.left, cell.top, cell.width, cell.height);
+await context.sync();
+'''
 // EVAL-IMPROVEMENTS-END
 `
 + (DEFAULT_MODEL.toLowerCase().includes('qwen') ? '\n/no_think' : '');
