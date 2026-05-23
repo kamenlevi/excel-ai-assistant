@@ -673,14 +673,163 @@ Respond with ONLY this JSON: {"modelId":"exact-id-from-list","reason":"2-3 sente
   }
 });
 
-// ── Feedback endpoint ────────────────────────────────────────────────────────
+// ── Auto-feedback: detect user dissatisfaction ──────────────────────────────
+const FEEDBACK_FILES = {
+  human:    path.join(__dirname, 'feedback.jsonl'),
+  autoHard: path.join(__dirname, 'feedback-auto-hard.jsonl'),
+  autoSoft: path.join(__dirname, 'feedback-auto-soft.jsonl'),
+};
+const FEEDBACK_WEIGHTS = { human: 1.0, autoHard: 0.7, autoSoft: 0.4 };
+
+const HARD_PATTERNS = [
+  /that(?:'s| is) (?:completely |totally )?wrong/i,
+  /you (?:messed|screwed|broke|ruined)/i,
+  /(?:no+!|NO!)/,
+  /(?:wrong|incorrect|broken|messed up|screwed up|completely off)/i,
+  /(?:the code (?:failed|crashed|broke|errored|doesn't work|does not work|didn't work))/i,
+  /(?:that (?:didn't|did not|doesn't|does not) (?:work|do (?:what|anything)))/i,
+  /(?:you (?:forgot|missed|ignored|skipped) (?:to |the |my ))/i,
+  /(?:not (?:at all )?what I (?:asked|wanted|meant|said))/i,
+];
+
+const SOFT_PATTERNS = [
+  /(?:try|do(?: it)?|redo) (?:it )?again/i,
+  /(?:can you (?:redo|undo|fix|correct|retry))/i,
+  /(?:that(?:'s| is) not (?:right|correct|what))/i,
+  /(?:I (?:said|meant|asked|wanted) )/i,
+  /(?:no,? (?:I |not |the |it ))/i,
+  /(?:actually,? (?:I |can you |please ))/i,
+  /(?:instead(?:,| of))/i,
+  /(?:but I (?:said|asked|wanted|meant))/i,
+  /(?:you did (?:it )?wrong)/i,
+  /(?:please (?:fix|correct|change) (?:it|that|this))/i,
+];
+
+function detectDissatisfaction(userMessage, conversationHistory) {
+  const s = userMessage.trim();
+  if (HARD_PATTERNS.some(p => p.test(s))) return 'hard';
+  if (SOFT_PATTERNS.some(p => p.test(s))) return 'soft';
+  // Detect retry: user repeats a very similar message to one they sent recently
+  if (conversationHistory && conversationHistory.length >= 3) {
+    const prevUserMsgs = conversationHistory
+      .filter(m => m.role === 'user')
+      .map(m => (m.content || '').replace(/\[REMINDER:.*?\]/g, '').trim().toLowerCase());
+    const current = s.toLowerCase().replace(/\[REMINDER:.*?\]/g, '').trim();
+    if (current.length > 10) {
+      for (const prev of prevUserMsgs.slice(-3)) {
+        if (prev.length > 10 && prev !== current) {
+          const shorter = current.length < prev.length ? current : prev;
+          const longer  = current.length < prev.length ? prev : current;
+          if (longer.includes(shorter) || similarity(current, prev) > 0.7) {
+            return 'soft';
+          }
+        }
+      }
+    }
+  }
+  return null;
+}
+
+function similarity(a, b) {
+  const setA = new Set(a.split(/\s+/));
+  const setB = new Set(b.split(/\s+/));
+  let intersection = 0;
+  for (const w of setA) if (setB.has(w)) intersection++;
+  return intersection / Math.max(setA.size, setB.size);
+}
+
+function logAutoFeedback(tier, prompt, response, code, model) {
+  const file = tier === 'hard' ? FEEDBACK_FILES.autoHard : FEEDBACK_FILES.autoSoft;
+  const entry = { prompt, response, code: code || null, model, tier, timestamp: new Date().toISOString() };
+  fs.appendFileSync(file, JSON.stringify(entry) + '\n');
+  console.log(`[auto-feedback][${tier}] Logged for prompt: ${prompt?.slice(0, 60)}`);
+}
+
+// ── Feedback endpoint (human reports) ────────────────────────────────────────
 app.post("/api/feedback", (req, res) => {
-  const entry = req.body;
-  const filePath = path.join(__dirname, "feedback.jsonl");
+  const entry = { ...req.body, tier: 'human' };
   const line = JSON.stringify(entry) + "\n";
-  fs.appendFileSync(filePath, line);
-  console.log("[feedback] Saved entry for prompt:", entry.prompt?.slice(0, 60));
+  fs.appendFileSync(FEEDBACK_FILES.human, line);
+  console.log("[feedback][human] Saved entry for prompt:", entry.prompt?.slice(0, 60));
   res.json({ ok: true });
+});
+
+// ── Auto-feedback endpoint (called by frontend when code execution fails) ───
+app.post("/api/feedback/auto", (req, res) => {
+  const { tier, prompt, response, code, model } = req.body;
+  if (!tier || !['soft', 'hard'].includes(tier)) return res.status(400).json({ error: 'Invalid tier' });
+  logAutoFeedback(tier, prompt, response, code, model);
+  res.json({ ok: true });
+});
+
+// ── Fine-tune export: merge all feedback tiers with weights ─────────────────
+app.get('/api/finetune/export', (req, res) => {
+  const format = req.query.format || 'jsonl'; // jsonl or json
+  const entries = [];
+
+  for (const [tier, file] of Object.entries(FEEDBACK_FILES)) {
+    try {
+      const lines = fs.readFileSync(file, 'utf8').trim().split('\n').filter(Boolean);
+      for (const line of lines) {
+        try {
+          const entry = JSON.parse(line);
+          entries.push({
+            weight: FEEDBACK_WEIGHTS[tier],
+            tier,
+            prompt: entry.prompt || '',
+            response: entry.response || '',
+            code: entry.code || null,
+            model: entry.model || null,
+            timestamp: entry.timestamp || null,
+          });
+        } catch {}
+      }
+    } catch {}
+  }
+
+  entries.sort((a, b) => (b.timestamp || '').localeCompare(a.timestamp || ''));
+
+  if (format === 'json') {
+    res.json({
+      totalEntries: entries.length,
+      byTier: {
+        human:    entries.filter(e => e.tier === 'human').length,
+        autoHard: entries.filter(e => e.tier === 'autoHard').length,
+        autoSoft: entries.filter(e => e.tier === 'autoSoft').length,
+      },
+      weights: FEEDBACK_WEIGHTS,
+      entries,
+    });
+  } else {
+    // Training-ready JSONL: each line is a conversation turn with weight
+    const lines = entries.map(e => JSON.stringify({
+      messages: [
+        { role: 'user', content: e.prompt },
+        { role: 'assistant', content: (e.response || '') + (e.code ? '\nCODE_JS::\n' + e.code + '\n::END_CODE' : '') },
+      ],
+      weight: e.weight,
+      tier: e.tier,
+      _meta: { model: e.model, timestamp: e.timestamp },
+    }));
+    res.setHeader('Content-Type', 'application/jsonl');
+    res.setHeader('Content-Disposition', 'attachment; filename="finetune-feedback.jsonl"');
+    res.send(lines.join('\n') + '\n');
+  }
+});
+
+// ── Fine-tune stats endpoint ────────────────────────────────────────────────
+app.get('/api/finetune/stats', (req, res) => {
+  const stats = {};
+  for (const [tier, file] of Object.entries(FEEDBACK_FILES)) {
+    try {
+      const lines = fs.readFileSync(file, 'utf8').trim().split('\n').filter(Boolean);
+      stats[tier] = { count: lines.length, weight: FEEDBACK_WEIGHTS[tier] };
+    } catch {
+      stats[tier] = { count: 0, weight: FEEDBACK_WEIGHTS[tier] };
+    }
+  }
+  stats.totalWeighted = Object.entries(stats).reduce((sum, [, v]) => sum + (v.count * v.weight), 0);
+  res.json(stats);
 });
 
 // ── Title generation endpoint ────────────────────────────────────────────────
@@ -934,6 +1083,16 @@ app.post('/api/chat', async (req, res) => {
 
   const rawUserMessage = messages[messages.length - 1]?.content || '';
   const recentMessages = messages.slice(-6).map(m => ({ ...m }));
+
+  // ── Auto-feedback: detect if user is unhappy with previous AI response ────
+  const dissatisfaction = detectDissatisfaction(rawUserMessage, messages);
+  if (dissatisfaction && messages.length >= 2) {
+    const prevAssistant = [...messages].reverse().find(m => m.role === 'assistant');
+    const prevUser      = [...messages].reverse().filter(m => m.role === 'user')[1];
+    if (prevAssistant && prevUser) {
+      logAutoFeedback(dissatisfaction, prevUser.content, prevAssistant.content, prevAssistant.code || null, model || 'unknown');
+    }
+  }
 
   // ── Auto Model: AI selects the best model for this prompt ─────────────────
   if (autoModel && options?.availableModels?.length) {

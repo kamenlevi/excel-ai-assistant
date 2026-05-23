@@ -1221,6 +1221,8 @@ async function sendMessage() {
           else if(!reply){addMsg('assistant','✓ Done.');}
         }else{
           addMsg('assistant','⚠ Error: '+r.err,true);
+          // Auto-feedback: code execution failure is a hard signal
+          try{fetch('/api/feedback/auto',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({tier:'hard',prompt:text,response:reply||'',code:code,model:autoSelected||modelId})});}catch{}
           history.push({role:'user',content:'The code failed: "'+r.err+'". Fix it with a corrected CODE_JS block.'});
           const rr=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},signal:ctrl.signal,body:JSON.stringify({messages:history.slice(-8),workbookData,activeSheet,summary,model:modelId,useOllama:isOllama,useGroq:isGroq,apiKey,groqKey})});
           const rd=await rr.json();
