@@ -6,6 +6,9 @@ const fs      = require('fs');
 const selfsigned = require('selfsigned');
 const fetch   = require('node-fetch');
 const { v4: uuidv4 } = require('uuid');
+const { execFile } = require('child_process');
+const ExcelJS = require('exceljs');
+const os = require('os');
 
 const app = express();
 app.use(express.json({ limit: '20mb' }));
@@ -242,6 +245,127 @@ const sheet = workbook.worksheets.getActiveWorksheet();
 sheet.getRange("B10").formulas = [["=SUM(B2:B9)"]];
 await context.sync();
 ::END_CODE
+
+MULTI-WORKBOOK SUPPORT:
+You can work with MULTIPLE workbooks on the user's computer — not just the one currently open. Use these helper functions inside CODE_JS blocks:
+
+  searchWorkbooks(query)
+    — finds .xlsx/.xlsm files on the user's computer by filename
+    — returns array of {path, name, size, modified}
+    — example: const files = await searchWorkbooks("Sales Report");
+
+  searchWorkbooksByContent(query)
+    — finds workbooks that CONTAIN specific text in their cells
+    — slower than name search — use when user doesn't know the filename
+    — returns array of {path, name, size, modified}
+    — example: const files = await searchWorkbooksByContent("Q4 Revenue");
+
+  readExternalWorkbook(filePath, sheetNames)
+    — reads data from a workbook file WITHOUT opening it in Excel
+    — sheetNames is optional array to read specific sheets only
+    — returns {file, sheets: [{name, rowCount, rows: [{row, values}]}]}
+    — example: const data = await readExternalWorkbook(files[0].path);
+    — example: const data = await readExternalWorkbook("C:\\Users\\Me\\report.xlsx", ["Summary"]);
+
+  writeExternalWorkbook(filePath, operations)
+    — writes changes to a workbook file on disk (creates it if it doesn't exist)
+    — operations is an array of operation objects:
+      {type:"setValue", sheet:"Sheet1", cell:"A1", value:"Hello"}
+      {type:"setFormula", sheet:"Sheet1", cell:"B1", formula:"SUM(A1:A10)"}
+      {type:"setValues", sheet:"Sheet1", startCell:"A1", values:[["Name","Age"],["Alice",30]]}
+      {type:"setFormat", sheet:"Sheet1", cell:"A1", bold:true, fill:"FF217346"}
+    — example: await writeExternalWorkbook(files[0].path, [
+        {type:"setValue", sheet:"Sheet1", cell:"D1", value:"Result"},
+        {type:"setFormula", sheet:"Sheet1", cell:"D2", formula:"SUM(B2:C2)"}
+      ]);
+
+  openInExcel(filePath)
+    — opens a workbook file in Excel (the desktop app)
+    — use this AFTER writing changes so the user can see them
+    — DO NOT call this if the user says "don't open it" or "just save it"
+    — example: await openInExcel(files[0].path);
+
+MULTI-WORKBOOK WORKFLOW EXAMPLES:
+
+User: "Find my Sales Report workbook and copy the totals to this workbook"
+Response:
+Finding your Sales Report and copying the totals.
+CODE_JS::
+const files = await searchWorkbooks("Sales Report");
+if (!files.length) throw new Error("No workbook matching 'Sales Report' found on your computer.");
+const extData = await readExternalWorkbook(files[0].path);
+const salesSheet = extData.sheets[0];
+// Find totals in external workbook
+const totals = salesSheet.rows[salesSheet.rows.length - 1].values;
+// Write to current workbook
+const sheet = workbook.worksheets.getActiveWorksheet();
+const used = sheet.getUsedRange();
+used.load("rowCount");
+await context.sync();
+const targetRow = used.rowCount + 2;
+for (let i = 0; i < totals.length; i++) {
+  sheet.getRangeByIndexes(targetRow, i, 1, 1).values = [[totals[i]]];
+}
+await context.sync();
+return "Copied " + totals.length + " values from " + files[0].name;
+::END_CODE
+
+User: "Apply this formula to cells B2:B10 in Workbook Y, using results from this workbook, then open it"
+Response:
+I'll read the current data, apply formulas to Workbook Y, and open it.
+CODE_JS::
+// 1. Read data from current workbook
+const sheet = workbook.worksheets.getActiveWorksheet();
+const used = sheet.getUsedRange();
+used.load("values");
+await context.sync();
+const currentData = used.values;
+// 2. Find the target workbook
+const files = await searchWorkbooks("Workbook Y");
+if (!files.length) throw new Error("Could not find 'Workbook Y' on your computer.");
+// 3. Write results to it
+const ops = [];
+for (let i = 1; i < Math.min(currentData.length, 10); i++) {
+  ops.push({type:"setValue", sheet:"Sheet1", cell:"B" + (i+1), value: currentData[i][1] * 2});
+}
+await writeExternalWorkbook(files[0].path, ops);
+// 4. Open it in Excel
+await openInExcel(files[0].path);
+return "Applied formulas to " + ops.length + " cells in " + files[0].name + " and opened it.";
+::END_CODE
+
+User: "Update 3 workbooks with this month's data but don't open them"
+Response:
+Updating all three workbooks without opening them.
+CODE_JS::
+const sheet = workbook.worksheets.getActiveWorksheet();
+const used = sheet.getUsedRange();
+used.load("values");
+await context.sync();
+const monthData = used.values;
+const targets = ["Budget 2024", "Summary Report", "Department Costs"];
+let updated = 0;
+for (const name of targets) {
+  const files = await searchWorkbooks(name);
+  if (!files.length) { continue; }
+  const ops = monthData.slice(1).map((row, i) => ({
+    type: "setValue", sheet: "Sheet1", cell: "C" + (i + 2), value: row[2]
+  }));
+  await writeExternalWorkbook(files[0].path, ops);
+  updated++;
+}
+return "Updated " + updated + " of " + targets.length + " workbooks (not opened).";
+::END_CODE
+
+IMPORTANT MULTI-WORKBOOK RULES:
+- When the user says a workbook name, ALWAYS use searchWorkbooks() to find it — never guess paths
+- If the user says "find workbooks containing X", use searchWorkbooksByContent() to search cell contents
+- ALWAYS check if searchWorkbooks returns results before proceeding — throw a clear error if not found
+- By DEFAULT, open modified external workbooks with openInExcel() AFTER writing
+- Do NOT open workbooks if the user explicitly says not to (e.g., "don't open", "just save", "silently")
+- You can chain operations: read current workbook → process → write to external → optionally open
+- For many workbooks (e.g., 100), use a loop — the helpers handle files efficiently
+- External workbook operations happen on disk — they don't need Excel to be open
 
 OTHER RULES:
 - Be concise. One short sentence explaining what you're doing, then the CODE_JS block.
@@ -591,6 +715,207 @@ app.post('/api/summarize', async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: 'Summarization failed' });
   }
+});
+
+// ── Multi-workbook: search for .xlsx files on the user's machine ─────────────
+const SEARCH_DIRS = [
+  os.homedir(),
+  path.join(os.homedir(), 'Desktop'),
+  path.join(os.homedir(), 'Documents'),
+  path.join(os.homedir(), 'Downloads'),
+  path.join(os.homedir(), 'OneDrive'),
+  path.join(os.homedir(), 'OneDrive - *'),
+];
+
+function expandGlobs(dirs) {
+  const glob = require('path');
+  const expanded = [];
+  for (const d of dirs) {
+    if (d.includes('*')) {
+      try {
+        const parent = path.dirname(d);
+        const pattern = path.basename(d);
+        const re = new RegExp('^' + pattern.replace(/\*/g, '.*') + '$');
+        fs.readdirSync(parent).filter(f => re.test(f)).forEach(f => expanded.push(path.join(parent, f)));
+      } catch {}
+    } else {
+      expanded.push(d);
+    }
+  }
+  return expanded;
+}
+
+function walkForXlsx(dir, maxDepth, results, visited, nameQuery, contentQuery, limit) {
+  if (results.length >= limit || maxDepth < 0) return;
+  let real;
+  try { real = fs.realpathSync(dir); } catch { return; }
+  if (visited.has(real)) return;
+  visited.add(real);
+  let entries;
+  try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch { return; }
+  for (const ent of entries) {
+    if (results.length >= limit) return;
+    const full = path.join(dir, ent.name);
+    if (ent.isDirectory()) {
+      if (ent.name.startsWith('.') || ent.name === 'node_modules' || ent.name === 'AppData') continue;
+      walkForXlsx(full, maxDepth - 1, results, visited, nameQuery, contentQuery, limit);
+    } else if (/\.(xlsx|xlsm)$/i.test(ent.name) && !ent.name.startsWith('~$')) {
+      const nameLower = ent.name.toLowerCase();
+      if (nameQuery && nameLower.includes(nameQuery)) {
+        try {
+          const stat = fs.statSync(full);
+          results.push({ path: full, name: ent.name, size: stat.size, modified: stat.mtime });
+        } catch {}
+      } else if (!nameQuery) {
+        try {
+          const stat = fs.statSync(full);
+          results.push({ path: full, name: ent.name, size: stat.size, modified: stat.mtime });
+        } catch {}
+      }
+    }
+  }
+}
+
+app.post('/api/workbooks/search', (req, res) => {
+  const { query, limit: userLimit } = req.body;
+  const limit = Math.min(userLimit || 50, 200);
+  const q = (query || '').toLowerCase().trim();
+  const results = [];
+  const visited = new Set();
+  const dirs = expandGlobs(SEARCH_DIRS);
+  for (const d of dirs) {
+    walkForXlsx(d, 5, results, visited, q || null, null, limit);
+    if (results.length >= limit) break;
+  }
+  res.json(results.slice(0, limit));
+});
+
+app.post('/api/workbooks/read', async (req, res) => {
+  const { filePath, sheetNames } = req.body;
+  if (!filePath) return res.status(400).json({ error: 'filePath required' });
+  try {
+    const wb = new ExcelJS.Workbook();
+    await wb.xlsx.readFile(filePath);
+    const sheets = [];
+    for (const ws of wb.worksheets) {
+      if (sheetNames && sheetNames.length && !sheetNames.includes(ws.name)) continue;
+      const rows = [];
+      ws.eachRow({ includeEmpty: false }, (row, rowNum) => {
+        if (rows.length >= 500) return;
+        const vals = [];
+        row.eachCell({ includeEmpty: true }, (cell, colNum) => {
+          vals[colNum - 1] = cell.value !== null && cell.value !== undefined
+            ? (typeof cell.value === 'object' && cell.value.result !== undefined ? cell.value.result : String(cell.value))
+            : '';
+        });
+        rows.push({ row: rowNum, values: vals });
+      });
+      sheets.push({ name: ws.name, rowCount: ws.rowCount, rows });
+    }
+    res.json({ file: filePath, sheets });
+  } catch (err) {
+    res.status(500).json({ error: `Failed to read workbook: ${err.message}` });
+  }
+});
+
+app.post('/api/workbooks/write', async (req, res) => {
+  const { filePath, operations } = req.body;
+  if (!filePath || !operations) return res.status(400).json({ error: 'filePath and operations required' });
+  try {
+    const wb = new ExcelJS.Workbook();
+    try { await wb.xlsx.readFile(filePath); } catch { /* new file */ }
+    for (const op of operations) {
+      let ws = wb.getWorksheet(op.sheet);
+      if (!ws) ws = wb.addWorksheet(op.sheet || 'Sheet1');
+      if (op.type === 'setValue') {
+        const cell = ws.getCell(op.cell);
+        cell.value = op.value;
+      } else if (op.type === 'setFormula') {
+        const cell = ws.getCell(op.cell);
+        cell.value = { formula: op.formula };
+      } else if (op.type === 'setValues') {
+        // op.startCell, op.values (2D array)
+        const startCell = ws.getCell(op.startCell);
+        const startRow = startCell.row;
+        const startCol = startCell.col;
+        for (let r = 0; r < op.values.length; r++) {
+          for (let c = 0; c < op.values[r].length; c++) {
+            ws.getCell(startRow + r, startCol + c).value = op.values[r][c];
+          }
+        }
+      } else if (op.type === 'setFormat') {
+        const cell = ws.getCell(op.cell);
+        if (op.bold !== undefined) cell.font = { ...cell.font, bold: op.bold };
+        if (op.fill) cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: op.fill } };
+        if (op.numFmt) cell.numFmt = op.numFmt;
+      }
+    }
+    await wb.xlsx.writeFile(filePath);
+    res.json({ ok: true, file: filePath, operationCount: operations.length });
+  } catch (err) {
+    res.status(500).json({ error: `Failed to write workbook: ${err.message}` });
+  }
+});
+
+app.post('/api/workbooks/open', (req, res) => {
+  const { filePath } = req.body;
+  if (!filePath) return res.status(400).json({ error: 'filePath required' });
+  const platform = process.platform;
+  let cmd, args;
+  if (platform === 'win32') {
+    cmd = 'cmd'; args = ['/c', 'start', '', filePath];
+  } else if (platform === 'darwin') {
+    cmd = 'open'; args = [filePath];
+  } else {
+    cmd = 'xdg-open'; args = [filePath];
+  }
+  execFile(cmd, args, (err) => {
+    if (err) return res.status(500).json({ error: `Failed to open: ${err.message}` });
+    res.json({ ok: true, file: filePath });
+  });
+});
+
+// ── Multi-workbook: content search (searches inside .xlsx for matching text) ─
+app.post('/api/workbooks/search-content', async (req, res) => {
+  const { query, limit: userLimit } = req.body;
+  const limit = Math.min(userLimit || 20, 50);
+  const q = (query || '').toLowerCase().trim();
+  if (!q) return res.json([]);
+
+  // First find all xlsx files, then search content
+  const allFiles = [];
+  const visited = new Set();
+  const dirs = expandGlobs(SEARCH_DIRS);
+  for (const d of dirs) {
+    walkForXlsx(d, 4, allFiles, visited, null, null, 500);
+  }
+
+  const matches = [];
+  for (const f of allFiles) {
+    if (matches.length >= limit) break;
+    try {
+      const wb = new ExcelJS.Workbook();
+      await wb.xlsx.readFile(f.path);
+      let found = false;
+      for (const ws of wb.worksheets) {
+        if (found) break;
+        ws.eachRow({ includeEmpty: false }, (row) => {
+          if (found) return;
+          row.eachCell((cell) => {
+            if (found) return;
+            const v = cell.value;
+            if (v && String(v).toLowerCase().includes(q)) {
+              found = true;
+            }
+          });
+        });
+      }
+      if (found) {
+        matches.push({ path: f.path, name: f.name, size: f.size, modified: f.modified });
+      }
+    } catch {}
+  }
+  res.json(matches);
 });
 
 // ── Main chat route ──────────────────────────────────────────────────────────
