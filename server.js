@@ -375,27 +375,47 @@ OTHER RULES:
 - Only skip CODE_JS if the user is purely asking a question with no changes needed.
 
 // EVAL-IMPROVEMENTS-START
-When filtering, use the 'getAutoFilter' method and check if the column exists before applying the filter.
+When sorting, ensure proper initialization and context by loading the worksheet and range before calling the sortByColumn method.
 '''javascript
 const sheet = workbook.worksheets.getActiveWorksheet();
-const filter = sheet.getAutoFilter();
-if (filter) {
-  filter.apply({
-    column: "Y",
-    criteria: "10"
-  });
-  await context.sync();
-} else {
-  throw new Error("AutoFilter not enabled");
-}
+const range = sheet.getRange("X:X");
+range.load("values");
+await context.sync();
+await range.sortByColumn("X", true);
+await context.sync();
 '''
-For non-existent columns, throw an error or ask for clarification instead of attempting to add a new column.
+For formatting, apply number formats to the data range only, excluding headers, and use efficient methods.
 '''javascript
 const sheet = workbook.worksheets.getActiveWorksheet();
-const column = sheet.getRange("A1").getColumn();
-if (column === null) {
-  throw new Error("Column not found");
+const used = sheet.getUsedRange();
+used.load("rowCount, columnCount");
+await context.sync();
+const dataRange = sheet.getRangeByIndexes(1, 1, used.rowCount - 1, 1);
+dataRange.numberFormat = [["\$#,##0.00"]];
+await context.sync();
+'''
+When applying conditional formatting, account for header rows and potential null values, and use efficient methods for formatting.
+'''javascript
+const sheet = workbook.worksheets.getActiveWorksheet();
+const used = sheet.getUsedRange();
+used.load("values");
+await context.sync();
+const scores = used.values;
+for (let i = 1; i < scores.length; i++) {
+  if (scores[i][0] < 50) {
+    sheet.getRangeByIndexes(i, 1, 1, 1).format.fill.color = "FF0000";
+  }
 }
+await context.sync();
+'''
+For data validation, use the addDataValidation method to restrict input values.
+'''javascript
+const sheet = workbook.worksheets.getActiveWorksheet();
+const range = sheet.getRange("A:A");
+const dataValidation = range.addDataValidation();
+dataValidation.allowType = Excel.DataValidationType.list;
+dataValidation.formula = { formula1: "\"no\"" };
+await context.sync();
 '''
 // EVAL-IMPROVEMENTS-END
 `
