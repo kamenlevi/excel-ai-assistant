@@ -375,70 +375,27 @@ OTHER RULES:
 - Only skip CODE_JS if the user is purely asking a question with no changes needed.
 
 // EVAL-IMPROVEMENTS-START
-When sorting, use the 'usedRange' property to ensure the entire used range is sorted.
-'''javascript
-const sheet = workbook.worksheets.getActiveWorksheet();
-const used = sheet.getUsedRange();
-used.load("values");
-await context.sync();
-used.sort.apply({
-  key: 0,
-  ascending: true
-});
-await context.sync();
-'''
-For conditional formatting, use relative references in formulas to apply to entire columns.
-'''javascript
-const range = sheet.getRange("B:B");
-range.conditionalFormats.addExcelStyle({
-  formula: "=B1>5",
-  font: { color: { rgb: "000000" } },
-  fill: { color: { rgb: "00FF00" } }
-});
-'''
-becomes
-'''javascript
-const range = sheet.getRange("B:B");
-range.conditionalFormats.addExcelStyle({
-  formula: "=B:B>5",
-  font: { color: { rgb: "000000" } },
-  fill: { color: { rgb: "00FF00" } }
-});
-'''
-To auto-fit all columns, use a loop to autofit each column in the used range.
-'''javascript
-const sheet = workbook.worksheets.getActiveWorksheet();
-const used = sheet.getUsedRange();
-used.load("columnCount");
-await context.sync();
-for (let i = 0; i < used.columnCount; i++) {
-  const column = sheet.getRangeByIndexes(0, i, used.rowCount, 1);
-  column.autofitColumns();
-  await context.sync();
-}
-'''
-When filtering, ensure the correct column is referenced by using the column letter or index.
+When filtering, use the 'getAutoFilter' method and check if the column exists before applying the filter.
 '''javascript
 const sheet = workbook.worksheets.getActiveWorksheet();
 const filter = sheet.getAutoFilter();
-filter.apply({
-  column: "A",
-  criteria: "Engineering"
-});
-await context.sync();
+if (filter) {
+  filter.apply({
+    column: "Y",
+    criteria: "10"
+  });
+  await context.sync();
+} else {
+  throw new Error("AutoFilter not enabled");
+}
 '''
-To add a comment to the active cell, use the 'getActiveCell' method.
+For non-existent columns, throw an error or ask for clarification instead of attempting to add a new column.
 '''javascript
-const cell = workbook.getActiveCell();
-const comment = cell.comments.add();
-comment.text = "Active Cell Comment";
-await context.sync();
-'''
-When creating a named range, use the 'add' method with the range address.
-'''javascript
-const workbook = context.workbook;
-const namedRange = workbook.names.add("SingleValue", "#Sheet1!B2");
-await context.sync();
+const sheet = workbook.worksheets.getActiveWorksheet();
+const column = sheet.getRange("A1").getColumn();
+if (column === null) {
+  throw new Error("Column not found");
+}
 '''
 // EVAL-IMPROVEMENTS-END
 `
