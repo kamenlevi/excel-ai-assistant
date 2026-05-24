@@ -375,74 +375,69 @@ OTHER RULES:
 - Only skip CODE_JS if the user is purely asking a question with no changes needed.
 
 // EVAL-IMPROVEMENTS-START
-When using 'sortByColumn', ensure correct usage by loading the range and using the 'sort' method.
+When sorting, use the 'usedRange' property to ensure the entire used range is sorted.
 '''javascript
-const range = sheet.getRange("A:A");
-range.load("values");
+const sheet = workbook.worksheets.getActiveWorksheet();
+const used = sheet.getUsedRange();
+used.load("values");
 await context.sync();
-range.sort.apply({
+used.sort.apply({
   key: 0,
-  ascending: false
+  ascending: true
 });
 await context.sync();
 '''
-For conditional formatting, use the 'conditionalFormats' API to highlight cells.
+For conditional formatting, use relative references in formulas to apply to entire columns.
 '''javascript
 const range = sheet.getRange("B:B");
 range.conditionalFormats.addExcelStyle({
-  formula: "=B1<50",
-  font: { color: { rgb: "FF0000" } },
-  fill: { color: { rgb: "FF0000" } }
+  formula: "=B1>5",
+  font: { color: { rgb: "000000" } },
+  fill: { color: { rgb: "00FF00" } }
+});
+'''
+becomes
+'''javascript
+const range = sheet.getRange("B:B");
+range.conditionalFormats.addExcelStyle({
+  formula: "=B:B>5",
+  font: { color: { rgb: "000000" } },
+  fill: { color: { rgb: "00FF00" } }
+});
+'''
+To auto-fit all columns, use a loop to autofit each column in the used range.
+'''javascript
+const sheet = workbook.worksheets.getActiveWorksheet();
+const used = sheet.getUsedRange();
+used.load("columnCount");
+await context.sync();
+for (let i = 0; i < used.columnCount; i++) {
+  const column = sheet.getRangeByIndexes(0, i, used.rowCount, 1);
+  column.autofitColumns();
+  await context.sync();
+}
+'''
+When filtering, ensure the correct column is referenced by using the column letter or index.
+'''javascript
+const sheet = workbook.worksheets.getActiveWorksheet();
+const filter = sheet.getAutoFilter();
+filter.apply({
+  column: "A",
+  criteria: "Engineering"
 });
 await context.sync();
 '''
-To adjust column width, use the 'columnWidth' property and adjust by a small amount.
+To add a comment to the active cell, use the 'getActiveCell' method.
 '''javascript
-const column = sheet.getRange("B:B");
-column.columnWidth = column.columnWidth - 1;
+const cell = workbook.getActiveCell();
+const comment = cell.comments.add();
+comment.text = "Active Cell Comment";
 await context.sync();
 '''
-When activating a worksheet, use the 'activate' method and handle potential errors.
+When creating a named range, use the 'add' method with the range address.
 '''javascript
-try {
-  const sheet = workbook.worksheets.getItem("Sheet1");
-  workbook.activateWorksheet(sheet.id);
-  await context.sync();
-} catch (error) {
-  throw new Error("Sheet not found.");
-}
-'''
-For data validation, ensure whole numbers are accepted by using the 'wholeNumber' property.
-'''javascript
-const validation = sheet.getRange("B:B").dataValidation;
-validation.clear();
-validation.rule = {
-  operator: Excel.DataValidationOperator.between,
-  formula1: "1",
-  formula2: "100"
-};
-validation.error = {
-  title: "Invalid Score",
-  message: "Please enter a whole number between 1 and 100."
-};
-validation.showInputMessage = true;
-validation.showErrorMessage = true;
-validation.allowBlanks = false;
-validation.wholeNumber = true;
-await context.sync();
-'''
-When setting fit to page option, specify both width and height.
-'''javascript
-const sheet = workbook.worksheets.getActiveWorksheet();
-sheet.pageSetup.fitToPages = { width: 1, height: 1 };
-await context.sync();
-'''
-To insert a shape with a header, use the 'addRectangle' method and set the header text.
-'''javascript
-const sheet = workbook.worksheets.getActiveWorksheet();
-const cell = sheet.getRange("A1");
-const shape = sheet.shapes.addRectangle(cell.left, cell.top, cell.width, cell.height);
-shape.text = "Header";
+const workbook = context.workbook;
+const namedRange = workbook.names.add("SingleValue", "#Sheet1!B2");
 await context.sync();
 '''
 // EVAL-IMPROVEMENTS-END
