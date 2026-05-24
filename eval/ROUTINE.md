@@ -38,8 +38,8 @@ Fix anything you find and explain what you changed.
 ```
 npm run eval
 ```
-This sends test prompts to the live Llama 3.3 70b API via OpenRouter and scores each
-response 0–100. The budget hard limit is $0.04 — the script enforces this automatically.
+This sends test prompts to the Llama 3.1 8B API via OpenRouter and scores each
+response 0–100. The budget hard limit is $0.03 — the script enforces this automatically.
 The script auto-patches `eval/improvements.txt` when categories fail (<70/100); those
 improvements are appended to the system prompt in `server.js` at runtime.
 
@@ -96,6 +96,6 @@ auto-generated when a level is mastered. Max 5 cases run per category per level.
 - ~76 test cases × ~1500 tokens in + ~400 tokens out = ~$0.017
 - ~76 judge calls × ~800 tokens in + ~150 tokens out = ~$0.008
 - Auto-patch generation (if needed) = ~$0.002
-- **Total: ~$0.02–0.03 per session** (well under the $0.04 limit)
+- **Total: ~$0.002–0.005 per session** (well under the $0.03 limit)
 
-Schedule: runs once every 3 days (~10 runs/month) to keep total cost under $1/month across all 3 repos.
+Schedule: runs weekly (every Monday, ~4 runs/month) to keep total cost under $1/month across all 3 repos.
