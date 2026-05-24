@@ -17,11 +17,11 @@ const path = require('path');
 const fetch = require('node-fetch');
 
 const OPENROUTER_KEY   = process.env.OPENROUTER_KEY;
-const MODEL            = 'meta-llama/llama-3.3-70b-instruct';
-const JUDGE_MODEL      = 'meta-llama/llama-3.3-70b-instruct';
-const COST_PER_1M_IN   = 0.07;
-const COST_PER_1M_OUT  = 0.30;
-const BUDGET_USD       = 0.04;
+const MODEL            = 'meta-llama/llama-3.1-8b-instruct';
+const JUDGE_MODEL      = 'meta-llama/llama-3.1-8b-instruct';
+const COST_PER_1M_IN   = 0.02;
+const COST_PER_1M_OUT  = 0.02;
+const BUDGET_USD       = 0.03;
 const MASTERY_THRESHOLD      = 95;
 const NEW_CAT_THRESHOLD      = 95;  // overall avg to spawn a brand-new category
 const STUCK_RUNS_THRESHOLD   = 3;   // runs without leveling up before we ease the cases
