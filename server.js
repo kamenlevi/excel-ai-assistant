@@ -402,21 +402,33 @@ if (column === null) {
 + (DEFAULT_MODEL.toLowerCase().includes('qwen') ? '\n/no_think' : '');
 
 // ── Call the AI ───────────────────────────────────────────────────────────────
+function injectNoThink(messages, model) {
+  if (!model.toLowerCase().includes('qwen')) return messages;
+  return messages.map(m =>
+    m.role === 'system' && !m.content.includes('/no_think')
+      ? { ...m, content: m.content + '\n/no_think' }
+      : m
+  );
+}
+
 async function callAI(messages, maxTokens = 4096, model = null, useOllama = false, useGroq = false, apiKey = null, groqKey = null) {
   const effectiveModel = model || DEFAULT_MODEL;
   const orKey  = apiKey  || OPENROUTER_KEY;
   const gKey   = groqKey || GROQ_KEY;
 
   if (useOllama) {
+    const msgsToSend = injectNoThink(messages, effectiveModel);
     const res = await fetch(`http://localhost:${OLLAMA_PORT}/api/chat`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      timeout: 120000,
       body: JSON.stringify({
-        model: effectiveModel, messages, stream: false,
-        options: { num_ctx: 4096, temperature: 0.15, top_p: 0.9, repeat_penalty: 1.1 }
+        model: effectiveModel, messages: msgsToSend, stream: false,
+        options: { num_ctx: 8192, num_predict: maxTokens, temperature: 0.15, top_p: 0.9, repeat_penalty: 1.1 }
       })
     });
     const data = await res.json();
+    if (!data.message) throw new Error(data.error || 'Ollama returned no message — is the model loaded?');
     return { text: data.message.content, usage: null };
   }
 
@@ -464,31 +476,38 @@ async function callAI(messages, maxTokens = 4096, model = null, useOllama = fals
   }
 
   if (USE_MLX) {
+    const msgsToSend = injectNoThink(messages, effectiveModel);
     const res = await fetch(`http://${MACBOOK_IP}:${MLX_PORT}/v1/chat/completions`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      timeout: 120000,
       body: JSON.stringify({
         model: effectiveModel,
-        messages,
+        messages: msgsToSend,
         max_tokens: maxTokens,
         temperature: 0.15,
         top_p: 0.9
       })
     });
     const data = await res.json();
+    if (!data.choices?.[0]?.message) throw new Error(data.error?.message || 'MLX returned no response');
     return { text: data.choices[0].message.content, usage: data.usage || null };
   }
 
   // Fallback: Ollama on MacBook
+  const fallbackModel = 'qwen3:32b';
+  const fallbackMsgs  = injectNoThink(messages, fallbackModel);
   const res = await fetch(`http://${MACBOOK_IP}:${OLLAMA_PORT}/api/chat`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
+    timeout: 120000,
     body: JSON.stringify({
-      model: 'qwen3:32b', messages, stream: false,
-      options: { num_ctx: 4096, temperature: 0.15, top_p: 0.9, repeat_penalty: 1.1 }
+      model: fallbackModel, messages: fallbackMsgs, stream: false,
+      options: { num_ctx: 8192, num_predict: maxTokens, temperature: 0.15, top_p: 0.9, repeat_penalty: 1.1 }
     })
   });
   const data = await res.json();
+  if (!data.message) throw new Error(data.error || 'Ollama returned no message — is the model loaded?');
   return { text: data.message.content, usage: null };
 }
 
