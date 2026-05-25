@@ -375,10 +375,10 @@ OTHER RULES:
 - Only skip CODE_JS if the user is purely asking a question with no changes needed.
 
 // EVAL-IMPROVEMENTS-START
-When sorting, use the correct Office JS API sortBy method instead of sortByColumn.
+When sorting, exclude the header row by using 'sheet.getRange("A2:A" + sheet.getLastRow())'.
 '''javascript
 const sheet = workbook.worksheets.getActiveWorksheet();
-const range = sheet.getRange("A:A");
+const range = sheet.getRange("A2:A" + sheet.getLastRow());
 range.load("values");
 await context.sync();
 range.sort.apply({
@@ -387,7 +387,40 @@ range.sort.apply({
 });
 await context.sync();
 '''
-For filtering, use the correct Office JS API autoFilter method.
+For column-specific sorting, use 'sheet.getRange(columnLetter + ":$" + columnLetter)' to sort by a specific column.
+'''javascript
+const columnLetter = "X";
+const sheet = workbook.worksheets.getActiveWorksheet();
+const range = sheet.getRange(columnLetter + ":$" + columnLetter);
+range.load("values");
+await context.sync();
+range.sort.apply({
+  key: range,
+  ascending: true
+});
+await context.sync();
+'''
+When copying data, specify the destination range correctly using 'sheet.getRange("D1").getResize(sourceRange.rowCount, sourceRange.columnCount)'.
+'''javascript
+const sheet = workbook.worksheets.getActiveWorksheet();
+const sourceRange = sheet.getRange("A:B");
+const targetRange = sheet.getRange("D1").getResize(sourceRange.rowCount, sourceRange.columnCount);
+sourceRange.copyFrom(targetRange, Excel.RangeCopyType.all, false, false);
+await context.sync();
+'''
+For the VLOOKUP function, provide a clear description and example without including unnecessary code.
+The VLOOKUP function looks up a value in a table and returns a value from another column.
+When answering questions about functions, provide concrete examples and note potential caveats.
+When counting rows with data in a specific column, use 'sheet.getRange(columnLetter + ":$" + columnLetter).getUsedRange().rowCount'.
+'''javascript
+const columnLetter = "A";
+const sheet = workbook.worksheets.getActiveWorksheet();
+const usedRange = sheet.getRange(columnLetter + ":$" + columnLetter).getUsedRange();
+usedRange.load("rowCount");
+await context.sync();
+return "Found " + usedRange.rowCount + " rows with data in column " + columnLetter + ".";
+'''
+For filtering, use the correct API implementation with 'sheet.autoFilter.apply'.
 '''javascript
 const sheet = workbook.worksheets.getActiveWorksheet();
 const range = sheet.getRange("A:A");
@@ -396,33 +429,13 @@ await context.sync();
 sheet.autoFilter.apply({
   range: range,
   criteria: {
-    operator: Excel.FilterOperator.greaterThan,
-    values: [5]
+    operator: Excel.FilterOperator.equals,
+    values: ["Engineering"]
   }
 });
 await context.sync();
 '''
-When copying data, use the copyFrom method.
-'''javascript
-const sheet = workbook.worksheets.getActiveWorksheet();
-const sourceRange = sheet.getRange("A:B");
-const targetRange = sheet.getRange("D:D");
-sourceRange.copyFrom(targetRange);
-await context.sync();
-'''
-For data validation, set the operator for the data validation.
-'''javascript
-const sheet = workbook.worksheets.getActiveWorksheet();
-const range = sheet.getRange("B:B");
-const dataValidation = range.addDataValidation();
-dataValidation.allowType = Excel.DataValidationType.wholeNumber;
-dataValidation.formula = { 
-  formula1: "1", 
-  operator: Excel.DataValidationOperator.between, 
-  formula2: "100" 
-};
-await context.sync();
-'''
+When
 // EVAL-IMPROVEMENTS-END
 `
 + (DEFAULT_MODEL.toLowerCase().includes('qwen') ? '\n/no_think' : '');
