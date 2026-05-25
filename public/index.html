@@ -440,8 +440,7 @@ html,body{height:100%;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;
         <div class="slabel">History</div>
         <button class="sdanger" onclick="clearAllHistory()">Delete all chat history</button>
       </div>
-      <div class="sfooter" style="cursor:pointer" onclick="toggleChangelog()" title="Click to see version history">Excel AI Assistant · <strong id="versionLabel">v4.0</strong></div>
-      <div id="changelogBox" style="display:none;margin-top:8px;max-height:200px;overflow-y:auto;background:var(--surf);border:1px solid var(--border);border-radius:var(--r2);padding:10px;font-size:11px;color:var(--text2);line-height:1.6;text-align:left"></div>
+      <div class="sfooter" style="cursor:pointer" onclick="openChangelog()" title="Click to see version history">Excel AI Assistant · <strong id="versionLabel">v4.1.0</strong></div>
     </div>
 
     <!-- Preferences tab -->
@@ -489,6 +488,15 @@ html,body{height:100%;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;
   </div>
 </div>
 
+<!-- Version history -->
+<div class="modal" id="changelogModal">
+  <div class="modal-bd" onclick="closeChangelog()"></div>
+  <div class="model-panel" style="max-height:70vh">
+    <div class="model-ph"><span>Version History</span><button class="btn-icon" onclick="closeChangelog()">✕</button></div>
+    <div id="changelogList" style="overflow-y:auto;flex:1;padding:8px 0"></div>
+  </div>
+</div>
+
 <script>
 // ── Column letter helper (supports beyond Z) ──────────────────────────────────
 function colLetter(i) {
@@ -514,14 +522,13 @@ let costLimitType = localStorage.getItem('costLimitType') || 'prompt';
 let costLimitIdx  = parseInt(localStorage.getItem('costLimitIdx') || '0');
 let sessionCost = 0;
 let pendingSendResolve = null;
-let changelogOpen = false;
-
-const APP_VERSION = 'v4.0';
+const APP_VERSION = 'v4.1.0';
 const CHANGELOG = [
-  { ver: 'v4.0', date: '2026-05-25', summary: 'Smart context management for large workbooks (no more token overflow), version tracker in settings' },
-  { ver: 'v3.0', date: '2026-05-25', summary: 'AI-auto-detected feedback with 3-tier weighted fine-tuning (human/hard/soft)' },
-  { ver: 'v2.0', date: '2026-05-25', summary: 'Multi-workbook support: search, read, write, and open external .xlsx files' },
-  { ver: 'v1.0', date: '2026-05-24', summary: 'Initial release: AI assistant with full read/write Excel access, chat history, model picker, cost controls' },
+  { ver: 'v4.1.0', date: '2026-05-25', summary: 'Fix: AI no longer errors on greetings/chitchat. Version history is now a proper popup modal. Switched to semver (x.y.z).' },
+  { ver: 'v4.0.0', date: '2026-05-25', summary: 'Smart context management for large workbooks — no more token overflow errors.' },
+  { ver: 'v3.0.0', date: '2026-05-25', summary: 'AI-auto-detected feedback with 3-tier weighted fine-tuning (human/hard/soft).' },
+  { ver: 'v2.0.0', date: '2026-05-25', summary: 'Multi-workbook support: search, read, write, and open external .xlsx files.' },
+  { ver: 'v1.0.0', date: '2026-05-24', summary: 'Initial release: AI assistant with full read/write Excel access, chat history, model picker, cost controls.' },
 ];
 
 const PROMPT_LIMITS  = [0, 0.001, 0.002, 0.005, 0.01, 0.02, 0.05, 0.10, 0.20, 0.50, 1.00];
@@ -642,14 +649,23 @@ function switchSettingsTab(tab) {
   document.getElementById('stab-prefs').className   = 'stab' + (tab==='prefs'?' active':'');
 }
 function openSettings()  { document.getElementById('settingsPanel').classList.add('open'); }
-function closeSettings() { document.getElementById('settingsPanel').classList.remove('open'); changelogOpen=false; const b=document.getElementById('changelogBox'); if(b)b.style.display='none'; }
-function toggleChangelog() {
-  changelogOpen=!changelogOpen;
-  const box=document.getElementById('changelogBox');
-  if(!changelogOpen){box.style.display='none';return;}
-  box.innerHTML=CHANGELOG.map(c=>'<div style="margin-bottom:6px"><strong>'+esc(c.ver)+'</strong> <span style="color:var(--text3)">'+esc(c.date)+'</span><br>'+esc(c.summary)+'</div>').join('');
-  box.style.display='block';
+function closeSettings() { document.getElementById('settingsPanel').classList.remove('open'); }
+function openChangelog() {
+  const list=document.getElementById('changelogList');
+  list.innerHTML=CHANGELOG.map((c,i)=>{
+    const isCurrent=i===0;
+    return '<div style="padding:10px 14px;border-bottom:1px solid var(--border);'+(isCurrent?'background:var(--surf)':'')+'">'+
+      '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">'+
+        '<strong style="font-size:14px;color:var(--text)">'+esc(c.ver)+'</strong>'+
+        (isCurrent?'<span class="badge rec">current</span>':'')+
+        '<span style="font-size:11px;color:var(--text3);margin-left:auto">'+esc(c.date)+'</span>'+
+      '</div>'+
+      '<div style="font-size:12px;color:var(--text2);line-height:1.5">'+esc(c.summary)+'</div>'+
+    '</div>';
+  }).join('');
+  document.getElementById('changelogModal').classList.add('open');
 }
+function closeChangelog() { document.getElementById('changelogModal').classList.remove('open'); }
 
 // ── Cost estimation ───────────────────────────────────────────────────────────
 function estimateCost(extraText) {

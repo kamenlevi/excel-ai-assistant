@@ -577,9 +577,20 @@ function isQuestion(userMessage) {
   return questionStarters.some(q => s.startsWith(q));
 }
 
+function isConversational(userMessage) {
+  const s = userMessage.toLowerCase().trim().replace(/[!?.,:;]+$/g, '');
+  const greetings = ['hi','hey','hello','howdy','yo','sup','hola','good morning','good afternoon','good evening','morning','afternoon','gm'];
+  const chitchat = ['thanks','thank you','thx','ok','okay','cool','nice','great','awesome','perfect','got it','understood','sounds good','bye','goodbye','see you','no thanks','nah','nope','yes','yeah','yep','sure','alright','right','hmm','hm','wow','lol','haha','bruh','dude'];
+  if (greetings.includes(s) || chitchat.includes(s)) return true;
+  if (s.length < 12 && !s.includes('row') && !s.includes('col') && !s.includes('cell') && !s.includes('sheet') && !s.includes('format') && !s.includes('filter') && !s.includes('sort') && !s.includes('add') && !s.includes('delete') && !s.includes('bold') && !s.includes('sum') && !s.includes('formula')) return true;
+  return false;
+}
+
 function modelForgotCode(responseText, userMessage) {
   if (responseText.includes('CODE_JS::')) return false;
-  return !isQuestion(userMessage);
+  if (isQuestion(userMessage)) return false;
+  if (isConversational(userMessage)) return false;
+  return true;
 }
 
 // ── Chat history endpoints ────────────────────────────────────────────────────
