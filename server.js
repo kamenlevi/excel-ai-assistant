@@ -1219,8 +1219,23 @@ app.post('/api/chat', async (req, res) => {
 
   const prefsSection = preferences ? `\n\nUSER PREFERENCES (always follow these):\n${preferences}` : '';
 
-  const contextMessages = workbookData ? [
-    { role: 'user', content: `Here is the current state of the workbook (last synced before this message).\n\nActive sheet: ${activeSheet}\n\n${workbookData}` },
+  // Token budget: estimate tokens from all parts, truncate workbook data if needed
+  const MAX_CONTEXT_TOKENS = 200000;
+  const CHARS_PER_TOKEN = 3.5;
+  const systemTokens = Math.ceil(SYSTEM_PROMPT.length / CHARS_PER_TOKEN);
+  const messageTokens = Math.ceil(recentMessages.reduce((s, m) => s + (m.content || '').length, 0) / CHARS_PER_TOKEN);
+  const summaryTokens = summary ? Math.ceil(summary.length / CHARS_PER_TOKEN) : 0;
+  const overhead = systemTokens + messageTokens + summaryTokens + maxTokens + 2000;
+  const wbBudgetTokens = Math.max(10000, MAX_CONTEXT_TOKENS - overhead);
+  const wbBudgetChars = Math.floor(wbBudgetTokens * CHARS_PER_TOKEN);
+
+  let trimmedWbData = workbookData || '';
+  if (trimmedWbData.length > wbBudgetChars) {
+    trimmedWbData = trimmedWbData.slice(0, wbBudgetChars) + '\n\n[...workbook data truncated to fit context window. Ask me to look at specific sheets/ranges if needed.]';
+  }
+
+  const contextMessages = trimmedWbData ? [
+    { role: 'user', content: `Here is the current state of the workbook (last synced before this message).\n\nActive sheet: ${activeSheet}\n\n${trimmedWbData}` },
     { role: 'assistant', content: 'I can see the full workbook. What would you like me to do?' }
   ] : [];
 
