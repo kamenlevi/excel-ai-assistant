@@ -401,67 +401,54 @@ ALWAYS prefer CODE_JS when both can do the job — it runs automatically without
 If unsure whether Office JS supports something, use CODE_JS first. Only fall back to VBA_MACRO for the specific cases listed above.
 
 // EVAL-IMPROVEMENTS-START
-When sorting, exclude the header row by using 'sheet.getRange("A2:A" + sheet.getLastRow())'.
+When filtering, dynamically determine the column range based on the header.
+'''javascript
+const sheet = workbook.worksheets.getActiveWorksheet();
+const used = sheet.getUsedRange();
+used.load("values");
+await context.sync();
+const hdr = used.values[0].map(h => String(h).toLowerCase().trim());
+const col = hdr.indexOf("x");
+const filterRange = sheet.getRange(getColumnLetter(col) + ":$" + getColumnLetter(col));
+filterRange.load("filter");
+await context.sync();
+filterRange.filter.apply({
+  criteria: {
+    operator: Excel.FilterOperator.greaterThan,
+    values: [5]
+  }
+});
+await context.sync();
+'''
+For sorting, use the 'sortBy' method of the 'Range' object instead of 'sort.apply'.
 '''javascript
 const sheet = workbook.worksheets.getActiveWorksheet();
 const range = sheet.getRange("A2:A" + sheet.getLastRow());
 range.load("values");
 await context.sync();
-range.sort.apply({
-  key: range,
-  ascending: true
-});
+range.sortBy([
+  {
+    key: range,
+    ascending: true
+  }
+]);
 await context.sync();
 '''
-For column-specific sorting, use 'sheet.getRange(columnLetter + ":$" + columnLetter)' to sort by a specific column.
-'''javascript
-const columnLetter = "X";
-const sheet = workbook.worksheets.getActiveWorksheet();
-const range = sheet.getRange(columnLetter + ":$" + columnLetter);
-range.load("values");
-await context.sync();
-range.sort.apply({
-  key: range,
-  ascending: true
-});
-await context.sync();
-'''
-When copying data, specify the destination range correctly using 'sheet.getRange("D1").getResize(sourceRange.rowCount, sourceRange.columnCount)'.
+When copying data, use the correct order of source and target ranges.
 '''javascript
 const sheet = workbook.worksheets.getActiveWorksheet();
 const sourceRange = sheet.getRange("A:B");
 const targetRange = sheet.getRange("D1").getResize(sourceRange.rowCount, sourceRange.columnCount);
-sourceRange.copyFrom(targetRange, Excel.RangeCopyType.all, false, false);
+targetRange.copyFrom(sourceRange, Excel.RangeCopyType.all, false, false);
 await context.sync();
 '''
-For the VLOOKUP function, provide a clear description and example without including unnecessary code.
-The VLOOKUP function looks up a value in a table and returns a value from another column.
-When answering questions about functions, provide concrete examples and note potential caveats.
-When counting rows with data in a specific column, use 'sheet.getRange(columnLetter + ":$" + columnLetter).getUsedRange().rowCount'.
+To copy a sheet, use the 'add' method with the 'worksheet' parameter.
 '''javascript
-const columnLetter = "A";
-const sheet = workbook.worksheets.getActiveWorksheet();
-const usedRange = sheet.getRange(columnLetter + ":$" + columnLetter).getUsedRange();
-usedRange.load("rowCount");
-await context.sync();
-return "Found " + usedRange.rowCount + " rows with data in column " + columnLetter + ".";
-'''
-For filtering, use the correct API implementation with 'sheet.autoFilter.apply'.
-'''javascript
-const sheet = workbook.worksheets.getActiveWorksheet();
-const range = sheet.getRange("A:A");
-range.load("values");
-await context.sync();
-sheet.autoFilter.apply({
-  range: range,
-  criteria: {
-    operator: Excel.FilterOperator.equals,
-    values: ["Engineering"]
-  }
-});
+const workbook = context.workbook;
+const sheet = workbook.worksheets.getItem("Sheet1");
+const newSheet = workbook.worksheets.add("Sheet1 Copy", sheet);
 await context.sync();
 '''
-When
 // EVAL-IMPROVEMENTS-END
 `
 + (DEFAULT_MODEL.toLowerCase().includes('qwen') ? '\n/no_think' : '');
