@@ -375,46 +375,52 @@ OTHER RULES:
 - Only skip CODE_JS if the user is purely asking a question with no changes needed.
 
 // EVAL-IMPROVEMENTS-START
-When sorting, ensure proper initialization and context by loading the worksheet and range before calling the sortByColumn method.
-'''javascript
-const sheet = workbook.worksheets.getActiveWorksheet();
-const range = sheet.getRange("X:X");
-range.load("values");
-await context.sync();
-await range.sortByColumn("X", true);
-await context.sync();
-'''
-For formatting, apply number formats to the data range only, excluding headers, and use efficient methods.
-'''javascript
-const sheet = workbook.worksheets.getActiveWorksheet();
-const used = sheet.getUsedRange();
-used.load("rowCount, columnCount");
-await context.sync();
-const dataRange = sheet.getRangeByIndexes(1, 1, used.rowCount - 1, 1);
-dataRange.numberFormat = [["\$#,##0.00"]];
-await context.sync();
-'''
-When applying conditional formatting, account for header rows and potential null values, and use efficient methods for formatting.
-'''javascript
-const sheet = workbook.worksheets.getActiveWorksheet();
-const used = sheet.getUsedRange();
-used.load("values");
-await context.sync();
-const scores = used.values;
-for (let i = 1; i < scores.length; i++) {
-  if (scores[i][0] < 50) {
-    sheet.getRangeByIndexes(i, 1, 1, 1).format.fill.color = "FF0000";
-  }
-}
-await context.sync();
-'''
-For data validation, use the addDataValidation method to restrict input values.
+When sorting, use the correct Office JS API sortBy method instead of sortByColumn.
 '''javascript
 const sheet = workbook.worksheets.getActiveWorksheet();
 const range = sheet.getRange("A:A");
+range.load("values");
+await context.sync();
+range.sort.apply({
+  key: range,
+  ascending: true
+});
+await context.sync();
+'''
+For filtering, use the correct Office JS API autoFilter method.
+'''javascript
+const sheet = workbook.worksheets.getActiveWorksheet();
+const range = sheet.getRange("A:A");
+range.load("values");
+await context.sync();
+sheet.autoFilter.apply({
+  range: range,
+  criteria: {
+    operator: Excel.FilterOperator.greaterThan,
+    values: [5]
+  }
+});
+await context.sync();
+'''
+When copying data, use the copyFrom method.
+'''javascript
+const sheet = workbook.worksheets.getActiveWorksheet();
+const sourceRange = sheet.getRange("A:B");
+const targetRange = sheet.getRange("D:D");
+sourceRange.copyFrom(targetRange);
+await context.sync();
+'''
+For data validation, set the operator for the data validation.
+'''javascript
+const sheet = workbook.worksheets.getActiveWorksheet();
+const range = sheet.getRange("B:B");
 const dataValidation = range.addDataValidation();
-dataValidation.allowType = Excel.DataValidationType.list;
-dataValidation.formula = { formula1: "\"no\"" };
+dataValidation.allowType = Excel.DataValidationType.wholeNumber;
+dataValidation.formula = { 
+  formula1: "1", 
+  operator: Excel.DataValidationOperator.between, 
+  formula2: "100" 
+};
 await context.sync();
 '''
 // EVAL-IMPROVEMENTS-END
