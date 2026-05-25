@@ -127,6 +127,12 @@ html,body{height:100%;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;
 .copy-code-btn:hover{border-color:var(--accent);color:var(--accent)}
 .copy-code-btn.copied{color:var(--ok);border-color:var(--ok)}
 
+.vba-block{margin-top:6px;border:1px solid #9C27B0;border-radius:var(--r2);overflow:hidden;font-size:12px}
+.vba-head{background:rgba(156,39,176,.1);padding:5px 10px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none}
+.vba-head span{font-size:11px;font-weight:600;color:#9C27B0;text-transform:uppercase;letter-spacing:.4px}
+.vba-steps{padding:8px 12px;background:var(--surf);font-size:11px;color:var(--text2);line-height:1.7;border-top:1px solid var(--border)}
+.vba-steps strong{color:var(--text)}
+
 .typing{display:flex;align-items:center;gap:4px;padding:10px 0}
 .tdot{width:6px;height:6px;background:var(--accent);border-radius:50%;animation:tbounce 1.2s ease-in-out infinite}
 .tdot:nth-child(2){animation-delay:.2s}
@@ -440,7 +446,7 @@ html,body{height:100%;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;
         <div class="slabel">History</div>
         <button class="sdanger" onclick="clearAllHistory()">Delete all chat history</button>
       </div>
-      <div class="sfooter" style="cursor:pointer" onclick="openChangelog()" title="Click to see version history">Excel AI Assistant · <strong id="versionLabel">v4.1.0</strong></div>
+      <div class="sfooter" style="cursor:pointer" onclick="openChangelog()" title="Click to see version history">Excel AI Assistant · <strong id="versionLabel">v5.0.0</strong></div>
     </div>
 
     <!-- Preferences tab -->
@@ -522,8 +528,9 @@ let costLimitType = localStorage.getItem('costLimitType') || 'prompt';
 let costLimitIdx  = parseInt(localStorage.getItem('costLimitIdx') || '0');
 let sessionCost = 0;
 let pendingSendResolve = null;
-const APP_VERSION = 'v4.1.0';
+const APP_VERSION = 'v5.0.0';
 const CHANGELOG = [
+  { ver: 'v5.0.0', date: '2026-05-25', summary: 'VBA macro support: AI generates VBA for tasks Office JS cannot handle (pivot tables, advanced charts, etc.) with styled code blocks and step-by-step instructions.' },
   { ver: 'v4.1.0', date: '2026-05-25', summary: 'Fix: AI no longer errors on greetings/chitchat. Version history is now a proper popup modal. Switched to semver (x.y.z).' },
   { ver: 'v4.0.0', date: '2026-05-25', summary: 'Smart context management for large workbooks — no more token overflow errors.' },
   { ver: 'v3.0.0', date: '2026-05-25', summary: 'AI-auto-detected feedback with 3-tier weighted fine-tuning (human/hard/soft).' },
@@ -1098,6 +1105,21 @@ function mkCode(code) {
   h.onclick=()=>{const hide=b.classList.toggle('hidden');h.querySelector('.code-toggle').textContent=hide?'show ▼':'hide ▲';};
   w.appendChild(h);w.appendChild(b);return w;
 }
+function mkVba(vbaCode) {
+  const w=document.createElement('div');w.className='vba-block';
+  const h=document.createElement('div');h.className='vba-head';
+  h.innerHTML='<span>VBA Macro</span><span class="code-toggle">hide ▲</span>';
+  const b=document.createElement('div');b.className='code-body';
+  const p=document.createElement('pre');p.textContent=vbaCode;b.appendChild(p);
+  const footer=document.createElement('div');footer.className='code-footer';
+  const cb=document.createElement('button');cb.className='copy-code-btn';cb.textContent='⎘ Copy macro';
+  cb.onclick=()=>{navigator.clipboard.writeText(vbaCode).then(()=>{cb.textContent='✓ Copied!';cb.classList.add('copied');setTimeout(()=>{cb.textContent='⎘ Copy macro';cb.classList.remove('copied');},1500);});};
+  footer.appendChild(cb);b.appendChild(footer);
+  const steps=document.createElement('div');steps.className='vba-steps';
+  steps.innerHTML='<strong>How to run:</strong> 1. Click <strong>Copy macro</strong> above &nbsp;2. Press <strong>Alt+F11</strong> to open VBA Editor &nbsp;3. Click <strong>Insert > Module</strong> &nbsp;4. Paste the code &nbsp;5. Press <strong>F5</strong> to run';
+  h.onclick=()=>{const hide=b.classList.toggle('hidden');steps.style.display=hide?'none':'';h.querySelector('.code-toggle').textContent=hide?'show ▼':'hide ▲';};
+  w.appendChild(h);w.appendChild(b);w.appendChild(steps);return w;
+}
 function addTyping() {
   document.getElementById('emptyState')?.remove();
   const el=document.createElement('div');el.className='msg assistant';el.id='typing';
@@ -1256,7 +1278,7 @@ async function sendMessage() {
     if(data.error){
       addMsg('assistant','⚠ '+data.error,true,ms);
     }else{
-      const{response:reply,code,usage,selectedModel:autoSelected,plan}=data;
+      const{response:reply,code,vba,usage,selectedModel:autoSelected,plan}=data;
       if(plan){history.push({role:'assistant',content:'📋 Plan:\n'+plan});addMsg('assistant','📋 Plan:\n'+plan);}
       const tok=usage?.completion_tokens??null;
       if(tok){totalTok+=tok;updateTok();}
@@ -1286,6 +1308,11 @@ async function sendMessage() {
           const rd=await rr.json();
           if(rd.code){const rres=await execCode(rd.code);if(rd.response)history.push({role:'assistant',content:rd.response});addMsg('assistant',rres.ok?'✓ Fixed.':'⚠ Retry failed: '+rres.err,!rres.ok);}
         }
+      }
+      if(vba){
+        const last=document.getElementById('messages').lastElementChild;
+        if(last)last.appendChild(mkVba(vba));
+        history.push({role:'assistant',content:'[VBA macro provided]',vba:vba});
       }
 
       // ── Mid-session cost check ──

@@ -13,7 +13,7 @@ Office Add-in (TaskPaneApp) for Excel with AI-powered read/write access to workb
 - Three-tier feedback: human (1.0 weight), auto-hard (0.7), auto-soft (0.4).
 
 ## Versioning Rules
-- Current version: **v4.1.0** (defined as `APP_VERSION` in index.html and in the settings footer).
+- Current version: **v5.0.0** (defined as `APP_VERSION` in index.html and in the settings footer).
 - The `CHANGELOG` array in index.html stores all versions with date and summary.
 - **After every commit**: bump the version in `APP_VERSION`, the `#versionLabel` default text, and add a new entry to the top of `CHANGELOG` with the current date and a one-line summary of what changed.
 - Version format: **x.y.z** — x = major feature/breaking change, y = medium feature/improvement, z = small fix/QoL.

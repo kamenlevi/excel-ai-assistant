@@ -371,8 +371,34 @@ OTHER RULES:
 - Be concise. One short sentence explaining what you're doing, then the CODE_JS block.
 - Never tell the user to do something manually that you can do via code.
 - If a requested column does not exist, throw a clear error: throw new Error("Column 'X' not found. Check the column name and try again.");
-- For VBA macros: write complete code in triple backtick vba blocks and tell the user to press Alt+F11.
 - Only skip CODE_JS if the user is purely asking a question with no changes needed.
+
+VBA MACROS — USE WHEN OFFICE JS CANNOT DO THE JOB:
+Some tasks CANNOT be done with the Office JS API (CODE_JS). For these, output a VBA_MACRO block instead:
+
+VBA_MACRO::
+Sub MyMacro()
+    ' VBA code here
+End Sub
+::END_VBA
+
+USE VBA_MACRO (not CODE_JS) for:
+- Creating or modifying pivot tables (Office JS has read-only pivot support)
+- Custom UserForms / input dialogs beyond simple prompts
+- ActiveX or Form controls on worksheets
+- Advanced page setup (custom headers/footers, print areas, page breaks)
+- Sending emails via Outlook
+- Advanced chart sub-type customization
+- Workbook events (BeforeSave, BeforeClose, Workbook_Open)
+- Accessing other Office apps (Word, Outlook, PowerPoint)
+- Running shell commands or calling external DLLs
+- Advanced Find/Replace with regex
+
+When you output VBA_MACRO, also include a brief instruction like:
+"I've generated VBA code for this. Click the **Copy** button below, then press **Alt+F11** to open the VBA Editor, go to **Insert > Module**, paste the code, and press **F5** to run it."
+
+ALWAYS prefer CODE_JS when both can do the job — it runs automatically without user steps.
+If unsure whether Office JS supports something, use CODE_JS first. Only fall back to VBA_MACRO for the specific cases listed above.
 
 // EVAL-IMPROVEMENTS-START
 When sorting, exclude the header row by using 'sheet.getRange("A2:A" + sheet.getLastRow())'.
@@ -552,18 +578,19 @@ async function callAI(messages, maxTokens = 4096, model = null, useOllama = fals
 
 // ── Parse code from response ─────────────────────────────────────────────────
 function parseResponse(text) {
-  let code = null;
+  let code = null, vba = null;
   const codeMatch = text.match(/CODE_JS::([\s\S]*?)::END_CODE/);
-  if (codeMatch) {
-    code = codeMatch[1].trim();
-  }
+  if (codeMatch) code = codeMatch[1].trim();
+  const vbaMatch = text.match(/VBA_MACRO::([\s\S]*?)::END_VBA/);
+  if (vbaMatch) vba = vbaMatch[1].trim();
 
   const cleaned = text
     .replace(/CODE_JS::[\s\S]*?::END_CODE/g, '')
+    .replace(/VBA_MACRO::[\s\S]*?::END_VBA/g, '')
     .replace(/<think>[\s\S]*?<\/think>/g, '')
     .trim();
 
-  return { code, cleaned };
+  return { code, vba, cleaned };
 }
 
 // ── Detect if model forgot to include code for an action request ─────────────
@@ -1266,7 +1293,7 @@ app.post('/api/chat', async (req, res) => {
     let { text: responseText, usage } = await callAI(allMessages, maxTokens, effectiveModel, useOllama || false, useGroq || false, apiKey || null, groqKey || null);
     responseText = responseText.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
 
-    if (modelForgotCode(responseText, rawUserMessage)) {
+    if (!responseText.includes('VBA_MACRO::') && modelForgotCode(responseText, rawUserMessage)) {
       console.log('[server] Model forgot CODE_JS — retrying...');
       const { text: retryText } = await callAI([
         ...allMessages,
@@ -1281,9 +1308,10 @@ app.post('/api/chat', async (req, res) => {
       }
     }
 
-    const { code, cleaned } = parseResponse(responseText);
+    const { code, vba, cleaned } = parseResponse(responseText);
     if (code) console.log('[server] Code to execute:\n' + code);
-    res.json({ response: cleaned, code, usage, selectedModel, plan: planText });
+    if (vba) console.log('[server] VBA macro generated:\n' + vba);
+    res.json({ response: cleaned, code, vba, usage, selectedModel, plan: planText });
 
   } catch (err) {
     console.error('AI error:', err);
