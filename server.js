@@ -921,6 +921,19 @@ function expandGlobs(dirs) {
   return expanded;
 }
 
+function isAllowedWorkbookPath(filePath) {
+  if (!filePath || typeof filePath !== 'string') return false;
+  if (!/\.(xlsx|xlsm)$/i.test(filePath)) return false;
+  let real;
+  try { real = fs.realpathSync(filePath); } catch { real = path.resolve(filePath); }
+  const allowed = expandGlobs(SEARCH_DIRS);
+  return allowed.some(d => {
+    let realD;
+    try { realD = fs.realpathSync(d); } catch { realD = path.resolve(d); }
+    return real.startsWith(realD + path.sep) || real === realD;
+  });
+}
+
 function walkForXlsx(dir, maxDepth, results, visited, nameQuery, contentQuery, limit) {
   if (results.length >= limit || maxDepth < 0) return;
   let real;
@@ -969,6 +982,7 @@ app.post('/api/workbooks/search', (req, res) => {
 app.post('/api/workbooks/read', async (req, res) => {
   const { filePath, sheetNames } = req.body;
   if (!filePath) return res.status(400).json({ error: 'filePath required' });
+  if (!isAllowedWorkbookPath(filePath)) return res.status(400).json({ error: 'filePath must be an .xlsx or .xlsm file in an allowed directory' });
   try {
     const wb = new ExcelJS.Workbook();
     await wb.xlsx.readFile(filePath);
@@ -997,6 +1011,7 @@ app.post('/api/workbooks/read', async (req, res) => {
 app.post('/api/workbooks/write', async (req, res) => {
   const { filePath, operations } = req.body;
   if (!filePath || !operations) return res.status(400).json({ error: 'filePath and operations required' });
+  if (!isAllowedWorkbookPath(filePath)) return res.status(400).json({ error: 'filePath must be an .xlsx or .xlsm file in an allowed directory' });
   try {
     const wb = new ExcelJS.Workbook();
     try { await wb.xlsx.readFile(filePath); } catch { /* new file */ }
@@ -1036,6 +1051,7 @@ app.post('/api/workbooks/write', async (req, res) => {
 app.post('/api/workbooks/open', (req, res) => {
   const { filePath } = req.body;
   if (!filePath) return res.status(400).json({ error: 'filePath required' });
+  if (!isAllowedWorkbookPath(filePath)) return res.status(400).json({ error: 'filePath must be an .xlsx or .xlsm file in an allowed directory' });
   const platform = process.platform;
   let cmd, args;
   if (platform === 'win32') {
@@ -1145,7 +1161,7 @@ app.post('/api/chat', async (req, res) => {
       const { text: assess } = await callAI([
         { role: 'system', content: 'Rate complexity 1-3: 1=simple, 2=moderate, 3=complex. JSON: {"level":1|2|3}' },
         { role: 'user', content: rawUserMessage.slice(0, 300) }
-      ], 30, null, false, false, apiKey || null, groqKey || null);
+      ], 30, effectiveModel, useOllama || false, useGroq || false, apiKey || null, groqKey || null);
       const m = assess.match(/\{[\s\S]*?\}/);
       const level = m ? (JSON.parse(m[0]).level || 2) : 2;
       maxTokens = level >= 3 ? 8192 : level === 1 ? 2048 : 4096;
@@ -1161,7 +1177,7 @@ app.post('/api/chat', async (req, res) => {
         const { text: enhanced } = await callAI([
           { role: 'system', content: 'You are a prompt engineer for an Excel AI assistant. Rewrite the user\'s request to be maximally clear, precise, and complete. Preserve intent exactly. Add explicit handling for edge cases (empty cells, merged cells, missing columns). Reference specific column names if visible in context. Output ONLY the rewritten prompt.' },
           { role: 'user', content: `Workbook context (headers + first rows):\n${(workbookData||'').slice(0,2000)}\n\nOriginal request: ${orig}` }
-        ], 700, null, false, false, apiKey || null, groqKey || null);
+        ], 700, effectiveModel, useOllama || false, useGroq || false, apiKey || null, groqKey || null);
         const enhancedText = enhanced.replace(/<think>[\s\S]*?<\/think>/g,'').trim();
         recentMessages[lastUserIdx] = { ...recentMessages[lastUserIdx], content: enhancedText };
         maxTokens = Math.max(maxTokens, 8192);
