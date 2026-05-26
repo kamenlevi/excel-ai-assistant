@@ -401,54 +401,68 @@ ALWAYS prefer CODE_JS when both can do the job — it runs automatically without
 If unsure whether Office JS supports something, use CODE_JS first. Only fall back to VBA_MACRO for the specific cases listed above.
 
 // EVAL-IMPROVEMENTS-START
-When filtering, dynamically determine the column range based on the header.
+When sorting, implement a custom sortByColumn function using the 'sortBy' method of the 'Range' object.
+'''javascript
+async function sortByColumn(columnName, ascending) {
+  const sheet = workbook.worksheets.getActiveWorksheet();
+  const used = sheet.getUsedRange();
+  used.load("values");
+  await context.sync();
+  const hdr = used.values[0].map(h => String(h).toLowerCase().trim());
+  const col = hdr.indexOf(columnName.toLowerCase());
+  if (col === -1) throw new Error('Column '${columnName}' not found.');
+  const range = sheet.getRangeByIndexes(1, col, used.rowCount - 1, 1);
+  range.load("values");
+  await context.sync();
+  range.sortBy([
+    {
+      key: range,
+      ascending: ascending
+    }
+  ]);
+  await context.sync();
+}
+'''
+For data validation, use the 'dataValidation' property of the 'Range' object to restrict input values.
 '''javascript
 const sheet = workbook.worksheets.getActiveWorksheet();
 const used = sheet.getUsedRange();
 used.load("values");
 await context.sync();
 const hdr = used.values[0].map(h => String(h).toLowerCase().trim());
-const col = hdr.indexOf("x");
-const filterRange = sheet.getRange(getColumnLetter(col) + ":$" + getColumnLetter(col));
-filterRange.load("filter");
+const col = hdr.indexOf("a");
+const range = sheet.getRange(getColumnLetter(col) + "1:" + getColumnLetter(col) + used.rowCount);
+range.load("dataValidation");
 await context.sync();
-filterRange.filter.apply({
-  criteria: {
-    operator: Excel.FilterOperator.greaterThan,
-    values: [5]
-  }
+range.dataValidation.clear();
+range.dataValidation.add(Excel.DataValidationType.list, {
+  inCellDropdown: true,
+  formula1: ["yes"]
 });
 await context.sync();
 '''
-For sorting, use the 'sortBy' method of the 'Range' object instead of 'sort.apply'.
+To clear cell content, use the 'clear' method with the 'Excel.ClearApplyTo.contents' option.
+'''javascript
+const sheet = workbook.workbooks.getActiveWorksheet();
+const range = sheet.getRange("A2");
+range.clear(Excel.ClearApplyTo.contents);
+await context.sync();
+'''
+When answering questions about functions, provide a clear description and relevant code example.
+'''javascript
+// VLOOKUP function description and example
+const sheet = workbook.worksheets.getActiveWorksheet();
+const formulaRange = sheet.getRange("A1");
+formulaRange.formula = "=VLOOKUP(A2, A:B, 2, FALSE)";
+await context.sync();
+'''
+To count rows with data in a specific column, use the 'getRange' and 'rowCount' properties.
 '''javascript
 const sheet = workbook.worksheets.getActiveWorksheet();
-const range = sheet.getRange("A2:A" + sheet.getLastRow());
-range.load("values");
+const used = sheet.getUsedRange();
+used.load("values");
 await context.sync();
-range.sortBy([
-  {
-    key: range,
-    ascending: true
-  }
-]);
-await context.sync();
-'''
-When copying data, use the correct order of source and target ranges.
-'''javascript
-const sheet = workbook.worksheets.getActiveWorksheet();
-const sourceRange = sheet.getRange("A:B");
-const targetRange = sheet.getRange("D1").getResize(sourceRange.rowCount, sourceRange.columnCount);
-targetRange.copyFrom(sourceRange, Excel.RangeCopyType.all, false, false);
-await context.sync();
-'''
-To copy a sheet, use the 'add' method with the 'worksheet' parameter.
-'''javascript
-const workbook = context.workbook;
-const sheet = workbook.worksheets.getItem("Sheet1");
-const newSheet = workbook.worksheets.add("Sheet1 Copy", sheet);
-await context.sync();
-'''
+const hdr
 // EVAL-IMPROVEMENTS-END
 `
 + (DEFAULT_MODEL.toLowerCase().includes('qwen') ? '\n/no_think' : '');
