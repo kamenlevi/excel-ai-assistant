@@ -401,68 +401,45 @@ ALWAYS prefer CODE_JS when both can do the job — it runs automatically without
 If unsure whether Office JS supports something, use CODE_JS first. Only fall back to VBA_MACRO for the specific cases listed above.
 
 // EVAL-IMPROVEMENTS-START
-When sorting, implement a custom sortByColumn function using the 'sortBy' method of the 'Range' object.
-'''javascript
-async function sortByColumn(columnName, ascending) {
-  const sheet = workbook.worksheets.getActiveWorksheet();
-  const used = sheet.getUsedRange();
-  used.load("values");
-  await context.sync();
-  const hdr = used.values[0].map(h => String(h).toLowerCase().trim());
-  const col = hdr.indexOf(columnName.toLowerCase());
-  if (col === -1) throw new Error('Column '${columnName}' not found.');
-  const range = sheet.getRangeByIndexes(1, col, used.rowCount - 1, 1);
-  range.load("values");
-  await context.sync();
-  range.sortBy([
-    {
-      key: range,
-      ascending: ascending
-    }
-  ]);
-  await context.sync();
-}
-'''
-For data validation, use the 'dataValidation' property of the 'Range' object to restrict input values.
+When clearing filters, specify the worksheet and use the 'clearFilters' method on the 'AutoFilter' object.
 '''javascript
 const sheet = workbook.worksheets.getActiveWorksheet();
-const used = sheet.getUsedRange();
-used.load("values");
-await context.sync();
-const hdr = used.values[0].map(h => String(h).toLowerCase().trim());
-const col = hdr.indexOf("a");
-const range = sheet.getRange(getColumnLetter(col) + "1:" + getColumnLetter(col) + used.rowCount);
-range.load("dataValidation");
-await context.sync();
-range.dataValidation.clear();
-range.dataValidation.add(Excel.DataValidationType.list, {
-  inCellDropdown: true,
-  formula1: ["yes"]
-});
+const autoFilter = sheet.getAutoFilter();
+autoFilter.clearFilters();
 await context.sync();
 '''
-To clear cell content, use the 'clear' method with the 'Excel.ClearApplyTo.contents' option.
+For sorting, use the provided 'sortByColumn' function to handle column sorting.
 '''javascript
-const sheet = workbook.workbooks.getActiveWorksheet();
+await sortByColumn("Name", true);
+'''
+To filter a column, use the 'applyColumnFilter' method with the correct column name.
+'''javascript
+const sheet = workbook.worksheets.getActiveWorksheet();
+const autoFilter = sheet.getAutoFilter();
+autoFilter.applyColumnFilter("Department", "Engineering");
+await context.sync();
+'''
+When adding hyperlinks, ensure the hyperlink is added to the correct cell and handle potential errors.
+'''javascript
+const sheet = workbook.worksheets.getActiveWorksheet();
 const range = sheet.getRange("A2");
-range.clear(Excel.ClearApplyTo.contents);
+const hyperlink = { address: "https://www.google.com", display: "Google" };
+range.hyperlink = hyperlink;
 await context.sync();
 '''
-When answering questions about functions, provide a clear description and relevant code example.
+To insert shapes, consider the header row and cell position.
 '''javascript
-// VLOOKUP function description and example
 const sheet = workbook.worksheets.getActiveWorksheet();
-const formulaRange = sheet.getRange("A1");
-formulaRange.formula = "=VLOOKUP(A2, A:B, 2, FALSE)";
-await context.sync();
+const shape = sheet.shapes.addRectangle(100, 20, 100, 20);
 '''
-To count rows with data in a specific column, use the 'getRange' and 'rowCount' properties.
+When adding line shapes, relate the shape's position and size to the data.
 '''javascript
 const sheet = workbook.worksheets.getActiveWorksheet();
 const used = sheet.getUsedRange();
 used.load("values");
 await context.sync();
-const hdr
+const shape = sheet.shapes.addShape(Excel.ShapeType.line, 10, used.rowCount * 20, 100, 10);
+'''
 // EVAL-IMPROVEMENTS-END
 `
 + (DEFAULT_MODEL.toLowerCase().includes('qwen') ? '\n/no_think' : '');
