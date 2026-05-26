@@ -3,127 +3,127 @@
   "filtering": {
     "level": 1,
     "masteredAt": null,
-    "lastScore": 70.7,
-    "lastRun": "2026-05-14T10-54-35",
-    "runsAtLevel": 2
+    "lastScore": 78.2,
+    "lastRun": "2026-05-26T03-05-43",
+    "runsAtLevel": 0
   },
   "sorting": {
     "level": 1,
     "masteredAt": null,
-    "lastScore": 60.4,
-    "lastRun": "2026-05-14T10-54-35",
-    "runsAtLevel": 2
+    "lastScore": 65.4,
+    "lastRun": "2026-05-26T03-05-43",
+    "runsAtLevel": 0
   },
   "formatting": {
     "level": 1,
     "masteredAt": null,
-    "lastScore": 85.6,
-    "lastRun": "2026-05-14T10-54-35",
-    "runsAtLevel": 2
+    "lastScore": 83.2,
+    "lastRun": "2026-05-26T03-05-43",
+    "runsAtLevel": 0
   },
   "formulas": {
     "level": 1,
     "masteredAt": null,
-    "lastScore": 82.6,
-    "lastRun": "2026-05-14T10-54-35",
-    "runsAtLevel": 2
+    "lastScore": 91.4,
+    "lastRun": "2026-05-26T03-05-43",
+    "runsAtLevel": 0
   },
   "conditional formatting": {
     "level": 1,
     "masteredAt": null,
-    "lastScore": 75.8,
-    "lastRun": "2026-05-14T10-54-35",
-    "runsAtLevel": 2
+    "lastScore": 78.5,
+    "lastRun": "2026-05-26T03-05-43",
+    "runsAtLevel": 0
   },
   "charts": {
     "level": 2,
     "masteredAt": "2026-05-05T10-06-14",
-    "lastScore": 83.3,
-    "lastRun": "2026-05-14T10-54-35",
-    "runsAtLevel": 2
+    "lastScore": 79.3,
+    "lastRun": "2026-05-17T02-59-44",
+    "runsAtLevel": 0
   },
   "data manipulation": {
     "level": 1,
     "masteredAt": null,
-    "lastScore": 86.2,
-    "lastRun": "2026-05-14T10-54-35",
-    "runsAtLevel": 2
+    "lastScore": 70.8,
+    "lastRun": "2026-05-26T03-05-43",
+    "runsAtLevel": 0
   },
   "sheet operations": {
     "level": 1,
     "masteredAt": null,
-    "lastScore": 84.5,
-    "lastRun": "2026-05-14T10-54-35",
-    "runsAtLevel": 2
+    "lastScore": 81.8,
+    "lastRun": "2026-05-26T03-05-43",
+    "runsAtLevel": 0
   },
   "question handling": {
     "level": 1,
     "masteredAt": null,
-    "lastScore": 79.7,
-    "lastRun": "2026-05-14T10-54-35",
-    "runsAtLevel": 2
+    "lastScore": 75.4,
+    "lastRun": "2026-05-26T03-05-43",
+    "runsAtLevel": 0
   },
   "edge cases": {
     "level": 1,
     "masteredAt": null,
-    "lastScore": 69,
-    "lastRun": "2026-05-14T10-54-35",
-    "runsAtLevel": 2
+    "lastScore": 67.3,
+    "lastRun": "2026-05-26T03-05-43",
+    "runsAtLevel": 0
   },
   "data validation": {
     "level": 1,
     "masteredAt": null,
-    "lastScore": 72.5,
-    "lastRun": "2026-05-14T10-54-35",
-    "runsAtLevel": 2
+    "lastScore": 81.2,
+    "lastRun": "2026-05-26T03-05-43",
+    "runsAtLevel": 0
   },
   "tables": {
     "level": 2,
     "masteredAt": "2026-05-05T10-06-14",
-    "lastScore": 67.6,
-    "lastRun": "2026-05-14T10-54-35",
-    "runsAtLevel": 2
+    "lastScore": 71,
+    "lastRun": "2026-05-26T03-05-43",
+    "runsAtLevel": 0
   },
   "named ranges": {
     "level": 2,
     "masteredAt": "2026-05-06T17-34-08",
-    "lastScore": 83.3,
-    "lastRun": "2026-05-14T10-54-35",
-    "runsAtLevel": 2
+    "lastScore": 90.7,
+    "lastRun": "2026-05-26T03-05-43",
+    "runsAtLevel": 0
   },
   "Hyperlinks": {
     "level": 1,
     "masteredAt": null,
-    "lastScore": 76.7,
-    "lastRun": "2026-05-14T10-54-35",
-    "runsAtLevel": 2
+    "lastScore": 82,
+    "lastRun": "2026-05-26T03-05-43",
+    "runsAtLevel": 0
   },
   "Comments": {
     "level": 2,
     "masteredAt": "2026-05-05T17-29-00",
-    "lastScore": 84.2,
-    "lastRun": "2026-05-14T10-54-35",
-    "runsAtLevel": 2
+    "lastScore": 83,
+    "lastRun": "2026-05-24T03-34-59",
+    "runsAtLevel": 0
   },
   "Sparklines": {
     "level": 2,
     "masteredAt": "2026-05-06T02-45-57",
-    "lastScore": 84.7,
-    "lastRun": "2026-05-14T10-54-35",
-    "runsAtLevel": 2
+    "lastScore": 73.3,
+    "lastRun": "2026-05-22T03-41-04",
+    "runsAtLevel": 0
   },
   "Page Layout": {
     "level": 2,
     "masteredAt": "2026-05-04T17-32-24",
-    "lastScore": 89.8,
-    "lastRun": "2026-05-14T10-54-35",
-    "runsAtLevel": 2
+    "lastScore": 81.7,
+    "lastRun": "2026-05-26T03-05-43",
+    "runsAtLevel": 0
   },
   "Shapes": {
     "level": 1,
     "masteredAt": null,
-    "lastScore": 75.8,
-    "lastRun": "2026-05-14T10-54-35",
-    "runsAtLevel": 2
+    "lastScore": 76.3,
+    "lastRun": "2026-05-26T03-05-43",
+    "runsAtLevel": 0
   }
 }

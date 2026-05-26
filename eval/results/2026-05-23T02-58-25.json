@@ -1,0 +1,935 @@
+{
+  "timestamp": "2026-05-23T02-58-25",
+  "model": "meta-llama/llama-3.3-70b-instruct",
+  "totalCostUSD": 0.014722940000000006,
+  "results": [
+    {
+      "id": "L1-filter-002",
+      "level": 1,
+      "category": "filtering",
+      "prompt": "show only rows where Status is Active",
+      "score": 80,
+      "reason": "The code is mostly correct, but loses points for not handling potential errors and not being a complete solution with proper context and loading, and also for not fully utilizing best practices.",
+      "hasCode": true,
+      "codeExpected": true,
+      "patternPass": true,
+      "missingPatterns": [],
+      "generatedCode": "await applyColumnFilter(\"Status\", \"Active\");"
+    },
+    {
+      "id": "L1-filter-003",
+      "level": 1,
+      "category": "filtering",
+      "prompt": "clear all filters",
+      "score": 85,
+      "reason": "The code correctly uses the clearFilters API and would work as intended, but loses points for approach due to the lack of context or error handling, and slightly for API correctness since the provided code snippet is minimal and assumes the existence of a properly loaded context.",
+      "hasCode": true,
+      "codeExpected": true,
+      "patternPass": true,
+      "missingPatterns": [],
+      "generatedCode": "await clearFilters();"
+    },
+    {
+      "id": "gen-L1-filtering-easy-022",
+      "level": 1,
+      "category": "filtering",
+      "prompt": "show only rows where X is val",
+      "score": 72,
+      "reason": "The code uses a correct API method, addresses the request, and would likely work, but lacks best practices and uses a potentially non-existent method without proper context or error handling.",
+      "hasCode": true,
+      "codeExpected": true,
+      "patternPass": true,
+      "missingPatterns": [],
+      "generatedCode": "await applyColumnFilter(\"X\", \"val\");"
+    },
+    {
+      "id": "gen-L1-filtering-easy-023",
+      "level": 1,
+      "category": "filtering",
+      "prompt": "filter column Y to show only rows with value val",
+      "score": 72,
+      "reason": "The code uses a correct API method but lacks context and proper setup, such as loading the worksheet and getting the column letter from the header, which reduces its completeness and adherence to best practices.",
+      "hasCode": true,
+      "codeExpected": true,
+      "patternPass": true,
+      "missingPatterns": [],
+      "generatedCode": "await applyColumnFilter(\"Y\", \"val\");"
+    },
+    {
+      "id": "gen-L1-filtering-easy-024",
+      "level": 1,
+      "category": "filtering",
+      "prompt": "clear any filters on the worksheet",
+      "score": 90,
+      "reason": "The code is mostly correct and complete, but loses points for not handling potential errors and not using the most efficient approach, as it directly clears the autoFilter without checking if it exists.",
+      "hasCode": true,
+      "codeExpected": true,
+      "patternPass": false,
+      "missingPatterns": [
+        "clearFilters"
+      ],
+      "generatedCode": "const sheet = workbook.worksheets.getActiveWorksheet();\nconst autoFilter = sheet.getAutoFilter();\nautoFilter.clear();\nawait context.sync();"
+    },
+    {
+      "id": "L1-sort-001",
+      "level": 1,
+      "category": "sorting",
+      "prompt": "sort the Name column A to Z",
+      "score": 67,
+      "reason": "The code correctly uses Office JS APIs and would likely execute without runtime errors, but it manually sorts the range instead of using the provided helpers and does not fully address the request by assuming the \"Name\" column is always in column A.",
+      "hasCode": true,
+      "codeExpected": true,
+      "patternPass": false,
+      "missingPatterns": [
+        "sortByColumn"
+      ],
+      "generatedCode": "const sheet = workbook.worksheets.getActiveWorksheet();\nconst used = sheet.getUsedRange();\nused.load(\"values\");\nawait context.sync();\nconst hdr = used.values[0].map(h => String(h).toLowerCase().trim());\nconst col = hdr.indexOf(\"name\");\nif (col === -1) throw new Error(\"Column 'Name' not found.\");\nconst range = sheet.getRange(\"A1:A\" + used.rowCount);\nrange.sort.apply({\n  key: 0,\n  ascending: true\n});\nawait context.sync();"
+    },
+    {
+      "id": "L1-sort-002",
+      "level": 1,
+      "category": "sorting",
+      "prompt": "sort by Amount from highest to lowest",
+      "score": 72,
+      "reason": "The code uses correct Office JS APIs and is mostly complete, but it has a flawed approach by not directly using the column index or name to sort, and the sortByColumn method is not a built-in Office JS API, which deducts points from API correctness and approach.",
+      "hasCode": true,
+      "codeExpected": true,
+      "patternPass": false,
+      "missingPatterns": [
+        "Amount"
+      ],
+      "generatedCode": "const sheet = workbook.worksheets.getActiveWorksheet();\nconst used = sheet.getRange(\"A1:B4\");\nused.load(\"values\");\nawait context.sync();\nconst colName = used.values[0][1]; // column B = index 1\nawait sortByColumn(colName, false);"
+    },
+    {
+      "id": "gen-L1-sorting-easy-022",
+      "level": 1,
+      "category": "sorting",
+      "prompt": "sort the X column in ascending order",
+      "score": 72,
+      "reason": "The code correctly uses Office JS APIs and addresses the request, but has issues with best practices, such as using `range.sort.apply` instead of the recommended `sortByColumn` helper, and lacks error handling for potential issues like an empty worksheet or column index out of range.",
+      "hasCode": true,
+      "codeExpected": true,
+      "patternPass": false,
+      "missingPatterns": [
+        "sortByColumn(\"X\", true)"
+      ],
+      "generatedCode": "const sheet = workbook.worksheets.getActiveWorksheet();\nconst used = sheet.getUsedRange();\nused.load(\"values\");\nawait context.sync();\nconst hdr = used.values[0].map(h => String(h).toLowerCase().trim());\nconst col = hdr.indexOf(\"x\");\nif (col === -1) throw new Error(\"Column 'X' not found.\");\nconst range = sheet.getRange(\"A1:A\" + used.rowCount);\nrange.sort.apply({\n  key: col,\n  ascending: true\n});\nawait context.sync();"
+    },
+    {
+      "id": "gen-L1-sorting-easy-023",
+      "level": 1,
+      "category": "sorting",
+      "prompt": "sort the Y column in descending order",
+      "score": 57,
+      "reason": "The code incorrectly assumes the existence of a `sortByColumn` method, which is not a real Office JS API, and also fails to properly handle the sorting of the entire column in descending order.",
+      "hasCode": true,
+      "codeExpected": true,
+      "patternPass": false,
+      "missingPatterns": [
+        "sortByColumn(\"Y\", false)"
+      ],
+      "generatedCode": "const sheet = workbook.worksheets.getActiveWorksheet();\nconst used = sheet.getRange(\"B:B\");\nused.load(\"values\");\nawait context.sync();\nconst colName = used.values[0][0]; // column B = index 0\nawait sortByColumn(colName, false);"
+    },
+    {
+      "id": "gen-L1-sorting-easy-024",
+      "level": 1,
+      "category": "sorting",
+      "prompt": "sort the X column in ascending order",
+      "score": 60,
+      "reason": "The code uses some correct Office JS APIs, but it has several issues, including the use of a hallucinated method `sortByColumn`, incorrect loading and syncing, and a lack of best practices, which significantly deducts from its overall score.",
+      "hasCode": true,
+      "codeExpected": true,
+      "patternPass": false,
+      "missingPatterns": [
+        "sortByColumn(\"X\", true)"
+      ],
+      "generatedCode": "const sheet = workbook.worksheets.getActiveWorksheet();\nconst used = sheet.getUsedRange();\nused.load(\"values\");\nawait context.sync();\nconst colName = used.values[0][0]; // column X = index 0\nawait sortByColumn(colName, true);"
+    },
+    {
+      "id": "L1-format-002",
+      "level": 1,
+      "category": "formatting",
+      "prompt": "add borders around all cells in the data range",
+      "score": 83,
+      "reason": "The code correctly uses Office JS APIs and would likely work in Excel Online, but it does not fully address the request as it adds borders to the entire used range, not just the data range, and lacks best practices in its approach.",
+      "hasCode": true,
+      "codeExpected": true,
+      "patternPass": false,
+      "missingPatterns": [
+        "format.borders"
+      ],
+      "generatedCode": "const sheet = workbook.worksheets.getActiveWorksheet();\nconst used = sheet.getUsedRange();\nused.load(\"address\");\nawait context.sync();\nconst range = sheet.getRange(used.address);\nrange.borders.getItem(Excel.BorderIndex.edgeTop).style = Excel.BorderStyle.thin;\nrange.borders.getItem(Excel.BorderIndex.edgeBottom).style = Excel.BorderStyle.thin;\nrange.borders.getItem(Excel.BorderIndex.edgeLeft).style = Excel.BorderStyle.thin;\nrange.borders.getItem(Excel.BorderIndex.edgeRight).style = Excel.BorderStyle.thin;\nrange.borders.getItem(Excel.BorderIndex.insideHorizontal).style = Excel.BorderStyle.thin;\nrange.borders.getItem(Excel.BorderIndex.insideVertical).style = Excel.BorderStyle.thin;\nawait context.sync();"
+    },
+    {
+      "id": "L1-format-003",
+      "level": 1,
+      "category": "formatting",
+      "prompt": "make column B numbers show as currency with 2 decimal places",
+      "score": 88,
+      "reason": "The code is mostly correct and would work as intended, but it lacks consideration for best practices, such as handling potential errors or using more efficient methods to achieve the desired formatting.",
+      "hasCode": true,
+      "codeExpected": true,
+      "patternPass": true,
+      "missingPatterns": [],
+      "generatedCode": "const sheet = workbook.worksheets.getActiveWorksheet();\nconst used = sheet.getUsedRange();\nused.load(\"columnCount\");\nawait context.sync();\nconst currencyRange = sheet.getRange(\"B1:B\" + used.rowCount);\ncurrencyRange.numberFormat = [[\"\\$#,##0.00\"]];\nawait context.sync();"
+    },
+    {
+      "id": "gen-L1-formatting-easy-101",
+      "level": 1,
+      "category": "formatting",
+      "prompt": "make the header row bold",
+      "score": 95,
+      "reason": "The code is almost perfect, but it loses points in the approach dimension because it manually sets the font bold property instead of using a potentially more efficient or specialized method, if one existed, to style the header row.",
+      "hasCode": true,
+      "codeExpected": true,
+      "patternPass": false,
+      "missingPatterns": [
+        "range.font.bold"
+      ],
+      "generatedCode": "const sheet = workbook.worksheets.getActiveWorksheet();\nconst header = sheet.getRange(\"1:1\");\nheader.format.font.bold = true;\nawait context.sync();"
+    },
+    {
+      "id": "gen-L1-formatting-easy-102",
+      "level": 1,
+      "category": "formatting",
+      "prompt": "center align the text in column A",
+      "score": 80,
+      "reason": "The code correctly uses Office JS APIs and addresses the request, but loses points for not loading the necessary properties before setting the alignment and not using the most efficient approach to get the range.",
+      "hasCode": true,
+      "codeExpected": true,
+      "patternPass": false,
+      "missingPatterns": [
+        "range.alignment.horizontal"
+      ],
+      "generatedCode": "const sheet = workbook.worksheets.getActiveWorksheet();\nconst used = sheet.getUsedRange();\nused.load(\"columnCount\");\nawait context.sync();\nsheet.getRange(\"A1:A\" + used.rowCount).alignment.horizontal = Excel.HorizontalAlignment.center;\nawait context.sync();"
+    },
+    {
+      "id": "gen-L1-formatting-easy-103",
+      "level": 1,
+      "category": "formatting",
+      "prompt": "set the font size of the entire data range to 12",
+      "score": 83,
+      "reason": "The code is mostly correct and would work, but it does not fully address the request as it sets the font size for the entire used range, not just the data range, and lacks best practices in its approach.",
+      "hasCode": true,
+      "codeExpected": true,
+      "patternPass": false,
+      "missingPatterns": [
+        "range.font.size"
+      ],
+      "generatedCode": "const sheet = workbook.worksheets.getActiveWorksheet();\nconst used = sheet.getUsedRange();\nused.load(\"address\");\nawait context.sync();\nconst dataRange = sheet.getRange(used.address);\ndataRange.format.font.size = 12;\nawait context.sync();"
+    },
+    {
+      "id": "L1-formulas-002",
+      "level": 1,
+      "category": "formulas",
+      "prompt": "add an AVERAGE formula in cell C2 for the range B2:B8",
+      "score": 92,
+      "reason": "The code is mostly correct, but loses points for not handling potential errors and not using try-catch blocks, which is a best practice for robustness, and also for not checking if the range is valid before applying the formula.",
+      "hasCode": true,
+      "codeExpected": true,
+      "patternPass": true,
+      "missingPatterns": [],
+      "generatedCode": "const sheet = workbook.worksheets.getActiveWorksheet();\nsheet.getRange(\"C2\").formulas = [[\"=AVERAGE(B2:B8)\"]];\nawait context.sync();"
+    },
+    {
+      "id": "L1-formulas-003",
+      "level": 1,
+      "category": "formulas",
+      "prompt": "in cell D2 write an IF formula that shows Pass if C2 is greater than 50, otherwise Fail",
+      "score": 90,
+      "reason": "The code is mostly correct and complete, but loses points for not handling potential errors and not using the most efficient approach, such as checking if the cell is already populated before writing the formula.",
+      "hasCode": true,
+      "codeExpected": true,
+      "patternPass": true,
+      "missingPatterns": [],
+      "generatedCode": "const sheet = workbook.worksheets.getActiveWorksheet();\nsheet.getRange(\"D2\").formulas = [[\"=IF(C2>50, \\\"Pass\\\", \\\"Fail\\\")\"]];\nawait context.sync();"
+    },
+    {
+      "id": "gen-L1-formulas-easy-055",
+      "level": 1,
+      "category": "formulas",
+      "prompt": "in cell A2 write a formula that shows the value of A1",
+      "score": 0,
+      "reason": "A: ",
+      "hasCode": true,
+      "codeExpected": true,
+      "patternPass": false,
+      "missingPatterns": [
+        "workbook.formulas.getValue"
+      ],
+      "generatedCode": "const sheet = workbook.worksheets.getActiveWorksheet();\nsheet.getRange(\"A2\").formulas = [[\"=A1\"]];\nawait context.sync();"
+    },
+    {
+      "id": "gen-L1-formulas-easy-056",
+      "level": 1,
+      "category": "formulas",
+      "prompt": "put a formula in cell B1 that adds 1 to the value in cell A1",
+      "score": 65,
+      "reason": "The code correctly uses Office JS APIs and would execute without runtime errors, but it fails to fully address the request by adding the formula to cell B2 instead of B1, and lacks best practices in its approach.",
+      "hasCode": true,
+      "codeExpected": true,
+      "patternPass": false,
+      "missingPatterns": [
+        "workbook.formulas.add"
+      ],
+      "generatedCode": "const sheet = workbook.worksheets.getActiveWorksheet();\nsheet.getRange(\"B2\").formulas = [[\"=A2+1\"]];\nawait context.sync();"
+    },
+    {
+      "id": "gen-L1-formulas-easy-057",
+      "level": 1,
+      "category": "formulas",
+      "prompt": "in cell C1 write a formula that shows the value of A1 multiplied by 2",
+      "score": 0,
+      "reason": "A: ",
+      "hasCode": true,
+      "codeExpected": true,
+      "patternPass": false,
+      "missingPatterns": [
+        "workbook.formulas.multiply"
+      ],
+      "generatedCode": "const sheet = workbook.worksheets.getActiveWorksheet();\nsheet.getRange(\"C1\").formulas = [[\"=A1*2\"]];\nawait context.sync();"
+    },
+    {
+      "id": "L1-conditional-001",
+      "level": 1,
+      "category": "conditional formatting",
+      "prompt": "highlight cells in the Score column red if below 50",
+      "score": 88,
+      "reason": "The code is mostly correct and would work as intended, but loses points for not handling potential errors and not using the most efficient approach, such as checking if a conditional format already exists before adding a new one.",
+      "hasCode": true,
+      "codeExpected": true,
+      "patternPass": true,
+      "missingPatterns": [],
+      "generatedCode": "const sheet = workbook.worksheets.getActiveWorksheet();\nconst range = sheet.getRange(\"B:B\");\nrange.conditionalFormats.add(Excel.ConditionalFormatType.cellValue,\n  {\n    operator: Excel.ConditionalOperator.lessThan,\n    values: [50]\n  },\n  {\n    fill: { color: \"red\" }\n  }\n);\nawait context.sync();"
+    },
+    {
+      "id": "gen-L1-conditional-formatting-easy-055",
+      "level": 1,
+      "category": "conditional formatting",
+      "prompt": "highlight cells in the X column green if equal to 10",
+      "score": 88,
+      "reason": "The code accurately uses Office JS APIs and would execute without runtime errors, but loses points for not fully addressing potential edge cases and not using the most optimal approach for conditional formatting.",
+      "hasCode": true,
+      "codeExpected": true,
+      "patternPass": true,
+      "missingPatterns": [],
+      "generatedCode": "const sheet = workbook.worksheets.getActiveWorksheet();\nconst range = sheet.getRange(\"A:A\");\nrange.conditionalFormats.add(Excel.ConditionalFormatType.cellValue,\n  {\n    operator: Excel.ConditionalOperator.equal,\n    values: [10]\n  },\n  {\n    fill: { color: \"green\" }\n  }\n);\nawait context.sync();"
+    },
+    {
+      "id": "gen-L1-conditional-formatting-easy-056",
+      "level": 1,
+      "category": "conditional formatting",
+      "prompt": "highlight cells in the Y column yellow if greater than 0",
+      "score": 92,
+      "reason": "The code is mostly correct and effective, but loses points for not handling potential errors and not using the most efficient approach, such as checking if a conditional format already exists before adding a new one.",
+      "hasCode": true,
+      "codeExpected": true,
+      "patternPass": true,
+      "missingPatterns": [],
+      "generatedCode": "const sheet = workbook.worksheets.getActiveWorksheet();\nconst range = sheet.getRange(\"B:B\");\nrange.conditionalFormats.add(Excel.ConditionalFormatType.cellValue, \n  {\n    operator: Excel.ConditionalOperator.greaterThan,\n    values: [0]\n  },\n  {\n    fill: { color: \"yellow\" }\n  }\n);\nawait context.sync();"
+    },
+    {
+      "id": "gen-L1-conditional-formatting-easy-057",
+      "level": 1,
+      "category": "conditional formatting",
+      "prompt": "highlight cells in the X column blue if less than 5",
+      "score": 67,
+      "reason": "The code is mostly correct but loses points for not handling potential errors, using a manual loop instead of available helpers, and not fully following best practices for Office JS API usage.",
+      "hasCode": true,
+      "codeExpected": true,
+      "patternPass": false,
+      "missingPatterns": [
+        "conditionalFormats.add"
+      ],
+      "generatedCode": "const sheet = workbook.worksheets.getActiveWorksheet();\nconst used = sheet.getUsedRange();\nused.load(\"values\");\nawait context.sync();\nconst values = used.values;\nconst hdr = values[0].map(h => String(h).toLowerCase().trim());\nconst colIndex = hdr.indexOf(\"x\");\nif (colIndex === -1) throw new Error(\"Column 'X' not found. Check the column name and try again.\");\nfor (let i = 1; i < values.length; i++) {\n  if (values[i][colIndex] < 5) {\n    const cell = sheet.getRangeByIndexes(i, colIndex, 1, 1);\n    cell.format.fill.color = \"blue\";\n  }\n}\nawait context.sync();"
+    },
+    {
+      "id": "L1-data-001",
+      "level": 1,
+      "category": "data manipulation",
+      "prompt": "copy the data in columns A and B and paste it starting at column D",
+      "score": 75,
+      "reason": "The code correctly uses Office JS APIs and would likely execute without runtime errors, but it partially addresses the request by copying to columns D and E instead of just starting at column D, and lacks best practices in its approach.",
+      "hasCode": true,
+      "codeExpected": true,
+      "patternPass": true,
+      "missingPatterns": [],
+      "generatedCode": "const sheet = workbook.worksheets.getActiveWorksheet();\nconst src = sheet.getRange(\"A:B\");\nconst dst = sheet.getRange(\"D1\");\ndst.copyFrom(src, Excel.RangeCopyType.all, false, false);\nawait context.sync();"
+    },
+    {
+      "id": "L1-data-002",
+      "level": 1,
+      "category": "data manipulation",
+      "prompt": "clear all the content in column C",
+      "score": 93,
+      "reason": "The code is mostly correct and effective, but loses points for not handling potential errors and not using the most efficient approach, such as directly using the `getRange` method without loading the entire used range.",
+      "hasCode": true,
+      "codeExpected": true,
+      "patternPass": true,
+      "missingPatterns": [],
+      "generatedCode": "const sheet = workbook.worksheets.getActiveWorksheet();\nconst used = sheet.getUsedRange();\nused.load(\"rowCount\");\nawait context.sync();\nsheet.getRange(\"C1:C\" + used.rowCount).clear(Excel.ClearApplyTo.contents);\nawait context.sync();"
+    },
+    {
+      "id": "gen-L1-data-manipulation-easy-022",
+      "level": 1,
+      "category": "data manipulation",
+      "prompt": "Set the value of cell A1 to 'Name'",
+      "score": 92,
+      "reason": "The code is mostly correct and complete, but loses points for not handling potential errors and not using try-catch blocks, which is a best practice in Office JS development.",
+      "hasCode": true,
+      "codeExpected": true,
+      "patternPass": false,
+      "missingPatterns": [
+        "Range.setValue"
+      ],
+      "generatedCode": "const sheet = workbook.worksheets.getActiveWorksheet();\nsheet.getRange(\"A1\").values = [[\"Name\"]];\nawait context.sync();"
+    },
+    {
+      "id": "gen-L1-data-manipulation-easy-023",
+      "level": 1,
+      "category": "data manipulation",
+      "prompt": "Clear the content of cell B2",
+      "score": 95,
+      "reason": "The code is nearly flawless, but loses a few points on approach because it directly uses the clear method without considering potential edge cases or providing additional error handling.",
+      "hasCode": true,
+      "codeExpected": true,
+      "patternPass": false,
+      "missingPatterns": [
+        "Range.clear"
+      ],
+      "generatedCode": "const sheet = workbook.worksheets.getActiveWorksheet();\nsheet.getRange(\"B2\").clear(Excel.ClearApplyTo.contents);\nawait context.sync();"
+    },
+    {
+      "id": "gen-L1-data-manipulation-easy-024",
+      "level": 1,
+      "category": "data manipulation",
+      "prompt": "Make column A a little wider",
+      "score": 72,
+      "reason": "The code correctly uses Office JS APIs and would likely execute without runtime errors, but it sets a fixed column width of 15, which may not be suitable for all users and doesn't fully address the request to make the column \"a little wider\" in a relative sense.",
+      "hasCode": true,
+      "codeExpected": true,
+      "patternPass": false,
+      "missingPatterns": [
+        "autofitColumns"
+      ],
+      "generatedCode": "const sheet = workbook.worksheets.getActiveWorksheet();\nconst column = sheet.getRange(\"A:A\");\ncolumn.columnWidth = 15;\nawait context.sync();"
+    },
+    {
+      "id": "L1-sheet-001",
+      "level": 1,
+      "category": "sheet operations",
+      "prompt": "freeze the top row so the headers stay visible when scrolling",
+      "score": 80,
+      "reason": "The code correctly uses the Office JS API to freeze panes, but loses points for not fully addressing the request by not providing any error handling or feedback, and not using the most efficient approach by directly using the `freezePanes` method without checking if the worksheet is already active.",
+      "hasCode": true,
+      "codeExpected": true,
+      "patternPass": true,
+      "missingPatterns": [],
+      "generatedCode": "const sheet = workbook.worksheets.getActiveWorksheet();\nsheet.freezePanes(\"A2\");\nawait context.sync();"
+    },
+    {
+      "id": "L1-sheet-002",
+      "level": 1,
+      "category": "sheet operations",
+      "prompt": "auto-fit the width of all columns to fit their content",
+      "score": 83,
+      "reason": "The code is mostly correct and complete, but loses points for not handling potential errors, using a simple loop instead of available helpers, and not checking if the used range is valid before accessing its properties.",
+      "hasCode": true,
+      "codeExpected": true,
+      "patternPass": true,
+      "missingPatterns": [],
+      "generatedCode": "const sheet = workbook.worksheets.getActiveWorksheet();\nconst used = sheet.getUsedRange();\nused.load(\"columnCount\");\nawait context.sync();\nfor (let i = 0; i < used.columnCount; i++) {\n  sheet.getRangeByIndexes(0, i, used.rowCount, 1).format.autofitColumns();\n}\nawait context.sync();"
+    },
+    {
+      "id": "gen-L1-sheet-operations-easy-040",
+      "level": 1,
+      "category": "sheet operations",
+      "prompt": "Create a new sheet in the workbook",
+      "score": 90,
+      "reason": "The code is mostly correct but loses points for not handling potential errors and not following best practices, such as checking if a sheet with the same name already exists before adding a new one.",
+      "hasCode": true,
+      "codeExpected": true,
+      "patternPass": true,
+      "missingPatterns": [],
+      "generatedCode": "const sheet = workbook.worksheets.add(\"NewSheet\");\nawait context.sync();"
+    },
+    {
+      "id": "gen-L1-sheet-operations-easy-041",
+      "level": 1,
+      "category": "sheet operations",
+      "prompt": "Rename the first sheet in the workbook to 'Data'",
+      "score": 90,
+      "reason": "The code is mostly correct, but lacks error handling and does not check if the worksheet name already exists, which could lead to potential issues, and also does not follow best practices for naming and commenting the code.",
+      "hasCode": true,
+      "codeExpected": true,
+      "patternPass": false,
+      "missingPatterns": [
+        "worksheet.setName"
+      ],
+      "generatedCode": "const sheet = workbook.worksheets.getItem(0);\nsheet.name = \"Data\";\nawait context.sync();"
+    },
+    {
+      "id": "gen-L1-sheet-operations-easy-042",
+      "level": 1,
+      "category": "sheet operations",
+      "prompt": "Delete the second sheet in the workbook",
+      "score": 92,
+      "reason": "The code is mostly correct, but it lacks error handling and does not check if the workbook actually has at least two sheets before attempting to delete the second one, which could lead to runtime errors.",
+      "hasCode": true,
+      "codeExpected": true,
+      "patternPass": false,
+      "missingPatterns": [
+        "worksheet.delete"
+      ],
+      "generatedCode": "const sheet = workbook.worksheets.getItemAt(1);\nsheet.delete();\nawait context.sync();"
+    },
+    {
+      "id": "L1-questions-001",
+      "level": 1,
+      "category": "question handling",
+      "prompt": "what does the VLOOKUP function do?",
+      "score": 72,
+      "reason": "The response accurately describes the VLOOKUP function and provides relevant code, but lacks clarity in explaining the function's parameters and relevance to the user's workbook context, and the bonus score is reduced due to the lack of a concrete example or note on potential caveats.",
+      "hasCode": true,
+      "codeExpected": false,
+      "patternPass": true,
+      "missingPatterns": [],
+      "generatedCode": "const sheet = workbook.worksheets.getActiveWorksheet();\nsheet.getRange(\"C2\").formulas = [[\"=VLOOKUP(A2, A:B, 2, FALSE)\"]];\nawait context.sync();"
+    },
+    {
+      "id": "L1-questions-002",
+      "level": 1,
+      "category": "question handling",
+      "prompt": "how many rows of data do I have?",
+      "score": 73,
+      "reason": "The response accurately calculates the number of rows, but loses points for not accounting for potential edge cases, such as an empty worksheet, and for not providing additional context or examples, which would have increased its clarity and usefulness.",
+      "hasCode": true,
+      "codeExpected": false,
+      "patternPass": false,
+      "missingPatterns": [
+        "4"
+      ],
+      "generatedCode": "const sheet = workbook.worksheets.getActiveWorksheet();\nconst used = sheet.getUsedRange();\nused.load(\"rowCount\");\nawait context.sync();\nreturn \"You have \" + (used.rowCount - 1) + \" rows of data.\";"
+    },
+    {
+      "id": "gen-L1-question-handling-easy-055",
+      "level": 1,
+      "category": "question handling",
+      "prompt": "what is in cell B1?",
+      "score": 83,
+      "reason": "The code is mostly correct and uses real Office JS APIs, but loses points for not handling potential errors and not using the most efficient approach to retrieve a single cell value.",
+      "hasCode": true,
+      "codeExpected": true,
+      "patternPass": false,
+      "missingPatterns": [
+        "Worksheet.getRange"
+      ],
+      "generatedCode": "const sheet = workbook.worksheets.getActiveWorksheet();\nconst cell = sheet.getRange(\"B1\");\ncell.load(\"values\");\nawait context.sync();\nreturn \"Cell B1 contains: \" + cell.values[0][0];"
+    },
+    {
+      "id": "gen-L1-question-handling-easy-056",
+      "level": 1,
+      "category": "question handling",
+      "prompt": "how many columns are in the worksheet?",
+      "score": 90,
+      "reason": "The code is mostly correct, but loses points for approach due to not considering potential optimizations or edge cases, and also for would_it_work due to the potential issue of not handling the case where the used range is not fully loaded before trying to access its properties.",
+      "hasCode": true,
+      "codeExpected": true,
+      "patternPass": false,
+      "missingPatterns": [
+        "Worksheet.getUsedRange"
+      ],
+      "generatedCode": "const sheet = workbook.worksheets.getActiveWorksheet();\nconst used = sheet.getUsedRange();\nused.load(\"columnCount\");\nawait context.sync();\nreturn \"Found \" + used.columnCount + \" columns.\";"
+    },
+    {
+      "id": "gen-L1-question-handling-easy-057",
+      "level": 1,
+      "category": "question handling",
+      "prompt": "is there data in cell A2?",
+      "score": 83,
+      "reason": "The code is mostly correct and complete, but loses points for not handling potential errors and not using the most efficient approach to check for empty cells, such as using the `cell.values[0][0] === \"\"` check in addition to null and undefined checks.",
+      "hasCode": true,
+      "codeExpected": true,
+      "patternPass": false,
+      "missingPatterns": [
+        "Range.getValue"
+      ],
+      "generatedCode": "const sheet = workbook.worksheets.getActiveWorksheet();\nconst cell = sheet.getRange(\"A2\");\ncell.load(\"values\");\nawait context.sync();\nreturn cell.values[0][0] !== null && cell.values[0][0] !== undefined;"
+    },
+    {
+      "id": "L1-edge-001",
+      "level": 1,
+      "category": "edge cases",
+      "prompt": "filter the Department column to show only Engineering",
+      "score": 40,
+      "reason": "The code does not use any real Office JS APIs, instead relying on a generic JavaScript error throw, which is the main flaw, but it does correctly identify the missing column and provides a helpful error message.",
+      "hasCode": true,
+      "codeExpected": true,
+      "patternPass": false,
+      "missingPatterns": [
+        "applyColumnFilter"
+      ],
+      "generatedCode": "throw new Error(\"Column 'Department' not found. Check the column name and try again.\");"
+    },
+    {
+      "id": "gen-L1-edge-cases-easy-043",
+      "level": 1,
+      "category": "edge cases",
+      "prompt": "filter the X column to show only values equal to 1",
+      "score": 80,
+      "reason": "The code is mostly correct but loses points for not handling potential errors and not being a complete solution with proper context and variable initialization.",
+      "hasCode": true,
+      "codeExpected": true,
+      "patternPass": true,
+      "missingPatterns": [],
+      "generatedCode": "await applyColumnFilter(\"X\", \"1\");"
+    },
+    {
+      "id": "gen-L1-edge-cases-easy-044",
+      "level": 1,
+      "category": "edge cases",
+      "prompt": "clear all filters and then filter the Y column to show only values containing 'e'",
+      "score": 0,
+      "reason": "A: ",
+      "hasCode": true,
+      "codeExpected": true,
+      "patternPass": true,
+      "missingPatterns": [],
+      "generatedCode": "await clearFilters();\nawait applyColumnFilter(\"Y\", Excel.FilterOperator.contains, [\"e\"]);"
+    },
+    {
+      "id": "gen-L1-edge-cases-easy-045",
+      "level": 1,
+      "category": "edge cases",
+      "prompt": "filter the X column to show only values less than 5",
+      "score": 90,
+      "reason": "The code is mostly correct and complete, but loses points for not using the more specific `applyColumnFilter` helper and for potential issues with the load/sync order, as `context.sync()` is used without ensuring the worksheet and autoFilter objects are fully loaded.",
+      "hasCode": true,
+      "codeExpected": true,
+      "patternPass": false,
+      "missingPatterns": [
+        "applyColumnFilter"
+      ],
+      "generatedCode": "const sheet = workbook.worksheets.getActiveWorksheet();\nconst autoFilter = sheet.getAutoFilter();\nautoFilter.apply(\"A\", { operator: Excel.FilterOperator.lessThan, values: [5] });\nawait context.sync();"
+    },
+    {
+      "id": "L1-validation-001",
+      "level": 1,
+      "category": "data validation",
+      "prompt": "add a dropdown list to column C that only allows Low, Medium, or High",
+      "score": 83,
+      "reason": "The code correctly uses Office JS APIs and would likely work in Excel Online, but it does not fully address the request as it applies the data validation to the entire column including the header, and does not handle potential errors or edge cases.",
+      "hasCode": true,
+      "codeExpected": true,
+      "patternPass": true,
+      "missingPatterns": [],
+      "generatedCode": "const sheet = workbook.worksheets.getActiveWorksheet();\nconst used = sheet.getUsedRange();\nused.load(\"rowCount\");\nawait context.sync();\nconst validation = sheet.getRange(\"C1:C\" + used.rowCount).dataValidation;\nvalidation.clear();\nvalidation.setType(Excel.DataValidationType.list);\nvalidation.formula = { formula1: \"\\\"Low,Medium,High\\\"\" };\nvalidation.showInput = true;\nvalidation.showError = true;\nawait context.sync();"
+    },
+    {
+      "id": "L1-validation-002",
+      "level": 1,
+      "category": "data validation",
+      "prompt": "make sure column B only accepts whole numbers between 1 and 100",
+      "score": 72,
+      "reason": "The code correctly applies data validation to column B, but it does not fully address the request by only allowing whole numbers, as it does not restrict input to integers.",
+      "hasCode": true,
+      "codeExpected": true,
+      "patternPass": true,
+      "missingPatterns": [],
+      "generatedCode": "const sheet = workbook.worksheets.getActiveWorksheet();\nconst range = sheet.getRange(\"B:B\");\nrange.dataValidation.rules.add(Excel.DataValidationOperator.between, {\n  formula1: \"1\",\n  formula2: \"100\"\n});\nrange.dataValidation.showInputMessage = true;\nrange.dataValidation.inputMessage = \"Please enter a whole number between 1 and 100.\";\nrange.dataValidation.showErrorMessage = true;\nrange.dataValidation.errorMessage = \"Invalid input. Please enter a whole number between 1 and 100.\";\nawait context.sync();"
+    },
+    {
+      "id": "gen-L1-data-validation-easy-055",
+      "level": 1,
+      "category": "data validation",
+      "prompt": "restrict column A to only allow the value 'no'",
+      "score": 58,
+      "reason": "The code incorrectly implements the request by deleting rows with values other than 'no' instead of restricting the column to only allow the value 'no', and also lacks proper data validation implementation.",
+      "hasCode": true,
+      "codeExpected": true,
+      "patternPass": false,
+      "missingPatterns": [
+        "dataValidation"
+      ],
+      "generatedCode": "const sheet = workbook.worksheets.getActiveWorksheet();\nconst used = sheet.getUsedRange();\nused.load(\"values\");\nawait context.sync();\nconst rows = used.values;\nconst hdr = rows[0].map(h => String(h).toLowerCase().trim());\nconst col = hdr.indexOf(\"x\");\nif (col === -1) throw new Error(\"Column 'X' not found.\");\nfor (let i = rows.length - 1; i >= 1; i--) {\n  if (String(rows[i][col]).toLowerCase() !== \"no\") {\n    sheet.getRangeByIndexes(i, col, 1, 1).delete(Excel.DeleteShiftDirection.up);\n    await context.sync();\n  }\n}"
+    },
+    {
+      "id": "gen-L1-data-validation-easy-056",
+      "level": 1,
+      "category": "data validation",
+      "prompt": "add a dropdown list to column B that only allows 'big' or 'small'",
+      "score": 83,
+      "reason": "The code correctly uses Office JS APIs and should work in Excel Online, but it does not fully address the request by not handling potential errors and not providing any feedback to the user, and it does not use the most efficient approach by directly setting the formula for the data validation.",
+      "hasCode": true,
+      "codeExpected": true,
+      "patternPass": true,
+      "missingPatterns": [],
+      "generatedCode": "const sheet = workbook.worksheets.getActiveWorksheet();\nconst used = sheet.getUsedRange();\nused.load(\"rowCount\");\nawait context.sync();\nconst validation = sheet.getRange(\"B2:B\" + used.rowCount).dataValidation;\nvalidation.clear();\nvalidation.setType(Excel.DataValidationType.list);\nvalidation.setFormula({\"formula1\": \"\\\"big,small\\\"\"});\nawait context.sync();"
+    },
+    {
+      "id": "gen-L1-data-validation-easy-057",
+      "level": 1,
+      "category": "data validation",
+      "prompt": "ensure column A only accepts whole numbers between 1 and 5",
+      "score": 72,
+      "reason": "The code correctly applies data validation to column A, but it does not handle existing invalid data, such as the value 7 in cell A3, and lacks best practices in terms of error handling and code organization.",
+      "hasCode": true,
+      "codeExpected": true,
+      "patternPass": true,
+      "missingPatterns": [],
+      "generatedCode": "const sheet = workbook.worksheets.getActiveWorksheet();\nconst range = sheet.getRange(\"A:A\");\nrange.dataValidation.rules.add(\n  Excel.DataValidationOperator.between,\n  [1, 5],\n  true\n);\nawait context.sync();"
+    },
+    {
+      "id": "gen-L1-Hyperlinks-easy-037",
+      "level": 1,
+      "category": "Hyperlinks",
+      "prompt": "Add a hyperlink to cell A1 with the text 'Google' that links to https://www.google.com",
+      "score": 90,
+      "reason": "The code is mostly correct and complete, but loses points for not handling potential errors and not using try-catch blocks, which is a best practice in Office JS API programming.",
+      "hasCode": true,
+      "codeExpected": true,
+      "patternPass": false,
+      "missingPatterns": [
+        "workbook.addHyperlink"
+      ],
+      "generatedCode": "const sheet = workbook.worksheets.getActiveWorksheet();\nconst range = sheet.getRange(\"A1\");\nrange.hyperlink = { address: \"https://www.google.com\", text: \"Google\" };\nawait context.sync();"
+    },
+    {
+      "id": "gen-L1-Hyperlinks-easy-038",
+      "level": 1,
+      "category": "Hyperlinks",
+      "prompt": "Create a hyperlink in cell B1 to https://www.bing.com with the display text 'Search'",
+      "score": 88,
+      "reason": "The code is mostly correct and complete, but loses points for not handling potential errors and not using best practices, such as checking if the range is valid before setting the hyperlink.",
+      "hasCode": true,
+      "codeExpected": true,
+      "patternPass": false,
+      "missingPatterns": [
+        "workbook.addHyperlink"
+      ],
+      "generatedCode": "const sheet = workbook.worksheets.getActiveWorksheet();\nconst range = sheet.getRange(\"B1\");\nrange.hyperlink = { address: \"https://www.bing.com\", display: \"Search\" };\nawait context.sync();"
+    },
+    {
+      "id": "gen-L1-Hyperlinks-easy-039",
+      "level": 1,
+      "category": "Hyperlinks",
+      "prompt": "Add a hyperlink to cell A1 that links to https://www.microsoft.com",
+      "score": 90,
+      "reason": "The code is mostly correct and complete, but loses points for not handling potential errors and not using the most efficient approach, such as checking if the hyperlink already exists before adding it.",
+      "hasCode": true,
+      "codeExpected": true,
+      "patternPass": false,
+      "missingPatterns": [
+        "workbook.addHyperlink"
+      ],
+      "generatedCode": "const sheet = workbook.worksheets.getActiveWorksheet();\nconst range = sheet.getRange(\"A1\");\nrange.hyperlinks.add({ address: \"https://www.microsoft.com\" });\nawait context.sync();"
+    },
+    {
+      "id": "gen-L2-Page-Layout-easy-053",
+      "level": 2,
+      "category": "Page Layout",
+      "prompt": "Set the page orientation to landscape for a blank worksheet with a single header row.",
+      "score": 95,
+      "reason": "The code perfectly addresses the request using correct Office JS APIs, but lacks consideration of potential best practices or additional helpers that could enhance the solution.",
+      "hasCode": true,
+      "codeExpected": true,
+      "patternPass": false,
+      "missingPatterns": [
+        "section.PageSetup.orientation"
+      ],
+      "generatedCode": "const sheet = workbook.worksheets.getActiveWorksheet();\nsheet.pageSetup.orientation = Excel.PageOrientation.landscape;\nawait context.sync();"
+    },
+    {
+      "id": "gen-L2-Page-Layout-easy-054",
+      "level": 2,
+      "category": "Page Layout",
+      "prompt": "Set the top margin to 1 inch for a simple worksheet with a short list of names.",
+      "score": 90,
+      "reason": "The code is mostly correct, but lacks error handling and does not check if the worksheet is valid before setting the margin, which might lead to runtime errors in certain scenarios.",
+      "hasCode": true,
+      "codeExpected": true,
+      "patternPass": false,
+      "missingPatterns": [
+        "section.PageSetup.margins"
+      ],
+      "generatedCode": "const sheet = workbook.worksheets.getActiveWorksheet();\nsheet.pageSetup.margin.top = 1;\nawait context.sync();"
+    },
+    {
+      "id": "gen-L2-Page-Layout-easy-055",
+      "level": 2,
+      "category": "Page Layout",
+      "prompt": "Set the fit to page option to 1 page wide for a short list of numbers in one column.",
+      "score": 83,
+      "reason": "The code correctly uses Office JS APIs and should work in Excel Online, but it lacks consideration for best practices and does not fully address potential edge cases, such as handling multiple worksheets or error handling.",
+      "hasCode": true,
+      "codeExpected": true,
+      "patternPass": false,
+      "missingPatterns": [
+        "section.PageSetup.fitToPage"
+      ],
+      "generatedCode": "const sheet = workbook.worksheets.getActiveWorksheet();\nsheet.pageSetup.fitToPage = true;\nsheet.pageSetup.fitToWidth = 1;\nsheet.pageSetup.fitToHeight = 0;\nawait context.sync();"
+    },
+    {
+      "id": "gen-L2-tables-easy-222",
+      "level": 2,
+      "category": "tables",
+      "prompt": "create a table with one column of data in cell A1",
+      "score": 83,
+      "reason": "The code correctly uses Office JS APIs and would likely work, but loses points for not fully addressing the request, as it includes the header row in the table range, and does not demonstrate the best approach by not checking if a table already exists before adding a new one.",
+      "hasCode": true,
+      "codeExpected": true,
+      "patternPass": true,
+      "missingPatterns": [],
+      "generatedCode": "const sheet = workbook.worksheets.getActiveWorksheet();\nconst range = sheet.getRange(\"A1:A3\");\nsheet.tables.add(range, true);\nawait context.sync();"
+    },
+    {
+      "id": "gen-L2-tables-easy-223",
+      "level": 2,
+      "category": "tables",
+      "prompt": "convert the range A1:A2 to a table",
+      "score": 80,
+      "reason": "The code is mostly correct and complete, but loses points for not checking if the range has a header row before converting to a table, and not using the `table` object to specify additional table properties, which is a best practice.",
+      "hasCode": true,
+      "codeExpected": true,
+      "patternPass": false,
+      "missingPatterns": [
+        "tables.add"
+      ],
+      "generatedCode": "const sheet = workbook.worksheets.getActiveWorksheet();\nconst range = sheet.getRange(\"A1:A2\");\nrange.format.asTable();\nawait context.sync();"
+    },
+    {
+      "id": "gen-L2-tables-easy-224",
+      "level": 2,
+      "category": "tables",
+      "prompt": "create a table from the data in cell A1",
+      "score": 72,
+      "reason": "The code correctly uses Office JS APIs and would likely work in Excel Online, but it lacks consideration for best practices and does not fully address the request as it assumes the range to be formatted as a table is A1:A2 without explicitly checking the data range.",
+      "hasCode": true,
+      "codeExpected": true,
+      "patternPass": false,
+      "missingPatterns": [
+        "tables.add"
+      ],
+      "generatedCode": "const sheet = workbook.worksheets.getActiveWorksheet();\nconst range = sheet.getRange(\"A1:A2\");\nrange.format.asTable();\nawait context.sync();"
+    },
+    {
+      "id": "gen-L2-Comments-easy-047",
+      "level": 2,
+      "category": "Comments",
+      "prompt": "Add a comment to cell A1 with the text 'Simple Comment'",
+      "score": 92,
+      "reason": "The code is mostly correct and complete, but loses points for not handling potential errors and not using the most efficient approach, such as checking if a comment already exists before adding a new one.",
+      "hasCode": true,
+      "codeExpected": true,
+      "patternPass": true,
+      "missingPatterns": [],
+      "generatedCode": "const sheet = workbook.worksheets.getActiveWorksheet();\nconst range = sheet.getRange(\"A1\");\nrange.comments.add(\"Simple Comment\");\nawait context.sync();"
+    },
+    {
+      "id": "gen-L2-Comments-easy-048",
+      "level": 2,
+      "category": "Comments",
+      "prompt": "Add a comment to the first cell with the text 'First Cell Comment'",
+      "score": 92,
+      "reason": "The code is mostly correct and complete, but loses points for not handling potential errors and not using try-catch blocks for better error handling, which is a best practice.",
+      "hasCode": true,
+      "codeExpected": true,
+      "patternPass": true,
+      "missingPatterns": [],
+      "generatedCode": "const sheet = workbook.worksheets.getActiveWorksheet();\nconst range = sheet.getRange(\"A1\");\nrange.comments.add(\"First Cell Comment\");\nawait context.sync();"
+    },
+    {
+      "id": "gen-L2-Comments-easy-049",
+      "level": 2,
+      "category": "Comments",
+      "prompt": "Add a comment to cell B1 with the text 'Header Comment'",
+      "score": 92,
+      "reason": "The code is mostly correct and complete, but loses points for not handling potential errors and not using try-catch blocks, which is a best practice in Office JS API programming.",
+      "hasCode": true,
+      "codeExpected": true,
+      "patternPass": false,
+      "missingPatterns": [
+        "comments.add"
+      ],
+      "generatedCode": "const sheet = workbook.worksheets.getActiveWorksheet();\nconst comment = sheet.getRange(\"B1\").addComment(\"Header Comment\");\nawait context.sync();"
+    },
+    {
+      "id": "gen-L1-Shapes-easy-052",
+      "level": 1,
+      "category": "Shapes",
+      "prompt": "Insert a rectangle shape in cell A1 with simple headers",
+      "score": 83,
+      "reason": "The code correctly uses Office JS APIs and is mostly complete, but loses points for not fully addressing the request by not considering the existing headers and data in the worksheet, and for not using best practices in terms of shape sizing and positioning.",
+      "hasCode": true,
+      "codeExpected": true,
+      "patternPass": true,
+      "missingPatterns": [],
+      "generatedCode": "const sheet = workbook.worksheets.getActiveWorksheet();\nconst shape = sheet.shapes.addShape(Excel.ShapeType.rectangle, sheet.getRange(\"A1\").getAbsolutePosition().left, sheet.getRange(\"A1\").getAbsolutePosition().top, 100, 20);\nshape.textFrame.text = \"Simple Header\";\nshape.textFrame.fontSize = 12;\nshape.line.format.fill.color = \"black\";\nshape.line.format.transparency = 0;\nawait context.sync();"
+    },
+    {
+      "id": "gen-L1-Shapes-easy-053",
+      "level": 1,
+      "category": "Shapes",
+      "prompt": "Add an oval shape to cell B2 with basic data",
+      "score": 65,
+      "reason": "The code uses correct Office JS APIs and is mostly complete, but it doesn't fully address the request by not specifying the correct position of the oval shape relative to cell B2, and lacks best practices in terms of error handling and shape placement.",
+      "hasCode": true,
+      "codeExpected": true,
+      "patternPass": true,
+      "missingPatterns": [],
+      "generatedCode": "const sheet = workbook.worksheets.getActiveWorksheet();\nconst shape = sheet.shapes.addShape(Excel.ShapeType.oval, 30, 10, 50, 20);\nawait context.sync();"
+    },
+    {
+      "id": "gen-L1-Shapes-easy-054",
+      "level": 1,
+      "category": "Shapes",
+      "prompt": "Insert a rectangle shape in cell A3 with numeric data",
+      "score": 83,
+      "reason": "The code correctly uses Office JS APIs and would likely work in Excel Online, but it does not fully address the request as it inserts a shape with a fixed size and position that may not perfectly align with cell A3, and it lacks best practices in terms of dynamic sizing and positioning.",
+      "hasCode": true,
+      "codeExpected": true,
+      "patternPass": true,
+      "missingPatterns": [],
+      "generatedCode": "const sheet = workbook.worksheets.getActiveWorksheet();\nconst shape = sheet.shapes.addShape(Excel.ShapeType.rectangle, 0, 0, 100, 50);\nshape.textFrame.text = \"30\";\nshape.textFrame.fontSize = 12;\nshape.left = sheet.getRange(\"A3\").left;\nshape.top = sheet.getRange(\"A3\").top;\nawait context.sync();"
+    },
+    {
+      "id": "gen-L2-named-ranges-easy-037",
+      "level": 2,
+      "category": "named ranges",
+      "prompt": "Create a named range called Header that covers the cell A1",
+      "score": 88,
+      "reason": "The code correctly uses Office JS APIs and fully addresses the request, but loses points for not handling potential errors and not using the most efficient approach, such as directly referencing the cell without specifying the sheet name.",
+      "hasCode": true,
+      "codeExpected": true,
+      "patternPass": true,
+      "missingPatterns": [],
+      "generatedCode": "const workbook = context.workbook;\nworkbook.names.add(\"Header\", \"=Sheet1!$A$1\");\nawait context.sync();"
+    },
+    {
+      "id": "gen-L2-named-ranges-easy-038",
+      "level": 2,
+      "category": "named ranges",
+      "prompt": "Create a named range called ValueCell that covers the cell A2",
+      "score": 95,
+      "reason": "The code is mostly correct and complete, but loses points on approach for not considering potential edge cases, such as checking if a named range with the same name already exists, which is a best practice.",
+      "hasCode": true,
+      "codeExpected": true,
+      "patternPass": true,
+      "missingPatterns": [],
+      "generatedCode": "const workbook = context.workbook;\nworkbook.names.add(\"ValueCell\", \"=Sheet1!$A$2\");\nawait context.sync();"
+    },
+    {
+      "id": "gen-L2-named-ranges-easy-039",
+      "level": 2,
+      "category": "named ranges",
+      "prompt": "Create a named range called SingleHeader that covers the cell B1",
+      "score": 88,
+      "reason": "The code is mostly correct and would work as intended, but it lacks consideration for best practices and available helpers, and assumes the worksheet name is \"Sheet1\" without verifying it.",
+      "hasCode": true,
+      "codeExpected": true,
+      "patternPass": true,
+      "missingPatterns": [],
+      "generatedCode": "const workbook = context.workbook;\nworkbook.names.add(\"SingleHeader\", \"=Sheet1!$B$1\");\nawait context.sync();"
+    }
+  ]
+}

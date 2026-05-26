@@ -127,6 +127,12 @@ html,body{height:100%;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;
 .copy-code-btn:hover{border-color:var(--accent);color:var(--accent)}
 .copy-code-btn.copied{color:var(--ok);border-color:var(--ok)}
 
+.vba-block{margin-top:6px;border:1px solid #9C27B0;border-radius:var(--r2);overflow:hidden;font-size:12px}
+.vba-head{background:rgba(156,39,176,.1);padding:5px 10px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none}
+.vba-head span{font-size:11px;font-weight:600;color:#9C27B0;text-transform:uppercase;letter-spacing:.4px}
+.vba-steps{padding:8px 12px;background:var(--surf);font-size:11px;color:var(--text2);line-height:1.7;border-top:1px solid var(--border)}
+.vba-steps strong{color:var(--text)}
+
 .typing{display:flex;align-items:center;gap:4px;padding:10px 0}
 .tdot{width:6px;height:6px;background:var(--accent);border-radius:50%;animation:tbounce 1.2s ease-in-out infinite}
 .tdot:nth-child(2){animation-delay:.2s}
@@ -440,7 +446,7 @@ html,body{height:100%;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;
         <div class="slabel">History</div>
         <button class="sdanger" onclick="clearAllHistory()">Delete all chat history</button>
       </div>
-      <div class="sfooter">Excel AI Assistant · v3</div>
+      <div class="sfooter" style="cursor:pointer" onclick="openChangelog()" title="Click to see version history">Excel AI Assistant · <strong id="versionLabel">v5.0.0</strong></div>
     </div>
 
     <!-- Preferences tab -->
@@ -488,6 +494,15 @@ html,body{height:100%;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;
   </div>
 </div>
 
+<!-- Version history -->
+<div class="modal" id="changelogModal">
+  <div class="modal-bd" onclick="closeChangelog()"></div>
+  <div class="model-panel" style="max-height:70vh">
+    <div class="model-ph"><span>Version History</span><button class="btn-icon" onclick="closeChangelog()">✕</button></div>
+    <div id="changelogList" style="overflow-y:auto;flex:1;padding:8px 0"></div>
+  </div>
+</div>
+
 <script>
 // ── Column letter helper (supports beyond Z) ──────────────────────────────────
 function colLetter(i) {
@@ -513,6 +528,15 @@ let costLimitType = localStorage.getItem('costLimitType') || 'prompt';
 let costLimitIdx  = parseInt(localStorage.getItem('costLimitIdx') || '0');
 let sessionCost = 0;
 let pendingSendResolve = null;
+const APP_VERSION = 'v5.0.0';
+const CHANGELOG = [
+  { ver: 'v5.0.0', date: '2026-05-25', summary: 'VBA macro support: AI generates VBA for tasks Office JS cannot handle (pivot tables, advanced charts, etc.) with styled code blocks and step-by-step instructions.' },
+  { ver: 'v4.1.0', date: '2026-05-25', summary: 'Fix: AI no longer errors on greetings/chitchat. Version history is now a proper popup modal. Switched to semver (x.y.z).' },
+  { ver: 'v4.0.0', date: '2026-05-25', summary: 'Smart context management for large workbooks — no more token overflow errors.' },
+  { ver: 'v3.0.0', date: '2026-05-25', summary: 'AI-auto-detected feedback with 3-tier weighted fine-tuning (human/hard/soft).' },
+  { ver: 'v2.0.0', date: '2026-05-25', summary: 'Multi-workbook support: search, read, write, and open external .xlsx files.' },
+  { ver: 'v1.0.0', date: '2026-05-24', summary: 'Initial release: AI assistant with full read/write Excel access, chat history, model picker, cost controls.' },
+];
 
 const PROMPT_LIMITS  = [0, 0.001, 0.002, 0.005, 0.01, 0.02, 0.05, 0.10, 0.20, 0.50, 1.00];
 const SESSION_LIMITS = [0, 0.01,  0.02,  0.05,  0.10, 0.25, 0.50, 1.00, 2.00, 5.00, 10.00];
@@ -633,6 +657,22 @@ function switchSettingsTab(tab) {
 }
 function openSettings()  { document.getElementById('settingsPanel').classList.add('open'); }
 function closeSettings() { document.getElementById('settingsPanel').classList.remove('open'); }
+function openChangelog() {
+  const list=document.getElementById('changelogList');
+  list.innerHTML=CHANGELOG.map((c,i)=>{
+    const isCurrent=i===0;
+    return '<div style="padding:10px 14px;border-bottom:1px solid var(--border);'+(isCurrent?'background:var(--surf)':'')+'">'+
+      '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">'+
+        '<strong style="font-size:14px;color:var(--text)">'+esc(c.ver)+'</strong>'+
+        (isCurrent?'<span class="badge rec">current</span>':'')+
+        '<span style="font-size:11px;color:var(--text3);margin-left:auto">'+esc(c.date)+'</span>'+
+      '</div>'+
+      '<div style="font-size:12px;color:var(--text2);line-height:1.5">'+esc(c.summary)+'</div>'+
+    '</div>';
+  }).join('');
+  document.getElementById('changelogModal').classList.add('open');
+}
+function closeChangelog() { document.getElementById('changelogModal').classList.remove('open'); }
 
 // ── Cost estimation ───────────────────────────────────────────────────────────
 function estimateCost(extraText) {
@@ -1065,6 +1105,21 @@ function mkCode(code) {
   h.onclick=()=>{const hide=b.classList.toggle('hidden');h.querySelector('.code-toggle').textContent=hide?'show ▼':'hide ▲';};
   w.appendChild(h);w.appendChild(b);return w;
 }
+function mkVba(vbaCode) {
+  const w=document.createElement('div');w.className='vba-block';
+  const h=document.createElement('div');h.className='vba-head';
+  h.innerHTML='<span>VBA Macro</span><span class="code-toggle">hide ▲</span>';
+  const b=document.createElement('div');b.className='code-body';
+  const p=document.createElement('pre');p.textContent=vbaCode;b.appendChild(p);
+  const footer=document.createElement('div');footer.className='code-footer';
+  const cb=document.createElement('button');cb.className='copy-code-btn';cb.textContent='⎘ Copy macro';
+  cb.onclick=()=>{navigator.clipboard.writeText(vbaCode).then(()=>{cb.textContent='✓ Copied!';cb.classList.add('copied');setTimeout(()=>{cb.textContent='⎘ Copy macro';cb.classList.remove('copied');},1500);});};
+  footer.appendChild(cb);b.appendChild(footer);
+  const steps=document.createElement('div');steps.className='vba-steps';
+  steps.innerHTML='<strong>How to run:</strong> 1. Click <strong>Copy macro</strong> above &nbsp;2. Press <strong>Alt+F11</strong> to open VBA Editor &nbsp;3. Click <strong>Insert > Module</strong> &nbsp;4. Paste the code &nbsp;5. Press <strong>F5</strong> to run';
+  h.onclick=()=>{const hide=b.classList.toggle('hidden');steps.style.display=hide?'none':'';h.querySelector('.code-toggle').textContent=hide?'show ▼':'hide ▲';};
+  w.appendChild(h);w.appendChild(b);w.appendChild(steps);return w;
+}
 function addTyping() {
   document.getElementById('emptyState')?.remove();
   const el=document.createElement('div');el.className='msg assistant';el.id='typing';
@@ -1082,11 +1137,36 @@ function setSyncStatus(state,text){const d=document.getElementById('syncDot');d.
 
 async function readWorkbook() {
   setSyncStatus('busy','Reading workbook…');
+  const MAX_TOTAL_CHARS=80000;
+  const MAX_ROWS_PER_SHEET=200;
+  const MAX_CELL_LEN=100;
   try{await Excel.run(async ctx=>{
     const wb=ctx.workbook,sheets=wb.worksheets,act=wb.worksheets.getActiveWorksheet();
     sheets.load('items/name');act.load('name');await ctx.sync();
-    activeSheet=act.name;const parts=[];
-    for(const sh of sheets.items){try{const u=sh.getUsedRange();u.load('values');await ctx.sync();if(!u.values?.length)continue;const hdrs=u.values[0];const hLine='Headers: '+hdrs.map((h,i)=>colLetter(i)+'1='+h).join(' | ');const rows=u.values.slice(1);const MAX_ROWS=500;const truncated=rows.length>MAX_ROWS;const dLines=rows.slice(0,MAX_ROWS).map((r,ri)=>r.map((v,ci)=>colLetter(ci)+(ri+2)+':'+v).join(' | ')).join('\n');parts.push('Sheet: '+sh.name+'\n'+hLine+'\nData:\n'+dLines+(truncated?'\n[...'+( rows.length-MAX_ROWS)+' more rows not shown]':''));}catch{}}
+    activeSheet=act.name;const parts=[];let totalChars=0;
+    const ordered=[...sheets.items].sort((a,b)=>a.name===activeSheet?-1:b.name===activeSheet?1:0);
+    for(const sh of ordered){
+      if(totalChars>=MAX_TOTAL_CHARS)break;
+      try{const u=sh.getUsedRange();u.load('values,rowCount,columnCount');await ctx.sync();
+      if(!u.values?.length)continue;
+      const hdrs=u.values[0];
+      const hLine='Headers: '+hdrs.map((h,i)=>colLetter(i)+'1='+String(h).slice(0,MAX_CELL_LEN)).join(' | ');
+      const rows=u.values.slice(1);
+      const totalRows=rows.length;
+      const budget=MAX_TOTAL_CHARS-totalChars;
+      const maxRows=Math.min(MAX_ROWS_PER_SHEET,totalRows);
+      const dLines=[];
+      for(let ri=0;ri<maxRows;ri++){
+        const line=rows[ri].map((v,ci)=>colLetter(ci)+(ri+2)+':'+String(v).slice(0,MAX_CELL_LEN)).join(' | ');
+        if(totalChars+line.length>MAX_TOTAL_CHARS&&dLines.length>5)break;
+        dLines.push(line);totalChars+=line.length+1;
+      }
+      const sheetInfo='Sheet: '+sh.name+' ('+totalRows+' rows, '+hdrs.length+' cols)';
+      const trunc=totalRows>dLines.length?'\n[...showing '+dLines.length+' of '+totalRows+' rows]':'';
+      parts.push(sheetInfo+'\n'+hLine+'\nData:\n'+dLines.join('\n')+trunc);
+      }catch{}
+    }
+    if(parts.length<sheets.items.length){parts.push('[+'+(sheets.items.length-parts.length)+' more sheets not shown due to size limit]');}
     workbookData=parts.join('\n\n---\n\n');setSyncStatus('ok','Synced — '+activeSheet);
   });}catch(e){setSyncStatus('err','Sync failed');console.error('readWorkbook error',e);}
 }
@@ -1115,8 +1195,13 @@ async function execCode(code) {
       async function applyColumnFilter(col,vals){const sh=wb.worksheets.getActiveWorksheet(),u=sh.getUsedRange();u.load('values');await ctx.sync();const hdrs=u.values[0],ci=hdrs.findIndex(h=>String(h).toLowerCase().trim()===String(col).toLowerCase().trim());if(ci===-1)throw new Error('Column "'+col+'" not found. Available: '+hdrs.filter(Boolean).join(', '));const v=(Array.isArray(vals)?vals:[vals]).map(x=>String(x));try{sh.autoFilter.clearFilters();await ctx.sync();}catch(e){}sh.autoFilter.apply(u,ci,{filterOn:Excel.FilterOn.values,values:v});await ctx.sync();}
       async function clearFilters(){const sh=wb.worksheets.getActiveWorksheet();try{sh.autoFilter.clearFilters();await ctx.sync();}catch(e){}}
       async function sortByColumn(col,asc=true){const sh=wb.worksheets.getActiveWorksheet(),u=sh.getUsedRange();u.load('values');await ctx.sync();const hdrs=u.values[0],ci=hdrs.findIndex(h=>String(h).toLowerCase().trim()===String(col).toLowerCase().trim());if(ci===-1)throw new Error('Column "'+col+'" not found. Available: '+hdrs.filter(Boolean).join(', '));u.sort.apply([{key:ci,ascending:asc}]);await ctx.sync();}
-      const fn=new Function('context','workbook','Excel','applyColumnFilter','clearFilters','sortByColumn','return (async()=>{ '+code+' })();');
-      const rv=await fn(ctx,wb,Excel,applyColumnFilter,clearFilters,sortByColumn);
+      async function searchWorkbooks(query,limit){const r=await fetch('/api/workbooks/search',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({query:query,limit:limit||50})});return await r.json();}
+      async function searchWorkbooksByContent(query,limit){const r=await fetch('/api/workbooks/search-content',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({query:query,limit:limit||20})});return await r.json();}
+      async function readExternalWorkbook(filePath,sheetNames){const r=await fetch('/api/workbooks/read',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({filePath:filePath,sheetNames:sheetNames||[]})});const d=await r.json();if(d.error)throw new Error(d.error);return d;}
+      async function writeExternalWorkbook(filePath,operations){const r=await fetch('/api/workbooks/write',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({filePath:filePath,operations:operations})});const d=await r.json();if(d.error)throw new Error(d.error);return d;}
+      async function openInExcel(filePath){const r=await fetch('/api/workbooks/open',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({filePath:filePath})});const d=await r.json();if(d.error)throw new Error(d.error);return d;}
+      const fn=new Function('context','workbook','Excel','applyColumnFilter','clearFilters','sortByColumn','searchWorkbooks','searchWorkbooksByContent','readExternalWorkbook','writeExternalWorkbook','openInExcel','return (async()=>{ '+code+' })();');
+      const rv=await fn(ctx,wb,Excel,applyColumnFilter,clearFilters,sortByColumn,searchWorkbooks,searchWorkbooksByContent,readExternalWorkbook,writeExternalWorkbook,openInExcel);
       if(rv!==undefined&&rv!==null)ret=String(rv);
     });
     await readWorkbook();return{ok:true,err:null,result:ret};
@@ -1193,7 +1278,7 @@ async function sendMessage() {
     if(data.error){
       addMsg('assistant','⚠ '+data.error,true,ms);
     }else{
-      const{response:reply,code,usage,selectedModel:autoSelected,plan}=data;
+      const{response:reply,code,vba,usage,selectedModel:autoSelected,plan}=data;
       if(plan){history.push({role:'assistant',content:'📋 Plan:\n'+plan});addMsg('assistant','📋 Plan:\n'+plan);}
       const tok=usage?.completion_tokens??null;
       if(tok){totalTok+=tok;updateTok();}
@@ -1216,11 +1301,18 @@ async function sendMessage() {
           else if(!reply){addMsg('assistant','✓ Done.');}
         }else{
           addMsg('assistant','⚠ Error: '+r.err,true);
+          // Auto-feedback: code execution failure is a hard signal
+          try{fetch('/api/feedback/auto',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({tier:'hard',prompt:text,response:reply||'',code:code,model:autoSelected||modelId})});}catch{}
           history.push({role:'user',content:'The code failed: "'+r.err+'". Fix it with a corrected CODE_JS block.'});
           const rr=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},signal:ctrl.signal,body:JSON.stringify({messages:history.slice(-8),workbookData,activeSheet,summary,model:modelId,useOllama:isOllama,useGroq:isGroq,apiKey,groqKey})});
           const rd=await rr.json();
           if(rd.code){const rres=await execCode(rd.code);if(rd.response)history.push({role:'assistant',content:rd.response});addMsg('assistant',rres.ok?'✓ Fixed.':'⚠ Retry failed: '+rres.err,!rres.ok);}
         }
+      }
+      if(vba){
+        const last=document.getElementById('messages').lastElementChild;
+        if(last)last.appendChild(mkVba(vba));
+        history.push({role:'assistant',content:'[VBA macro provided]',vba:vba});
       }
 
       // ── Mid-session cost check ──
