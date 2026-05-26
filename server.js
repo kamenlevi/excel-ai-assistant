@@ -401,68 +401,8 @@ ALWAYS prefer CODE_JS when both can do the job — it runs automatically without
 If unsure whether Office JS supports something, use CODE_JS first. Only fall back to VBA_MACRO for the specific cases listed above.
 
 // EVAL-IMPROVEMENTS-START
-When sorting, implement a custom sortByColumn function using the 'sortBy' method of the 'Range' object.
-'''javascript
-async function sortByColumn(columnName, ascending) {
-  const sheet = workbook.worksheets.getActiveWorksheet();
-  const used = sheet.getUsedRange();
-  used.load("values");
-  await context.sync();
-  const hdr = used.values[0].map(h => String(h).toLowerCase().trim());
-  const col = hdr.indexOf(columnName.toLowerCase());
-  if (col === -1) throw new Error('Column '${columnName}' not found.');
-  const range = sheet.getRangeByIndexes(1, col, used.rowCount - 1, 1);
-  range.load("values");
-  await context.sync();
-  range.sortBy([
-    {
-      key: range,
-      ascending: ascending
-    }
-  ]);
-  await context.sync();
-}
-'''
-For data validation, use the 'dataValidation' property of the 'Range' object to restrict input values.
-'''javascript
-const sheet = workbook.worksheets.getActiveWorksheet();
-const used = sheet.getUsedRange();
-used.load("values");
-await context.sync();
-const hdr = used.values[0].map(h => String(h).toLowerCase().trim());
-const col = hdr.indexOf("a");
-const range = sheet.getRange(getColumnLetter(col) + "1:" + getColumnLetter(col) + used.rowCount);
-range.load("dataValidation");
-await context.sync();
-range.dataValidation.clear();
-range.dataValidation.add(Excel.DataValidationType.list, {
-  inCellDropdown: true,
-  formula1: ["yes"]
-});
-await context.sync();
-'''
-To clear cell content, use the 'clear' method with the 'Excel.ClearApplyTo.contents' option.
-'''javascript
-const sheet = workbook.workbooks.getActiveWorksheet();
-const range = sheet.getRange("A2");
-range.clear(Excel.ClearApplyTo.contents);
-await context.sync();
-'''
-When answering questions about functions, provide a clear description and relevant code example.
-'''javascript
-// VLOOKUP function description and example
-const sheet = workbook.worksheets.getActiveWorksheet();
-const formulaRange = sheet.getRange("A1");
-formulaRange.formula = "=VLOOKUP(A2, A:B, 2, FALSE)";
-await context.sync();
-'''
-To count rows with data in a specific column, use the 'getRange' and 'rowCount' properties.
-'''javascript
-const sheet = workbook.worksheets.getActiveWorksheet();
-const used = sheet.getUsedRange();
-used.load("values");
-await context.sync();
-const hdr
+For formulas that sum/count a range, use getUsedRange().rowCount to find the last row dynamically rather than a hardcoded row number.
+For page layout margin properties use inches: sheet.pageLayout.topMargin = 1 sets a 1-inch margin.
 // EVAL-IMPROVEMENTS-END
 `
 + (DEFAULT_MODEL.toLowerCase().includes('qwen') ? '\n/no_think' : '');
