@@ -123,6 +123,21 @@ html,body{height:100%;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;
 .memory-chip-x{cursor:pointer;opacity:.6;font-size:9px;flex-shrink:0;line-height:1}
 .memory-chip-x:hover{opacity:1}
 
+.danger-banner{border-radius:var(--r);margin:8px 0;padding:10px 12px;font-size:13px;line-height:1.5}
+.danger-banner.high{background:rgba(230,160,40,.12);border:1px solid rgba(230,160,40,.35);color:var(--text)}
+.danger-banner.critical{background:rgba(217,79,79,.1);border:1px solid rgba(217,79,79,.35);color:var(--text)}
+.danger-title{font-weight:600;margin-bottom:4px;display:flex;align-items:center;gap:6px}
+.danger-reason{font-size:12px;color:var(--text2);margin-bottom:10px}
+.danger-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.danger-proceed{background:var(--accent);color:#fff;border:none;border-radius:var(--r);padding:5px 14px;font-size:12px;font-weight:600;cursor:pointer}
+.danger-proceed:hover{filter:brightness(1.1)}
+.danger-proceed.critical-btn{background:#c94040}
+.danger-cancel{background:none;border:1px solid var(--border);border-radius:var(--r);padding:5px 12px;font-size:12px;color:var(--text2);cursor:pointer}
+.danger-cancel:hover{background:var(--surf2)}
+.danger-pwd-row{display:flex;gap:6px;width:100%;margin-top:6px}
+.danger-pwd-inp{flex:1;font-size:12px;padding:5px 8px;border-radius:var(--r);border:1px solid var(--border);background:var(--bg);color:var(--text)}
+.danger-pwd-inp.err{border-color:#c94040}
+
 .think-section{border:1px solid var(--border);border-radius:var(--r);margin-bottom:8px;overflow:hidden}
 .think-header{display:flex;align-items:center;gap:6px;padding:6px 10px;cursor:pointer;user-select:none;color:var(--text3);font-size:12px;background:var(--surf2)}
 .think-header:hover{color:var(--text2)}
@@ -477,7 +492,13 @@ html,body{height:100%;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;
         <div class="slabel">History</div>
         <button class="sdanger" onclick="clearAllHistory()">Delete all chat history</button>
       </div>
-      <div class="sfooter" style="cursor:pointer" onclick="openChangelog()" title="Click to see version history">Excel AI Assistant · <strong id="versionLabel">v5.4.0</strong></div>
+      <div class="sgrp">
+        <div class="slabel">Security</div>
+        <div style="font-size:12px;color:var(--text2);margin-bottom:6px">Password required for critical operations (file deletion, shell commands). Leave blank to disable.</div>
+        <input class="sinput" type="password" id="secPwdInp" placeholder="Set security password…" oninput="saveSecPwd()">
+        <span class="sinote" id="secPwdNote">Not set — critical operations need only confirmation.</span>
+      </div>
+      <div class="sfooter" style="cursor:pointer" onclick="openChangelog()" title="Click to see version history">Excel AI Assistant · <strong id="versionLabel">v5.5.0</strong></div>
     </div>
 
     <!-- Preferences tab -->
@@ -563,8 +584,12 @@ let costLimitType = localStorage.getItem('costLimitType') || 'prompt';
 let costLimitIdx  = parseInt(localStorage.getItem('costLimitIdx') || '0');
 let sessionCost = 0;
 let pendingSendResolve = null;
-const APP_VERSION = 'v5.4.0';
+// ── Security state ────────────────────────────────────────────────────────────
+let sessionDangerConfirmed = new Set(); // 'high', 'critical' confirmed this session
+let sessionPasswordVerified = false;    // password entered once this session
+const APP_VERSION = 'v5.5.0';
 const CHANGELOG = [
+  { ver: 'v5.5.0', date: '2026-05-27', summary: 'Security guardrails: server scans generated code for dangerous filesystem patterns (deletion, shell execution, bulk file moves, drive-wide search) and classifies as high/critical; inline confirmation banner before execution with session memory; critical ops require a security password (set in Settings); password verified once per session.' },
   { ver: 'v5.4.0', date: '2026-05-27', summary: 'Streaming responses: all AI output streams live token-by-token via SSE (/api/chat/stream); thinking models show a collapsible "Thought process" section that auto-collapses when the answer starts; non-thinking models stream their answer directly; live timer updates while streaming.' },
   { ver: 'v5.3.0', date: '2026-05-27', summary: 'Gradient context compression: recent messages kept full, older messages compressed into rolling narrative + extracted facts (coreMemory); pin-to-memory button on user messages; permanent memory strip UI; /memory and /reset memory slash commands; /api/compress endpoint.' },
   { ver: 'v5.2.0', date: '2026-05-27', summary: 'Structural: server no longer double-truncates history (was slice(-6) on top of frontend slice(-8)); plan now fed into main AI call so model follows it; summarize keeps 8 messages not 4; last CODE_JS block used when AI outputs multiple; MacBook/Ollama host configurable via OLLAMA_HOST env var.' },
@@ -632,6 +657,22 @@ function loadSettings() {
   document.getElementById('seg-session').className = 'seg-btn' + (costLimitType==='session'?' active':'');
   document.getElementById('costSlider').value = costLimitIdx;
   updateCostSlider(costLimitIdx, false);
+  const sp = localStorage.getItem('securityPassword');
+  if (sp) {
+    document.getElementById('secPwdInp').value = sp;
+    document.getElementById('secPwdNote').textContent = 'Password set — required for critical operations.';
+  }
+}
+function saveSecPwd() {
+  const v = document.getElementById('secPwdInp').value;
+  if (v) {
+    localStorage.setItem('securityPassword', v);
+    document.getElementById('secPwdNote').textContent = 'Password set — required for critical operations.';
+  } else {
+    localStorage.removeItem('securityPassword');
+    sessionPasswordVerified = false;
+    document.getElementById('secPwdNote').textContent = 'Not set — critical operations need only confirmation.';
+  }
 }
 function setTheme(t, save=true) {
   document.documentElement.setAttribute('data-theme', t);
@@ -1231,6 +1272,73 @@ async function registerListeners() {
   });}catch{}
 }
 
+// ── Security: danger confirmation before executing risky code ─────────────────
+function requestDangerConfirmation(danger) {
+  // Already confirmed at this level (or lower) this session
+  if (sessionDangerConfirmed.has(danger.level)) return Promise.resolve(true);
+  if (danger.level === 'high' && sessionDangerConfirmed.has('critical')) return Promise.resolve(true);
+
+  return new Promise(resolve => {
+    const isCritical = danger.level === 'critical';
+    const hasPwd = !!localStorage.getItem('securityPassword');
+
+    const banner = document.createElement('div');
+    banner.className = `danger-banner ${danger.level}`;
+
+    const icon = isCritical ? '🔒' : '⚠';
+    const title = isCritical ? 'Critical operation' : 'Potentially risky operation';
+    banner.innerHTML = `
+      <div class="danger-title">${icon} ${title}</div>
+      <div class="danger-reason">Detected: <strong>${danger.reason}</strong>. This may affect files or folders on your system outside Excel.</div>
+      <div class="danger-actions">
+        <button class="danger-proceed${isCritical?' critical-btn':''}" id="dangerProceed">Proceed</button>
+        <button class="danger-cancel" id="dangerCancel">Cancel</button>
+        <label style="font-size:11px;color:var(--text3);display:flex;align-items:center;gap:4px;cursor:pointer">
+          <input type="checkbox" id="dangerRemember" style="cursor:pointer"> Don't ask again this session
+        </label>
+      </div>
+      ${isCritical && hasPwd && !sessionPasswordVerified ? `
+      <div class="danger-pwd-row">
+        <input class="danger-pwd-inp" type="password" id="dangerPwdInp" placeholder="Security password required…">
+      </div>` : ''}
+    `;
+
+    const box = document.getElementById('messages');
+    box.appendChild(banner);
+    box.scrollTop = box.scrollHeight;
+
+    const cleanup = () => banner.remove();
+
+    document.getElementById('dangerCancel').onclick = () => { cleanup(); resolve(false); };
+
+    document.getElementById('dangerProceed').onclick = () => {
+      // Password check for critical ops
+      if (isCritical && hasPwd && !sessionPasswordVerified) {
+        const inp = document.getElementById('dangerPwdInp');
+        if (!inp) { cleanup(); resolve(false); return; }
+        const entered = inp.value;
+        const stored  = localStorage.getItem('securityPassword');
+        if (entered !== stored) {
+          inp.classList.add('err');
+          inp.placeholder = 'Wrong password — try again';
+          inp.value = '';
+          return;
+        }
+        sessionPasswordVerified = true;
+      }
+      const remember = document.getElementById('dangerRemember')?.checked;
+      if (remember) sessionDangerConfirmed.add(danger.level);
+      cleanup();
+      resolve(true);
+    };
+
+    // Allow Enter key in password field
+    document.getElementById('dangerPwdInp')?.addEventListener('keydown', e => {
+      if (e.key === 'Enter') document.getElementById('dangerProceed').click();
+    });
+  });
+}
+
 // ── Code execution ────────────────────────────────────────────────────────────
 async function execCode(code) {
   code=code
@@ -1660,6 +1768,17 @@ async function sendMessage() {
           if(finalText)history.push({role:'assistant',content:finalText,ms,tok,time:new Date().toISOString(),via:viaName});
 
           if(code){
+            // ── Security check before execution ──
+            if(ev.danger){
+              const allowed=await requestDangerConfirmation(ev.danger);
+              if(!allowed){
+                addMsg('assistant','Operation cancelled.');
+                loading=false;
+                const sb2=document.getElementById('sendBtn');sb2.textContent='Send';sb2.className='send';sb2.onclick=sendMessage;
+                await saveChat();
+                return;
+              }
+            }
             const r=await execCode(code);
             if(showCode)streamEl.appendChild(mkCode(code));
             if(r.ok){

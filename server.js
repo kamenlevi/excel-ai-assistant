@@ -626,6 +626,44 @@ function parseResponse(text) {
   return { code, vba, cleaned };
 }
 
+// ── Danger classifier: scans CODE_JS for risky filesystem operations ──────────
+function analyzeDanger(code) {
+  if (!code) return null;
+
+  // Critical — irreversible: deletion, shell execution
+  const critical = [
+    [/\bdeleteFile\b|\bremoveFile\b|\bunlinkSync?\b|\bfs\.rm\b/i,       'file deletion'],
+    [/\brmdir\b|\brm\b.*-rf|\.remove\s*\(\s*true\b/i,                   'directory removal'],
+    [/child_process|\.exec\s*\(|\.execSync\s*\(|shelljs/i,              'shell command execution'],
+    [/fetch\s*\(.*\/api\/.*\bdelet/i,                                    'server-side file deletion endpoint'],
+    [/fetch\s*\(.*\/api\/.*\bremov/i,                                    'server-side file removal endpoint'],
+  ];
+
+  // High — risky but recoverable: bulk moves, renames, folder creation, drive-wide search
+  const high = [
+    [/fetch\s*\(.*\/api\/.*\bmov[ei]/i,                                  'bulk file move'],
+    [/fetch\s*\(.*\/api\/.*\brenam/i,                                    'file rename operation'],
+    [/fetch\s*\(.*\/api\/.*\b(mkdir|createDir|createFolder)\b/i,        'directory creation'],
+    [/\bmkdir\b|\bmkdirSync\b|\bcreateDirectory\b/i,                     'directory creation'],
+    [/\brenamefile\b|\brename\s*\(/i,                                    'file rename'],
+    [/\bmove\s*\(.*\.(xlsx|xlsm)\b/i,                                    'workbook file move'],
+    // Bulk: loop that calls a write/modify endpoint for each file
+    [/(for\b|forEach|\.map\s*\()[\s\S]{1,600}\/api\/workbooks\/write/is, 'bulk workbook modification loop'],
+    // Searching from drive roots
+    [/['"](C:\\\\|D:\\\\|E:\\\\|[A-Z]:\\\\|\/home\/|\/Users\/|\/root\/)['"]/i, 'whole-drive file search'],
+    // Recursive file walk outside known patterns
+    [/readdirSync\s*\(|walkDir\s*\(|glob\s*\(/i,                        'recursive filesystem traversal'],
+  ];
+
+  for (const [pattern, reason] of critical) {
+    if (pattern.test(code)) return { level: 'critical', reason };
+  }
+  for (const [pattern, reason] of high) {
+    if (pattern.test(code)) return { level: 'high', reason };
+  }
+  return null;
+}
+
 // ── Detect if model forgot to include code for an action request ─────────────
 function isQuestion(userMessage) {
   const s = userMessage.toLowerCase().trim();
@@ -1403,7 +1441,9 @@ app.post('/api/chat', async (req, res) => {
     const { code, vba, cleaned } = parseResponse(responseText);
     if (code) console.log('[server] Code to execute:\n' + code);
     if (vba) console.log('[server] VBA macro generated:\n' + vba);
-    res.json({ response: cleaned, code, vba, usage, selectedModel, plan: planText });
+    const danger = analyzeDanger(code);
+    if (danger) console.log(`[server] Danger classified: ${danger.level} — ${danger.reason}`);
+    res.json({ response: cleaned, code, vba, usage, selectedModel, plan: planText, danger });
 
   } catch (err) {
     console.error('AI error:', err);
@@ -1592,7 +1632,9 @@ app.post('/api/chat/stream', async (req, res) => {
       } catch {}
     }
 
-    sse({ type: 'done', code: finalCode, vba, cleaned, usage: finalUsage, selectedModel, plan: planText });
+    const danger = analyzeDanger(finalCode);
+    if (danger) console.log(`[server] Danger classified: ${danger.level} — ${danger.reason}`);
+    sse({ type: 'done', code: finalCode, vba, cleaned, usage: finalUsage, selectedModel, plan: planText, danger });
     res.end();
   } catch (err) {
     sse({ type: 'error', message: err.message });
