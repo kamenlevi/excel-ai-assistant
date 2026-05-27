@@ -114,6 +114,14 @@ html,body{height:100%;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;
 .copy-msg-btn{background:none;border:none;color:var(--text3);cursor:pointer;font-size:11px;padding:2px 6px;border-radius:4px;transition:color .1s,background .1s}
 .copy-msg-btn:hover{color:var(--text);background:var(--surf2)}
 .copy-msg-btn.copied{color:var(--ok)}
+.pin-btn{background:none;border:none;color:var(--text3);cursor:pointer;font-size:11px;padding:2px 6px;border-radius:4px;transition:color .1s,background .1s}
+.pin-btn:hover{color:var(--accent);background:var(--surf2)}
+.pin-btn.pinned{color:var(--accent);opacity:.6;cursor:default}
+.memory-strip{display:none;align-items:center;gap:6px;padding:5px 10px;background:rgba(204,120,92,.08);border-bottom:1px solid rgba(204,120,92,.2);font-size:11px;color:var(--text2);flex-shrink:0;flex-wrap:wrap}
+.memory-strip.visible{display:flex}
+.memory-chip{background:rgba(204,120,92,.12);color:var(--accent);border-radius:10px;padding:2px 8px;font-size:10px;display:flex;align-items:center;gap:4px;max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.memory-chip-x{cursor:pointer;opacity:.6;font-size:9px;flex-shrink:0;line-height:1}
+.memory-chip-x:hover{opacity:1}
 
 .code-block{margin-top:6px;border:1px solid var(--border);border-radius:var(--r2);overflow:hidden;font-size:12px}
 .code-head{background:var(--surf);padding:5px 10px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none}
@@ -310,6 +318,7 @@ html,body{height:100%;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;
       <button class="btn-icon" onclick="openSettings()" title="Settings">⚙</button>
     </header>
 
+    <div class="memory-strip" id="memoryStrip"></div>
     <div class="messages" id="messages">
       <div class="empty-state" id="emptyState">
         <div class="empty-icon">✦</div>
@@ -459,7 +468,7 @@ html,body{height:100%;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;
         <div class="slabel">History</div>
         <button class="sdanger" onclick="clearAllHistory()">Delete all chat history</button>
       </div>
-      <div class="sfooter" style="cursor:pointer" onclick="openChangelog()" title="Click to see version history">Excel AI Assistant · <strong id="versionLabel">v5.2.0</strong></div>
+      <div class="sfooter" style="cursor:pointer" onclick="openChangelog()" title="Click to see version history">Excel AI Assistant · <strong id="versionLabel">v5.3.0</strong></div>
     </div>
 
     <!-- Preferences tab -->
@@ -531,6 +540,8 @@ let totalTok = 0, autoSync = true, showCode = true;
 let opts = { deep: false, dynamic: false, auto: false, plan: false };
 let slashNoThink = localStorage.getItem('slashNoThink'); // 'on'|'off'|null(auto)
 let slashPopupItems = [], slashPopupSel = 0;
+let pinnedMemory = JSON.parse(localStorage.getItem('pinnedMemory') || '[]'); // user-pinned messages
+let coreMemory   = JSON.parse(localStorage.getItem('coreMemory')   || '[]'); // auto-extracted facts
 let selectedModel = localStorage.getItem('selModel') || 'meta-llama/llama-3.3-70b-instruct';
 let localModels = [], customModels = [], catalogModels = [], catalogLoaded = false, changeReady = false, syncTimer = null;
 let plusOpen = false, timerInterval = null;
@@ -543,8 +554,9 @@ let costLimitType = localStorage.getItem('costLimitType') || 'prompt';
 let costLimitIdx  = parseInt(localStorage.getItem('costLimitIdx') || '0');
 let sessionCost = 0;
 let pendingSendResolve = null;
-const APP_VERSION = 'v5.2.0';
+const APP_VERSION = 'v5.3.0';
 const CHANGELOG = [
+  { ver: 'v5.3.0', date: '2026-05-27', summary: 'Gradient context compression: recent messages kept full, older messages compressed into rolling narrative + extracted facts (coreMemory); pin-to-memory button on user messages; permanent memory strip UI; /memory and /reset memory slash commands; /api/compress endpoint.' },
   { ver: 'v5.2.0', date: '2026-05-27', summary: 'Structural: server no longer double-truncates history (was slice(-6) on top of frontend slice(-8)); plan now fed into main AI call so model follows it; summarize keeps 8 messages not 4; last CODE_JS block used when AI outputs multiple; MacBook/Ollama host configurable via OLLAMA_HOST env var.' },
   { ver: 'v5.1.2', date: '2026-05-27', summary: 'Fix: slash commands crashed (getElementById("chat") → "messages"); code retry did not check rd.error before execCode; greedy JSON regex in model recommendation replaced with non-greedy.' },
   { ver: 'v5.1.1', date: '2026-05-27', summary: 'Fix: Groq model costs were not tracked — addActualCost received stripped model ID, failing the lookup. Session cost and cost limits now work correctly for Groq models.' },
@@ -585,6 +597,7 @@ Office.onReady(async info => {
   customModels = JSON.parse(localStorage.getItem('customModels') || '[]');
   await Promise.all([loadChats(), detectLocal()]);
   renderModelBtn();
+  renderMemoryStrip();
   await readWorkbook();
   registerListeners();
   if (!chatId) newChat(false);
@@ -1104,6 +1117,16 @@ function mkMsg(role,text,isErr,ms,tok,code,savedTime,via) {
   const copyBtn=document.createElement('button'); copyBtn.className='copy-msg-btn'; copyBtn.innerHTML='⎘ Copy';
   copyBtn.onclick=()=>{navigator.clipboard.writeText(text).then(()=>{copyBtn.innerHTML='✓ Copied';copyBtn.classList.add('copied');setTimeout(()=>{copyBtn.innerHTML='⎘ Copy';copyBtn.classList.remove('copied');},1500);});};
   actions.appendChild(copyBtn);
+  if(role==='user'){
+    const pinBtn=document.createElement('button'); pinBtn.className='pin-btn'; pinBtn.innerHTML='📌 Pin'; pinBtn.title='Pin to permanent memory';
+    pinBtn.onclick=()=>{
+      const item={text:text.slice(0,150),pinned:new Date().toISOString()};
+      pinnedMemory.push(item); localStorage.setItem('pinnedMemory',JSON.stringify(pinnedMemory));
+      pinBtn.innerHTML='📌 Pinned'; pinBtn.className='pin-btn pinned'; pinBtn.disabled=true;
+      renderMemoryStrip(); addSysMsg('📌 Pinned to permanent memory.');
+    };
+    actions.appendChild(pinBtn);
+  }
   if(role==='assistant'&&!isErr){
     const rb=document.createElement('button');rb.className='report-btn';rb.title='Report';rb.innerHTML='⚑ Report';
     rb.onclick=()=>reportMsg(rb,text,code);actions.appendChild(rb);
@@ -1258,8 +1281,18 @@ const SLASH_CMDS = {
   '/no_think': { desc: 'Disable thinking for local models  (shortcut: /set no_think)', fn: () => applyNoThink('on')  },
   '/think':    { desc: 'Enable thinking for local models   (shortcut: /set think)',    fn: () => applyNoThink('off') },
   '/clear':    { desc: 'Clear chat history and start fresh',                           fn: () => slashClear()        },
+  '/memory':   { desc: 'Show all permanent memory (pinned + auto-extracted facts)',    fn: () => slashShowMemory()   },
   '/help':     { desc: 'List all available slash commands',                            fn: () => slashHelp()         },
   '/status':   { desc: 'Show current settings and active toggles',                     fn: () => slashStatus()       },
+  '/reset': {
+    desc: 'Reset counters or state',
+    sub: {
+      'cost':    { desc: 'Reset session cost counter to $0.000',          fn: () => { resetSessionCost(); addSysMsg('Session cost reset to $0.000'); } },
+      'history': { desc: 'Clear chat history (same as /clear)',            fn: () => slashClear() },
+      'memory':  { desc: 'Clear all pinned and auto-extracted memory',    fn: () => slashResetMemory() },
+      'prefs':   { desc: 'Clear saved AI preferences text',               fn: () => { userPreferences=''; localStorage.removeItem('userPreferences'); const el=document.getElementById('prefsInp'); if(el) el.value=''; addSysMsg('Preferences cleared.'); } },
+    }
+  },
 };
 
 function applyNoThink(val) {
@@ -1275,6 +1308,24 @@ function slashClear() {
   history = []; summary = null;
   document.getElementById('messages').innerHTML = '';
   addSysMsg('Chat cleared.');
+}
+function slashShowMemory() {
+  const lines = ['Permanent memory:'];
+  if (pinnedMemory.length) {
+    lines.push('\nPinned by you:');
+    pinnedMemory.forEach((p,i) => lines.push(`  ${i+1}. ${p.text}`));
+  }
+  if (coreMemory.length) {
+    lines.push('\nAuto-extracted facts:');
+    coreMemory.forEach((f,i) => lines.push(`  ${i+1}. ${f}`));
+  }
+  if (!pinnedMemory.length && !coreMemory.length) lines.push('  (empty — pin a message or send 20+ messages to auto-extract)');
+  addSysMsg(lines.join('\n'));
+}
+function slashResetMemory() {
+  pinnedMemory = []; coreMemory = [];
+  localStorage.removeItem('pinnedMemory'); localStorage.removeItem('coreMemory');
+  renderMemoryStrip(); addSysMsg('Memory cleared.');
 }
 function slashHelp() {
   let lines = ['Available commands:'];
@@ -1296,7 +1347,9 @@ function slashStatus() {
     '\nauto-sync:   ' + (autoSync ? 'ON' : 'OFF') +
     '\nshow code:   ' + (showCode ? 'ON' : 'OFF') +
     '\ncost limit:  ' + (lim ? ('$' + lim + ' per ' + costLimitType) : 'OFF') +
-    '\nsession $:   $' + sessionCost.toFixed(3)
+    '\nsession $:   $' + sessionCost.toFixed(3) +
+    '\npinned:      ' + pinnedMemory.length + ' item(s)' +
+    '\nauto-facts:  ' + coreMemory.length + ' item(s)'
   );
 }
 function addSysMsg(text) {
@@ -1412,10 +1465,48 @@ function useSugg(btn){document.getElementById('msgInput').value=btn.textContent;
 function attachFile(e){const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{attached={name:f.name,content:ev.target.result};document.getElementById('attachBadge').innerHTML='📎 <span style="color:var(--text2)">'+esc(f.name)+'</span> <button class="attach-x" onclick="clearAttach()">✕</button>';};r.readAsText(f);e.target.value='';}
 function clearAttach(){attached=null;document.getElementById('attachBadge').innerHTML='';}
 
-// ── Summarise ────────────────────────────────────────────────────────────────
-async function maybeSummarize() {
-  if(history.length<10)return;
-  try{const k=localStorage.getItem('apiKey');const r=await fetch('/api/summarize',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:history.slice(0,-8),previousSummary:summary||undefined,apiKey:k||undefined})});const d=await r.json();if(d.summary){summary=d.summary;history=history.slice(-8);}}catch{}
+// ── Memory strip ──────────────────────────────────────────────────────────────
+function renderMemoryStrip() {
+  const strip = document.getElementById('memoryStrip');
+  const all = [...pinnedMemory, ...coreMemory.map(f=>({text:f,auto:true}))];
+  if (!all.length) { strip.classList.remove('visible'); return; }
+  strip.classList.add('visible');
+  strip.innerHTML = '<span style="font-size:10px;color:var(--text3);flex-shrink:0">📌 Memory:</span>'
+    + pinnedMemory.map((p,i) =>
+        `<span class="memory-chip" title="${esc(p.text)}">${esc(p.text.slice(0,30))}…<span class="memory-chip-x" onclick="unpinMemory(${i})">✕</span></span>`
+      ).join('')
+    + (coreMemory.length ? `<span style="color:var(--text3);font-size:10px">${coreMemory.length} auto-fact${coreMemory.length!==1?'s':''}</span>` : '');
+}
+function unpinMemory(i) {
+  pinnedMemory.splice(i, 1);
+  localStorage.setItem('pinnedMemory', JSON.stringify(pinnedMemory));
+  renderMemoryStrip();
+}
+
+// ── Compress (replaces maybeSummarize) ────────────────────────────────────────
+async function maybeCompress() {
+  if (history.length < 20) return;
+  const toCompress = history.slice(0, -15);
+  if (!toCompress.length) return;
+  try {
+    const k = localStorage.getItem('apiKey');
+    const r = await fetch('/api/compress', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ messages: toCompress, previousSummary: summary||undefined, apiKey: k||undefined })
+    });
+    const d = await r.json();
+    if (d.summary) {
+      summary = d.summary;
+      history = history.slice(-15);
+      if (d.facts?.length) {
+        const existing = new Set(coreMemory.map(f => f.toLowerCase()));
+        d.facts.forEach(f => { if (!existing.has(f.toLowerCase())) { coreMemory.push(f); existing.add(f.toLowerCase()); } });
+        if (coreMemory.length > 30) coreMemory = coreMemory.slice(-30);
+        localStorage.setItem('coreMemory', JSON.stringify(coreMemory));
+        renderMemoryStrip();
+      }
+    }
+  } catch {}
 }
 
 // ── Stop ──────────────────────────────────────────────────────────────────────
@@ -1448,7 +1539,7 @@ async function sendMessage() {
 
   const userMsg={role:'user',content:text,time:new Date().toISOString()};
   history.push(userMsg);addMsg('user',text);
-  addTyping();await maybeSummarize();
+  addTyping();await maybeCompress();
 
   const t0=Date.now();ctrl=new AbortController();
   const isGroq   =selectedModel.startsWith('groq:');
@@ -1461,7 +1552,7 @@ async function sendMessage() {
     const res=await fetch('/api/chat',{
       method:'POST',headers:{'Content-Type':'application/json'},signal:ctrl.signal,
       body:JSON.stringify({
-        messages:history.slice(-8),workbookData,activeSheet,summary,
+        messages:history.slice(-15),workbookData,activeSheet,summary,
         model:modelId,useOllama:isOllama,useGroq:isGroq,apiKey,groqKey,
         options:{
           deepThink:  opts.deep,
@@ -1470,6 +1561,8 @@ async function sendMessage() {
           plan:       opts.plan,
           noThink:    slashNoThink === 'on',
           allowThink: slashNoThink === 'off',
+          pinnedMemory,
+          coreMemory,
           preferences: userPreferences,
           costLimit:  getCostLimit(),
           availableModels: opts.auto

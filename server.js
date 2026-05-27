@@ -874,25 +874,50 @@ app.post('/api/title', async (req, res) => {
 });
 
 // ── Summarize endpoint ───────────────────────────────────────────────────────
-app.post('/api/summarize', async (req, res) => {
+app.post('/api/compress', async (req, res) => {
   const { messages, previousSummary, apiKey } = req.body;
   try {
-    const prevContext = previousSummary ? `Previous context (already summarised):\n${previousSummary}\n\nNew messages to incorporate:\n` : 'Summarise:\n';
     const { text } = await callAI([
       {
         role: 'system',
-        content: 'You summarise Excel assistant conversations. Write one short paragraph (max 100 words) covering: what sheets exist, what data they contain, what changes were made, any important cell ranges or values. If given a previous summary, merge it with the new messages into one updated summary. Be specific. No fluff.'
+        content: `Compress an Excel AI assistant conversation. Respond with EXACTLY this format:
+
+SUMMARY: [one paragraph, max 120 words — what was worked on, changes made, sheets/columns involved]
+
+FACTS:
+- [a permanent rule, preference, or data reference worth always remembering]
+- [another fact]
+
+FACTS rules: max 10 items, max 15 words each. Only include:
+• User rules/preferences ("always X", "never Y", "I prefer Z")
+• Named data that will recur (sheet names, column names, table names, named ranges)
+• Critical errors to avoid repeating
+Skip obvious things. If nothing worth remembering, write "FACTS: none"`
       },
       {
         role: 'user',
-        content: `${prevContext}\n${messages.map(m => `${m.role}: ${m.content}`).join('\n\n')}`
+        content: (previousSummary ? `Previous summary:\n${previousSummary}\n\nNew messages:\n` : '')
+          + messages.map(m => `${m.role}: ${(m.content || '').slice(0, 400)}`).join('\n\n')
       }
-    ], 250, null, false, false, apiKey || null);
-    res.json({ summary: text.replace(/<think>[\s\S]*?<\/think>/g, '').trim() });
+    ], 500, null, false, false, apiKey || null);
+
+    const clean = text.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
+
+    const summaryMatch = clean.match(/SUMMARY:\s*([\s\S]*?)(?=\n\nFACTS:|$)/i);
+    const summary = summaryMatch ? summaryMatch[1].trim() : clean.slice(0, 200);
+
+    const factsBlock = clean.match(/FACTS:\s*([\s\S]*)$/i)?.[1] || '';
+    const facts = factsBlock === 'none' ? [] : factsBlock
+      .split('\n')
+      .map(l => l.replace(/^[-•*]\s*/, '').trim())
+      .filter(l => l.length > 5 && l.length < 120);
+
+    res.json({ summary, facts });
   } catch (err) {
-    res.status(500).json({ error: 'Summarization failed' });
+    res.status(500).json({ error: 'Compression failed' });
   }
 });
+
 
 // ── Multi-workbook: search for .xlsx files on the user's machine ─────────────
 const SEARCH_DIRS = [
@@ -1120,8 +1145,10 @@ app.post('/api/chat', async (req, res) => {
   const dynamicDepth  = options?.dynamicDepth  || false;
   const autoModel     = options?.autoModel     || false;
   const planFirst     = options?.plan          || false;
-  const forceNoThink  = options?.noThink       || false; // /set no_think
-  const forceThink    = options?.allowThink    || false; // /set think
+  const forceNoThink  = options?.noThink       || false;
+  const forceThink    = options?.allowThink    || false;
+  const pinnedMemory  = options?.pinnedMemory  || []; // user-pinned messages
+  const coreMemory    = options?.coreMemory    || []; // auto-extracted facts
 
   let maxTokens = 4096;
   let effectiveModel = model || null;
@@ -1242,7 +1269,16 @@ app.post('/api/chat', async (req, res) => {
     { role: 'assistant', content: 'Got it, I have the context of what we did earlier.' }
   ] : [];
 
-  let systemContent = SYSTEM_PROMPT + prefsSection;
+  const allMemoryItems = [
+    ...pinnedMemory.map(p => p.text || p),
+    ...coreMemory
+  ].filter(Boolean);
+  const memorySection = allMemoryItems.length
+    ? '\n\nPERMANENT MEMORY — always remember and follow these throughout the conversation:\n'
+      + allMemoryItems.map(m => `• ${m}`).join('\n')
+    : '';
+
+  let systemContent = SYSTEM_PROMPT + prefsSection + memorySection;
   if (planText) systemContent += `\n\nYour plan for this request was:\n${planText}\nFollow this plan exactly.`;
   if (forceNoThink && !systemContent.includes('/no_think')) systemContent += '\n/no_think';
   if (forceThink) systemContent += '__ALLOW_THINK__'; // sentinel: prevents injectNoThink from adding /no_think
