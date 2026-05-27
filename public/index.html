@@ -24,6 +24,9 @@
   --ok:       #4CAF6A;
   --shadow:   0 2px 8px rgba(0,0,0,.08);
   --shadow2:  0 4px 16px rgba(0,0,0,.12);
+  --accent-rgb: 204, 120, 92;
+  --spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease: cubic-bezier(0.25, 0.46, 0.45, 0.94);
   --r:        8px;
   --r2:       5px;
 }
@@ -53,10 +56,12 @@ html,body{height:100%;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;
 .main{flex:1;display:flex;flex-direction:column;min-width:0;overflow:hidden}
 
 /* ── Sidebar ── */
-.sidebar{position:fixed;inset:0;z-index:300;display:none}
-.sidebar.open{display:flex}
-.sidebar-backdrop{position:absolute;inset:0;background:rgba(0,0,0,.35)}
-.sidebar-drawer{position:absolute;left:0;top:0;bottom:0;width:240px;background:var(--sidebar);border-right:1px solid var(--border);display:flex;flex-direction:column;z-index:1}
+.sidebar{position:fixed;inset:0;z-index:300;visibility:hidden;pointer-events:none}
+.sidebar.open{visibility:visible;pointer-events:all}
+.sidebar-backdrop{position:absolute;inset:0;background:rgba(0,0,0,.35);opacity:0;transition:opacity .25s var(--ease)}
+.sidebar.open .sidebar-backdrop{opacity:1}
+.sidebar-drawer{position:absolute;left:0;top:0;bottom:0;width:240px;background:var(--sidebar);border-right:1px solid var(--border);display:flex;flex-direction:column;z-index:1;transform:translateX(-100%);transition:transform .35s var(--spring);will-change:transform}
+.sidebar.open .sidebar-drawer{transform:translateX(0)}
 .sidebar-head{padding:12px;border-bottom:1px solid var(--border);display:flex;gap:8px;align-items:center}
 .new-chat{flex:1;background:var(--accent);color:#fff;border:none;border-radius:var(--r2);padding:7px 10px;font-size:13px;font-weight:600;cursor:pointer;transition:background .15s}
 .new-chat:hover{background:var(--accent2)}
@@ -97,14 +102,19 @@ html,body{height:100%;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;
 .chip{background:var(--surf);border:1px solid var(--border);border-radius:var(--r2);padding:8px 10px;font-size:12px;color:var(--text);cursor:pointer;text-align:left;transition:background .1s,border-color .1s}
 .chip:hover{background:var(--surf2);border-color:var(--accent)}
 
-.msg{display:flex;flex-direction:column;gap:4px}
+@keyframes msgIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.msg{display:flex;flex-direction:column;gap:4px;animation:msgIn .2s var(--ease) both}
 .msg-head{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 .msg-role{font-size:12px;font-weight:600;color:var(--text2)}
 .msg-role.user{color:var(--accent)}
 .msg-meta{font-size:11px;color:var(--text3);margin-left:auto}
 .msg-via{font-size:10px;color:var(--text3);background:var(--surf);border:1px solid var(--border);border-radius:10px;padding:1px 6px;white-space:nowrap}
 .msg-body{font-size:14px;line-height:1.6;color:var(--text);white-space:pre-wrap;word-break:break-word}
-.msg.user .msg-body{background:var(--user-bg);padding:9px 12px;border-radius:var(--r2)}
+.msg.user{align-items:flex-end}
+.msg.user .msg-head{flex-direction:row-reverse}
+.msg.user .msg-body{background:var(--user-bg);padding:9px 12px;border-radius:14px 14px 4px 14px;max-width:90%}
+.msg.user .msg-actions{justify-content:flex-end}
+.msg.assistant .msg-body{white-space:normal}
 .msg.error .msg-body{background:rgba(217,79,79,.1);border:1px solid rgba(217,79,79,.25);border-radius:var(--r2);padding:8px 12px;color:var(--err)}
 .msg-actions{display:flex;gap:4px;margin-top:3px;opacity:0;transition:opacity .15s}
 .msg:hover .msg-actions{opacity:1}
@@ -175,14 +185,15 @@ html,body{height:100%;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;
 /* ── Input area ── */
 .input-area{padding:8px 10px 10px;border-top:1px solid var(--border);background:var(--bg);flex-shrink:0}
 .input-box{background:var(--input-bg);border:1px solid var(--border);border-radius:var(--r);transition:border-color .15s}
-.input-box:focus-within{border-color:var(--accent)}
+.input-box:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px rgba(var(--accent-rgb),.14)}
 .input-row{display:flex;align-items:flex-end;gap:4px;padding:8px}
 #msgInput{flex:1;background:none;border:none;outline:none;color:var(--text);font-size:14px;font-family:inherit;resize:none;min-height:20px;max-height:120px;line-height:1.5}
 #msgInput::placeholder{color:var(--text3)}
 .input-btns{display:flex;align-items:center;gap:3px;flex-shrink:0}
 .act-btn{background:none;border:none;color:var(--text2);cursor:pointer;padding:5px;border-radius:var(--r2);font-size:15px;line-height:1;transition:color .1s,background .1s;display:flex;align-items:center;justify-content:center}
 .act-btn:hover{color:var(--accent);background:var(--surf)}
-.send{background:var(--accent);border:none;color:#fff;cursor:pointer;padding:6px 12px;border-radius:var(--r2);font-size:13px;font-weight:600;transition:background .15s;white-space:nowrap}
+.send{background:var(--accent);border:none;color:#fff;cursor:pointer;padding:6px 12px;border-radius:var(--r2);font-size:13px;font-weight:600;transition:background .15s,transform .15s var(--spring);transform-origin:center;white-space:nowrap}
+.send:active{transform:scale(0.92)}
 .send:hover:not(:disabled){background:var(--accent2)}
 .send:disabled{opacity:.5;cursor:not-allowed}
 .send.stop{background:var(--err)}
@@ -221,10 +232,12 @@ html,body{height:100%;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;
 #plusBtn{position:relative}
 
 /* ── Model picker ── */
-.modal{position:fixed;inset:0;z-index:400;display:none}
-.modal.open{display:flex}
-.modal-bd{position:absolute;inset:0;background:rgba(0,0,0,.3)}
-.model-panel{position:absolute;top:44px;left:10px;right:10px;background:var(--bg);border:1px solid var(--border);border-radius:var(--r);box-shadow:var(--shadow2);max-height:78vh;display:flex;flex-direction:column;overflow:hidden}
+.modal{position:fixed;inset:0;z-index:400;visibility:hidden;pointer-events:none}
+.modal.open{visibility:visible;pointer-events:all}
+.modal-bd{position:absolute;inset:0;background:rgba(0,0,0,.3);opacity:0;transition:opacity .2s var(--ease)}
+.modal.open .modal-bd{opacity:1}
+.model-panel{position:absolute;top:44px;left:10px;right:10px;background:var(--bg);border:1px solid var(--border);border-radius:var(--r);box-shadow:var(--shadow2);max-height:78vh;display:flex;flex-direction:column;overflow:hidden;transform:translateY(-8px) scale(0.97);opacity:0;transition:transform .25s var(--spring),opacity .2s var(--ease);will-change:transform}
+.modal.open .model-panel{transform:translateY(0) scale(1);opacity:1}
 .model-ph{padding:10px 12px;border-bottom:1px solid var(--border);font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;display:flex;align-items:center;justify-content:space-between;position:relative}
 .filter-btn{background:none;border:1px solid var(--border);border-radius:var(--r2);color:var(--text2);cursor:pointer;font-size:12px;padding:2px 7px;line-height:1.6;transition:all .15s}
 .filter-btn:hover{border-color:var(--accent);color:var(--accent)}
@@ -274,10 +287,12 @@ html,body{height:100%;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;
 .model-opt-del:hover{color:var(--err)}
 
 /* ── Settings ── */
-.settings{position:fixed;inset:0;z-index:400;display:none}
-.settings.open{display:flex}
-.settings-bd{position:absolute;inset:0;background:rgba(0,0,0,.3)}
-.settings-draw{position:absolute;right:0;top:0;bottom:0;width:285px;background:var(--bg);border-left:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
+.settings{position:fixed;inset:0;z-index:400;visibility:hidden;pointer-events:none}
+.settings.open{visibility:visible;pointer-events:all}
+.settings-bd{position:absolute;inset:0;background:rgba(0,0,0,.3);opacity:0;transition:opacity .25s var(--ease)}
+.settings.open .settings-bd{opacity:1}
+.settings-draw{position:absolute;right:0;top:0;bottom:0;width:285px;background:var(--bg);border-left:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;transform:translateX(100%);transition:transform .35s var(--spring);will-change:transform}
+.settings.open .settings-draw{transform:translateX(0)}
 .shead{padding:13px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
 .stitle{font-size:15px;font-weight:600;color:var(--text)}
 .stabs{display:flex;border-bottom:1px solid var(--border);flex-shrink:0;padding:0 14px}
@@ -325,9 +340,25 @@ html,body{height:100%;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;
 .cost-ok{background:var(--accent);border:none;color:#fff;border-radius:var(--r2);padding:6px 14px;cursor:pointer;font-size:13px;font-weight:600;transition:background .15s}
 .cost-ok:hover{background:var(--accent2)}
 
+.toast{position:fixed;bottom:75px;left:50%;transform:translateX(-50%) translateY(8px);background:var(--text);color:var(--bg);padding:7px 16px;border-radius:20px;font-size:12px;font-weight:500;opacity:0;pointer-events:none;transition:opacity .2s var(--ease),transform .2s var(--ease);white-space:nowrap;z-index:600;max-width:80vw;text-overflow:ellipsis;overflow:hidden}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
 ::-webkit-scrollbar{width:4px;height:4px}
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+.hl-kw{color:#7c3aed}.hl-str{color:#16a34a}.hl-cmt{color:#9ca3af;font-style:italic}.hl-num{color:#ea580c}.hl-bi{color:#2563eb}
+[data-theme="dark"] .hl-kw{color:#c792ea}[data-theme="dark"] .hl-str{color:#c3e88d}[data-theme="dark"] .hl-cmt{color:#676e95}[data-theme="dark"] .hl-num{color:#f78c6c}[data-theme="dark"] .hl-bi{color:#82aaff}
+
+.msg-body p{margin:0 0 6px}
+.msg-body p:last-child{margin-bottom:0}
+.msg-body ul,.msg-body ol{margin:4px 0 6px 18px;display:flex;flex-direction:column;gap:2px}
+.msg-body li{font-size:14px;line-height:1.5}
+.msg-body h3{font-size:14px;font-weight:700;margin:8px 0 4px;color:var(--text)}
+.msg-body h4{font-size:13px;font-weight:700;margin:6px 0 3px;color:var(--text)}
+.msg-body code{font-family:'Menlo','Monaco','Courier New',monospace;font-size:12px;background:var(--surf2);padding:1px 5px;border-radius:3px}
+.md-code{font-family:'Menlo','Monaco','Courier New',monospace;font-size:12px;line-height:1.5;background:var(--code-bg);border:1px solid var(--border);border-radius:var(--r2);padding:10px;overflow-x:auto;margin:6px 0}
+.msg-body hr{border:none;border-top:1px solid var(--border);margin:8px 0}
+
 #fileInput{display:none}
 </style>
 </head>
@@ -498,7 +529,7 @@ html,body{height:100%;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;
         <input class="sinput" type="password" id="secPwdInp" placeholder="Set security password…" oninput="saveSecPwd()">
         <span class="sinote" id="secPwdNote">Not set — critical operations need only confirmation.</span>
       </div>
-      <div class="sfooter" style="cursor:pointer" onclick="openChangelog()" title="Click to see version history">Excel AI Assistant · <strong id="versionLabel">v5.5.0</strong></div>
+      <div class="sfooter" style="cursor:pointer" onclick="openChangelog()" title="Click to see version history">Excel AI Assistant · <strong id="versionLabel">v5.6.0</strong></div>
     </div>
 
     <!-- Preferences tab -->
@@ -555,6 +586,8 @@ html,body{height:100%;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;
   </div>
 </div>
 
+<div id="toastEl" class="toast"></div>
+
 <script>
 // ── Column letter helper (supports beyond Z) ──────────────────────────────────
 function colLetter(i) {
@@ -587,8 +620,9 @@ let pendingSendResolve = null;
 // ── Security state ────────────────────────────────────────────────────────────
 let sessionDangerConfirmed = new Set(); // 'high', 'critical' confirmed this session
 let sessionPasswordVerified = false;    // password entered once this session
-const APP_VERSION = 'v5.5.0';
+const APP_VERSION = 'v5.6.0';
 const CHANGELOG = [
+  { ver: 'v5.6.0', date: '2026-05-27', summary: 'UX overhaul: spring animations for settings/sidebar/model picker; message fade-in; user messages right-aligned; AI responses render markdown (bold, lists, headers, code blocks); syntax highlighting in code blocks; input glow on focus; send button spring animation; sound effects (send click + done chime); haptic feedback; toast notifications replace inline system messages.' },
   { ver: 'v5.5.0', date: '2026-05-27', summary: 'Security guardrails: server scans generated code for dangerous filesystem patterns (deletion, shell execution, bulk file moves, drive-wide search) and classifies as high/critical; inline confirmation banner before execution with session memory; critical ops require a security password (set in Settings); password verified once per session.' },
   { ver: 'v5.4.0', date: '2026-05-27', summary: 'Streaming responses: all AI output streams live token-by-token via SSE (/api/chat/stream); thinking models show a collapsible "Thought process" section that auto-collapses when the answer starts; non-thinking models stream their answer directly; live timer updates while streaming.' },
   { ver: 'v5.3.0', date: '2026-05-27', summary: 'Gradient context compression: recent messages kept full, older messages compressed into rolling narrative + extracted facts (coreMemory); pin-to-memory button on user messages; permanent memory strip UI; /memory and /reset memory slash commands; /api/compress endpoint.' },
@@ -1119,6 +1153,88 @@ async function generateTitle(userMsg,aiReply) {
   try{const k=localStorage.getItem('apiKey');const r=await fetch('/api/title',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({userMsg,aiReply,apiKey:k||undefined})});const d=await r.json();return d.title||null;}catch{return null;}
 }
 
+// ── Syntax highlighter (JS) ───────────────────────────────────────────────────
+function highlightJS(code) {
+  const e = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const KW = new Set(['const','let','var','function','async','await','return','if','else','for','while','do','try','catch','finally','throw','new','delete','typeof','instanceof','class','extends','import','export','default','switch','case','break','continue','true','false','null','undefined','this','super','of','in']);
+  const BI = new Set(['Excel','Office','context','console','document','window','fetch','JSON','Math','Array','Object','Promise','String','Number','Boolean','Error','ctx','workbook','sheet','range']);
+  let res = '', i = 0, src = code;
+  while (i < src.length) {
+    if (src[i]==='/' && src[i+1]==='/') {
+      const end = src.indexOf('\n',i); const s = end===-1?src.slice(i):src.slice(i,end);
+      res += `<span class="hl-cmt">${e(s)}</span>`; i += s.length; continue;
+    }
+    if (src[i]==='/' && src[i+1]==='*') {
+      const end = src.indexOf('*/',i+2); const s = end===-1?src.slice(i):src.slice(i,end+2);
+      res += `<span class="hl-cmt">${e(s)}</span>`; i += s.length; continue;
+    }
+    if (src[i]==="'" || src[i]==='"' || src[i]==='`') {
+      const q = src[i]; let j = i+1;
+      while (j<src.length && src[j]!==q && src[j]!=='\n') { if(src[j]==='\\')j++; j++; }
+      const s = src.slice(i, j+1);
+      res += `<span class="hl-str">${e(s)}</span>`; i = j+1; continue;
+    }
+    if (/\d/.test(src[i]) && (i===0||/\W/.test(src[i-1]))) {
+      let j = i; while(j<src.length&&/[\d._xXa-fA-F]/.test(src[j]))j++;
+      res += `<span class="hl-num">${e(src.slice(i,j))}</span>`; i = j; continue;
+    }
+    if (/[a-zA-Z_$]/.test(src[i])) {
+      let j = i; while(j<src.length&&/[a-zA-Z0-9_$]/.test(src[j]))j++;
+      const w = src.slice(i,j);
+      if (KW.has(w)) res += `<span class="hl-kw">${e(w)}</span>`;
+      else if (BI.has(w)) res += `<span class="hl-bi">${e(w)}</span>`;
+      else res += e(w);
+      i = j; continue;
+    }
+    res += e(src[i]); i++;
+  }
+  return res;
+}
+
+// ── Markdown renderer ─────────────────────────────────────────────────────────
+function renderMd(raw) {
+  if (!raw) return '';
+  const e = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  function inline(s) {
+    return s.split(/(`[^`\n]+`)/g).map((p,i) => {
+      if (i%2===1) return `<code>${e(p.slice(1,-1))}</code>`;
+      return e(p).replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>').replace(/\*(.+?)\*/g,'<em>$1</em>');
+    }).join('');
+  }
+  const lines = raw.split('\n');
+  let html='', inUl=false, inOl=false, inCode=false, codeBuf=[];
+  const closeList=()=>{ if(inUl){html+='</ul>';inUl=false;} if(inOl){html+='</ol>';inOl=false;} };
+  for (const line of lines) {
+    if (inCode) {
+      if (/^```/.test(line.trimStart())) { html+=`<pre class="md-code">${highlightJS(codeBuf.join('\n'))}</pre>`; inCode=false; codeBuf=[]; }
+      else codeBuf.push(line);
+      continue;
+    }
+    if (/^```/.test(line.trimStart())) { closeList(); inCode=true; codeBuf=[]; continue; }
+    if (/^#{1,4} /.test(line)) {
+      closeList();
+      const lv=line.match(/^(#{1,4}) /)[1].length; const tag=lv<=2?'h3':'h4';
+      html+=`<${tag}>${inline(line.replace(/^#{1,4} /,''))}</${tag}>`; continue;
+    }
+    if (/^[-*] /.test(line)) {
+      if(inOl){html+='</ol>';inOl=false;} if(!inUl){html+='<ul>';inUl=true;}
+      html+=`<li>${inline(line.slice(2))}</li>`; continue;
+    }
+    const olM=line.match(/^\d+\. /);
+    if (olM) {
+      if(inUl){html+='</ul>';inUl=false;} if(!inOl){html+='<ol>';inOl=true;}
+      html+=`<li>${inline(line.slice(olM[0].length))}</li>`; continue;
+    }
+    if (/^---+$/.test(line.trim())) { closeList(); html+='<hr>'; continue; }
+    closeList();
+    if (!line.trim()) continue;
+    html+=`<p>${inline(line)}</p>`;
+  }
+  closeList();
+  if (inCode) html+=`<pre class="md-code">${e(codeBuf.join('\n'))}</pre>`;
+  return html;
+}
+
 // ── Render ────────────────────────────────────────────────────────────────────
 function renderEmpty() {
   document.getElementById('messages').innerHTML=
@@ -1162,7 +1278,7 @@ function mkMsg(role,text,isErr,ms,tok,code,savedTime,via) {
   }
   const viaTag = via ? '<span class="msg-via">via '+esc(via)+'</span>' : '';
   el.innerHTML='<div class="msg-head"><span class="msg-role '+role+'">'+(role==='user'?'You':'Excel AI')+'</span>'+viaTag+'<span class="msg-meta">'+meta+'</span></div>'+
-    '<div class="msg-body">'+esc(text)+'</div>';
+    '<div class="msg-body">'+(role==='assistant'&&!isErr?renderMd(text):esc(text))+'</div>';
   if(code&&showCode)el.appendChild(mkCode(code));
   const actions=document.createElement('div'); actions.className='msg-actions';
   const copyBtn=document.createElement('button'); copyBtn.className='copy-msg-btn'; copyBtn.innerHTML='⎘ Copy';
@@ -1190,7 +1306,7 @@ function mkCode(code) {
   const h=document.createElement('div');h.className='code-head';
   h.innerHTML='<span>Generated Code</span><span class="code-toggle">hide ▲</span>';
   const b=document.createElement('div');b.className='code-body';
-  const p=document.createElement('pre');p.textContent=code;b.appendChild(p);
+  const p=document.createElement('pre');p.innerHTML=highlightJS(code);b.appendChild(p);
   const footer=document.createElement('div');footer.className='code-footer';
   const cb=document.createElement('button');cb.className='copy-code-btn';cb.textContent='⎘ Copy code';
   cb.onclick=()=>{navigator.clipboard.writeText(code).then(()=>{cb.textContent='✓ Copied';cb.classList.add('copied');setTimeout(()=>{cb.textContent='⎘ Copy code';cb.classList.remove('copied');},1500);});};
@@ -1470,15 +1586,48 @@ function slashStatus() {
     '\nauto-facts:  ' + coreMemory.length + ' item(s)'
   );
 }
-function addSysMsg(text) {
-  const el = document.createElement('div');
-  el.className = 'sys-msg';
-  el.style.whiteSpace = 'pre-wrap';
-  el.textContent = text;
-  const box = document.getElementById('messages');
-  box.appendChild(el);
-  box.scrollTop = box.scrollHeight;
+// ── Sound & haptics ───────────────────────────────────────────────────────────
+let _audioCtx = null;
+function getACtx() {
+  try { _audioCtx = _audioCtx || new (window.AudioContext || window.webkitAudioContext)(); } catch {}
+  return _audioCtx;
 }
+function playSound(type) {
+  try {
+    const ctx = getACtx(); if (!ctx) return;
+    if (type === 'send') {
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.connect(g); g.connect(ctx.destination);
+      o.type = 'sine';
+      o.frequency.setValueAtTime(600, ctx.currentTime);
+      o.frequency.exponentialRampToValueAtTime(300, ctx.currentTime + 0.06);
+      g.gain.setValueAtTime(0.12, ctx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.08);
+      o.start(); o.stop(ctx.currentTime + 0.09);
+    } else if (type === 'done') {
+      [[523, 0], [659, 0.07]].forEach(([freq, delay]) => {
+        const o = ctx.createOscillator(), g = ctx.createGain();
+        o.connect(g); g.connect(ctx.destination); o.type = 'sine'; o.frequency.value = freq;
+        g.gain.setValueAtTime(0, ctx.currentTime + delay);
+        g.gain.linearRampToValueAtTime(0.07, ctx.currentTime + delay + 0.02);
+        g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + delay + 0.4);
+        o.start(ctx.currentTime + delay); o.stop(ctx.currentTime + delay + 0.45);
+      });
+    }
+  } catch {}
+}
+function haptic(p = [10]) { try { navigator.vibrate?.(p); } catch {} }
+
+// ── Toast notifications ────────────────────────────────────────────────────────
+let _toastTimer = null;
+function showToast(msg, ms = 2800) {
+  const t = document.getElementById('toastEl'); if (!t) return;
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => t.classList.remove('show'), ms);
+}
+
+function addSysMsg(text) { showToast(text); }
 
 // ── Slash popup logic ──────────────────────────────────────────────────────────
 function updateSlashPopup(val) {
@@ -1654,6 +1803,7 @@ async function sendMessage() {
 
   const userMsg={role:'user',content:text,time:new Date().toISOString()};
   history.push(userMsg);addMsg('user',text);
+  playSound('send'); haptic([10]);
   addTyping();await maybeCompress();
 
   const t0=Date.now();ctrl=new AbortController();
@@ -1735,8 +1885,9 @@ async function sendMessage() {
           addMsg('assistant','📋 Plan:\n'+ev.text);
         }else if(ev.type==='done'){
           clearInterval(timerInterval);timerInterval=null;
+          playSound('done');
           const ms=Date.now()-t0;
-          const{code,vba,cleaned,usage,selectedModel:autoSelected}=ev;
+          const{code,vba,cleaned,usage,selectedModel:autoSelected,danger}=ev;
           const tok=usage?.completion_tokens??null;
           if(tok){totalTok+=tok;updateTok();}
           if(usage)addActualCost(usage,autoSelected||selectedModel);
@@ -1745,7 +1896,7 @@ async function sendMessage() {
           const finalText=cleaned||answerText;
 
           ensureStreamEl();
-          streamBody.textContent=finalText;
+          streamBody.innerHTML=renderMd(finalText);
           // Update header with real timing
           const parts=[];
           if(ms!=null)parts.push((ms/1000).toFixed(1)+'s');
@@ -1769,8 +1920,8 @@ async function sendMessage() {
 
           if(code){
             // ── Security check before execution ──
-            if(ev.danger){
-              const allowed=await requestDangerConfirmation(ev.danger);
+            if(danger){
+              const allowed=await requestDangerConfirmation(danger);
               if(!allowed){
                 addMsg('assistant','Operation cancelled.');
                 loading=false;
