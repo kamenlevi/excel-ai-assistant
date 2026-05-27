@@ -417,6 +417,97 @@ function injectNoThink(messages, model) {
   );
 }
 
+// ── Stream helpers ────────────────────────────────────────────────────────────
+async function* readLines(stream) {
+  let buf = '';
+  for await (const chunk of stream) {
+    buf += typeof chunk === 'string' ? chunk : chunk.toString('utf8');
+    const lines = buf.split('\n');
+    buf = lines.pop();
+    for (const line of lines) yield line;
+  }
+  if (buf) yield buf;
+}
+
+// Yields {token, usage?} chunks; usage appears once at end for OpenAI-compatible providers
+async function* streamAI(messages, maxTokens, model, useOllama, useGroq, apiKey, groqKey) {
+  const effectiveModel = model || DEFAULT_MODEL;
+  const orKey = apiKey  || OPENROUTER_KEY;
+  const gKey  = groqKey || GROQ_KEY;
+
+  if (useOllama) {
+    const msgsToSend = injectNoThink(messages, effectiveModel);
+    const res = await fetch(`http://localhost:${OLLAMA_PORT}/api/chat`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, timeout: 120000,
+      body: JSON.stringify({ model: effectiveModel, messages: msgsToSend, stream: true,
+        options: { num_ctx: 8192, num_predict: maxTokens, temperature: 0.15, top_p: 0.9, repeat_penalty: 1.1 } })
+    });
+    for await (const line of readLines(res.body)) {
+      if (!line.trim()) continue;
+      try {
+        const d = JSON.parse(line);
+        if (d.message?.content) yield { token: d.message.content };
+        if (d.done) return;
+      } catch {}
+    }
+    return;
+  }
+
+  let url, headers, reqBody;
+
+  if (useGroq || USE_GROQ) {
+    const groqModel = (useGroq && model) ? model : 'llama-3.3-70b-versatile';
+    url = 'https://api.groq.com/openai/v1/chat/completions';
+    headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${gKey}` };
+    reqBody = { model: groqModel, messages, max_tokens: maxTokens, temperature: 0.15, top_p: 0.9,
+      stream: true, stream_options: { include_usage: true } };
+  } else if (USE_OPENROUTER || orKey) {
+    url = 'https://openrouter.ai/api/v1/chat/completions';
+    headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${orKey}`,
+      'HTTP-Referer': 'https://localhost:3000', 'X-Title': 'Excel AI Assistant' };
+    reqBody = { model: effectiveModel, messages, max_tokens: maxTokens, temperature: 0.15, top_p: 0.9,
+      stream: true, stream_options: { include_usage: true } };
+  } else if (USE_MLX) {
+    const msgsToSend = injectNoThink(messages, effectiveModel);
+    url = `http://${MACBOOK_IP}:${MLX_PORT}/v1/chat/completions`;
+    headers = { 'Content-Type': 'application/json' };
+    reqBody = { model: effectiveModel, messages: msgsToSend, max_tokens: maxTokens, temperature: 0.15, top_p: 0.9, stream: true };
+  } else {
+    // Fallback: Ollama on MacBook
+    const fallbackModel = 'qwen3:32b';
+    const fallbackMsgs  = injectNoThink(messages, fallbackModel);
+    const res = await fetch(`http://${MACBOOK_IP}:${OLLAMA_PORT}/api/chat`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, timeout: 120000,
+      body: JSON.stringify({ model: fallbackModel, messages: fallbackMsgs, stream: true,
+        options: { num_ctx: 8192, num_predict: maxTokens, temperature: 0.15, top_p: 0.9, repeat_penalty: 1.1 } })
+    });
+    for await (const line of readLines(res.body)) {
+      if (!line.trim()) continue;
+      try {
+        const d = JSON.parse(line);
+        if (d.message?.content) yield { token: d.message.content };
+        if (d.done) return;
+      } catch {}
+    }
+    return;
+  }
+
+  const res = await fetch(url, { method: 'POST', headers, body: JSON.stringify(reqBody) });
+  let pendingUsage = null;
+  for await (const line of readLines(res.body)) {
+    if (!line.startsWith('data: ')) continue;
+    const raw = line.slice(6).trim();
+    if (raw === '[DONE]') { if (pendingUsage) yield { token: '', usage: pendingUsage }; return; }
+    try {
+      const d = JSON.parse(raw);
+      if (d.usage) pendingUsage = d.usage;
+      const token = d.choices?.[0]?.delta?.content;
+      if (token) yield { token };
+    } catch {}
+  }
+  if (pendingUsage) yield { token: '', usage: pendingUsage };
+}
+
 async function callAI(messages, maxTokens = 4096, model = null, useOllama = false, useGroq = false, apiKey = null, groqKey = null) {
   const effectiveModel = model || DEFAULT_MODEL;
   const orKey  = apiKey  || OPENROUTER_KEY;
@@ -1317,6 +1408,195 @@ app.post('/api/chat', async (req, res) => {
   } catch (err) {
     console.error('AI error:', err);
     res.status(500).json({ error: `AI error: ${err.message}` });
+  }
+});
+
+// ── Streaming chat route ─────────────────────────────────────────────────────
+app.post('/api/chat/stream', async (req, res) => {
+  const { messages, workbookData, activeSheet, summary, model, useOllama, useGroq, apiKey, groqKey, options } = req.body;
+
+  const preferences  = options?.preferences  || '';
+  const deepThink    = options?.deepThink    || false;
+  const dynamicDepth = options?.dynamicDepth || false;
+  const autoModel    = options?.autoModel    || false;
+  const planFirst    = options?.plan         || false;
+  const forceNoThink = options?.noThink      || false;
+  const forceThink   = options?.allowThink   || false;
+  const pinnedMemory = options?.pinnedMemory || [];
+  const coreMemory   = options?.coreMemory   || [];
+
+  let maxTokens = 4096;
+  let effectiveModel = model || null;
+  let selectedModel  = null;
+
+  const rawUserMessage = messages[messages.length - 1]?.content || '';
+  const recentMessages = messages.map(m => ({ ...m }));
+
+  const dissatisfaction = detectDissatisfaction(rawUserMessage, messages);
+  if (dissatisfaction && messages.length >= 2) {
+    const prevAssistant = [...messages].reverse().find(m => m.role === 'assistant');
+    const prevUser      = [...messages].reverse().filter(m => m.role === 'user')[1];
+    if (prevAssistant && prevUser)
+      logAutoFeedback(dissatisfaction, prevUser.content, prevAssistant.content, prevAssistant.code || null, model || 'unknown');
+  }
+
+  if (autoModel && options?.availableModels?.length) {
+    try {
+      const { text: choice } = await callAI([
+        { role: 'system', content: 'Select the best AI model for this task. JSON only: {"modelId":"id"}' },
+        { role: 'user', content: `Task: "${rawUserMessage.slice(0, 300)}"\nModels:\n${options.availableModels.map(m=>`${m.id} $${m.in}/$${m.out}`).join('\n')}` }
+      ], 60, null, false, false, apiKey || null, groqKey || null);
+      const m = choice.replace(/<think>[\s\S]*?<\/think>/g,'').trim().match(/\{[\s\S]*?\}/);
+      if (m) {
+        const parsed = JSON.parse(m[0]);
+        if (parsed.modelId && options.availableModels.find(x => x.id === parsed.modelId)) {
+          effectiveModel = parsed.modelId; selectedModel = parsed.modelId;
+        }
+      }
+    } catch {}
+  }
+
+  if (dynamicDepth) {
+    try {
+      const { text: assess } = await callAI([
+        { role: 'system', content: 'Rate complexity 1-3: 1=simple, 2=moderate, 3=complex. JSON: {"level":1|2|3}' },
+        { role: 'user', content: rawUserMessage.slice(0, 300) }
+      ], 30, effectiveModel, useOllama || false, useGroq || false, apiKey || null, groqKey || null);
+      const m = assess.match(/\{[\s\S]*?\}/);
+      const level = m ? (JSON.parse(m[0]).level || 2) : 2;
+      maxTokens = level >= 3 ? 8192 : level === 1 ? 2048 : 4096;
+    } catch {}
+  }
+
+  if (deepThink) {
+    const lastUserIdx = recentMessages.map(m=>m.role).lastIndexOf('user');
+    if (lastUserIdx !== -1) {
+      try {
+        const orig = recentMessages[lastUserIdx].content;
+        const { text: enhanced } = await callAI([
+          { role: 'system', content: 'You are a prompt engineer for an Excel AI assistant. Rewrite the user\'s request to be maximally clear, precise, and complete. Preserve intent exactly. Add explicit handling for edge cases. Output ONLY the rewritten prompt.' },
+          { role: 'user', content: `Workbook context:\n${(workbookData||'').slice(0,2000)}\n\nOriginal request: ${orig}` }
+        ], 700, effectiveModel, useOllama || false, useGroq || false, apiKey || null, groqKey || null);
+        recentMessages[lastUserIdx] = { ...recentMessages[lastUserIdx], content: enhanced.replace(/<think>[\s\S]*?<\/think>/g,'').trim() };
+        maxTokens = Math.max(maxTokens, 8192);
+      } catch {}
+    }
+  }
+
+  let planText = null;
+  if (planFirst && !isQuestion(rawUserMessage)) {
+    try {
+      const prefsSection_ = preferences ? `\n\nUSER PREFERENCES:\n${preferences}` : '';
+      const contextMessages_ = workbookData ? [
+        { role: 'user', content: `Here is the current state of the workbook.\n\nActive sheet: ${activeSheet}\n\n${workbookData}` },
+        { role: 'assistant', content: 'I can see the full workbook. What would you like me to do?' }
+      ] : [];
+      const { text: planReply } = await callAI([
+        { role: 'system', content: SYSTEM_PROMPT + prefsSection_ + '\n\nIMPORTANT: Output a short numbered plan (3-5 steps). No CODE_JS block.' },
+        ...contextMessages_,
+        { role: 'user', content: `Before executing, give me a brief plan for: ${rawUserMessage}` }
+      ], 512, effectiveModel, useOllama || false, useGroq || false, apiKey || null, groqKey || null);
+      planText = planReply.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
+    } catch {}
+  }
+
+  const lastIdx = recentMessages.map(m=>m.role).lastIndexOf('user');
+  if (lastIdx !== -1) recentMessages[lastIdx] = { ...recentMessages[lastIdx],
+    content: recentMessages[lastIdx].content + '\n\n[REMINDER: If making changes, output a CODE_JS block with Office JS code. Do not skip it.]' };
+
+  const prefsSection = preferences ? `\n\nUSER PREFERENCES (always follow these):\n${preferences}` : '';
+  const MAX_CONTEXT_TOKENS = 200000, CHARS_PER_TOKEN = 3.5;
+  const overhead = Math.ceil((SYSTEM_PROMPT.length + recentMessages.reduce((s,m)=>s+(m.content||'').length,0) + (summary||'').length) / CHARS_PER_TOKEN) + maxTokens + 2000;
+  const wbBudgetChars = Math.floor(Math.max(10000, MAX_CONTEXT_TOKENS - overhead) * CHARS_PER_TOKEN);
+  let trimmedWbData = workbookData || '';
+  if (trimmedWbData.length > wbBudgetChars) trimmedWbData = trimmedWbData.slice(0, wbBudgetChars) + '\n\n[...workbook data truncated to fit context window.]';
+
+  const contextMessages = trimmedWbData ? [
+    { role: 'user', content: `Here is the current state of the workbook (last synced before this message).\n\nActive sheet: ${activeSheet}\n\n${trimmedWbData}` },
+    { role: 'assistant', content: 'I can see the full workbook. What would you like me to do?' }
+  ] : [];
+  const summaryMessages = summary ? [
+    { role: 'user', content: `Earlier in this session: ${summary}` },
+    { role: 'assistant', content: 'Got it, I have the context of what we did earlier.' }
+  ] : [];
+  const allMemoryItems = [...pinnedMemory.map(p => p.text || p), ...coreMemory].filter(Boolean);
+  const memorySection = allMemoryItems.length
+    ? '\n\nPERMANENT MEMORY — always remember and follow these throughout the conversation:\n' + allMemoryItems.map(m=>`• ${m}`).join('\n')
+    : '';
+  let systemContent = SYSTEM_PROMPT + prefsSection + memorySection;
+  if (planText) systemContent += `\n\nYour plan for this request was:\n${planText}\nFollow this plan exactly.`;
+  if (forceNoThink && !systemContent.includes('/no_think')) systemContent += '\n/no_think';
+  if (forceThink) systemContent += '__ALLOW_THINK__';
+  const allMessages = [{ role: 'system', content: systemContent }, ...contextMessages, ...summaryMessages, ...recentMessages];
+
+  // All pre-processing done — now switch to SSE
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.flushHeaders();
+
+  const sse = (data) => { if (!res.writableEnded) res.write(`data: ${JSON.stringify(data)}\n\n`); };
+
+  if (planText) sse({ type: 'plan', text: planText });
+
+  // ── Think-tag parser: routes tokens to 'think' or 'token' SSE events ─────
+  let tBuf = '', inThink = false, answerBuf = '';
+
+  function feedToken(tok) {
+    tBuf += tok;
+    while (tBuf.length > 0) {
+      if (!inThink) {
+        const i = tBuf.indexOf('<think>');
+        if (i === -1) {
+          const safe = Math.max(0, tBuf.length - 6);
+          if (safe > 0) { sse({ type: 'token', token: tBuf.slice(0, safe) }); answerBuf += tBuf.slice(0, safe); tBuf = tBuf.slice(safe); }
+          break;
+        }
+        if (i > 0) { sse({ type: 'token', token: tBuf.slice(0, i) }); answerBuf += tBuf.slice(0, i); }
+        tBuf = tBuf.slice(i + 7); inThink = true;
+      } else {
+        const i = tBuf.indexOf('</think>');
+        if (i === -1) {
+          const safe = Math.max(0, tBuf.length - 8);
+          if (safe > 0) { sse({ type: 'think', token: tBuf.slice(0, safe) }); tBuf = tBuf.slice(safe); }
+          break;
+        }
+        if (i > 0) sse({ type: 'think', token: tBuf.slice(0, i) });
+        tBuf = tBuf.slice(i + 8); inThink = false;
+        sse({ type: 'think_end' });
+      }
+    }
+  }
+
+  let finalUsage = null;
+  try {
+    for await (const { token, usage: u } of streamAI(allMessages, maxTokens, effectiveModel, useOllama || false, useGroq || false, apiKey || null, groqKey || null)) {
+      if (res.writableEnded) break;
+      if (u) finalUsage = u;
+      if (token) feedToken(token);
+    }
+    // Flush remaining buffer
+    if (tBuf) { if (inThink) sse({ type: 'think', token: tBuf }); else { sse({ type: 'token', token: tBuf }); answerBuf += tBuf; } }
+
+    const { code, vba, cleaned } = parseResponse(answerBuf);
+    let finalCode = code;
+    if (!vba && modelForgotCode(answerBuf, rawUserMessage)) {
+      try {
+        const { text: retryText } = await callAI([
+          ...allMessages,
+          { role: 'assistant', content: answerBuf },
+          { role: 'user', content: 'You forgot the CODE_JS block. Output ONLY the CODE_JS block now. Start with CODE_JS:: and end with ::END_CODE.' }
+        ], 2048, effectiveModel, useOllama || false, useGroq || false, apiKey || null, groqKey || null);
+        const { code: rc } = parseResponse(retryText.replace(/<think>[\s\S]*?<\/think>/g,'').trim());
+        if (rc) finalCode = rc;
+      } catch {}
+    }
+
+    sse({ type: 'done', code: finalCode, vba, cleaned, usage: finalUsage, selectedModel, plan: planText });
+    res.end();
+  } catch (err) {
+    sse({ type: 'error', message: err.message });
+    res.end();
   }
 });
 

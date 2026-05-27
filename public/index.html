@@ -123,6 +123,15 @@ html,body{height:100%;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;
 .memory-chip-x{cursor:pointer;opacity:.6;font-size:9px;flex-shrink:0;line-height:1}
 .memory-chip-x:hover{opacity:1}
 
+.think-section{border:1px solid var(--border);border-radius:var(--r);margin-bottom:8px;overflow:hidden}
+.think-header{display:flex;align-items:center;gap:6px;padding:6px 10px;cursor:pointer;user-select:none;color:var(--text3);font-size:12px;background:var(--surf2)}
+.think-header:hover{color:var(--text2)}
+.think-arrow{font-size:10px;transition:transform .2s;display:inline-block}
+.think-section.collapsed .think-arrow{transform:rotate(-90deg)}
+.think-body{max-height:300px;overflow-y:auto;transition:max-height .25s ease}
+.think-section.collapsed .think-body{max-height:0}
+.think-text{margin:0;padding:8px 10px;font-size:11px;color:var(--text2);white-space:pre-wrap;word-break:break-word;font-family:inherit;line-height:1.5}
+
 .code-block{margin-top:6px;border:1px solid var(--border);border-radius:var(--r2);overflow:hidden;font-size:12px}
 .code-head{background:var(--surf);padding:5px 10px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none}
 .code-head span{font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.4px}
@@ -468,7 +477,7 @@ html,body{height:100%;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;
         <div class="slabel">History</div>
         <button class="sdanger" onclick="clearAllHistory()">Delete all chat history</button>
       </div>
-      <div class="sfooter" style="cursor:pointer" onclick="openChangelog()" title="Click to see version history">Excel AI Assistant · <strong id="versionLabel">v5.3.0</strong></div>
+      <div class="sfooter" style="cursor:pointer" onclick="openChangelog()" title="Click to see version history">Excel AI Assistant · <strong id="versionLabel">v5.4.0</strong></div>
     </div>
 
     <!-- Preferences tab -->
@@ -554,8 +563,9 @@ let costLimitType = localStorage.getItem('costLimitType') || 'prompt';
 let costLimitIdx  = parseInt(localStorage.getItem('costLimitIdx') || '0');
 let sessionCost = 0;
 let pendingSendResolve = null;
-const APP_VERSION = 'v5.3.0';
+const APP_VERSION = 'v5.4.0';
 const CHANGELOG = [
+  { ver: 'v5.4.0', date: '2026-05-27', summary: 'Streaming responses: all AI output streams live token-by-token via SSE (/api/chat/stream); thinking models show a collapsible "Thought process" section that auto-collapses when the answer starts; non-thinking models stream their answer directly; live timer updates while streaming.' },
   { ver: 'v5.3.0', date: '2026-05-27', summary: 'Gradient context compression: recent messages kept full, older messages compressed into rolling narrative + extracted facts (coreMemory); pin-to-memory button on user messages; permanent memory strip UI; /memory and /reset memory slash commands; /api/compress endpoint.' },
   { ver: 'v5.2.0', date: '2026-05-27', summary: 'Structural: server no longer double-truncates history (was slice(-6) on top of frontend slice(-8)); plan now fed into main AI call so model follows it; summarize keeps 8 messages not 4; last CODE_JS block used when AI outputs multiple; MacBook/Ollama host configurable via OLLAMA_HOST env var.' },
   { ver: 'v5.1.2', date: '2026-05-27', summary: 'Fix: slash commands crashed (getElementById("chat") → "messages"); code retry did not check rd.error before execCode; greedy JSON regex in model recommendation replaced with non-greedy.' },
@@ -1521,18 +1531,15 @@ async function sendMessage() {
   closePlus();
   closeSlashPopup();
 
-  // ── Slash command interception ──
-  if (text.startsWith('/') && !attached) {
-    inp.value = ''; inp.style.height = 'auto';
-    if (executeSlashCmd(text)) return;
-    // Falls through only if not a known command — send as normal message
+  if(text.startsWith('/')&&!attached){
+    inp.value='';inp.style.height='auto';
+    if(executeSlashCmd(text))return;
   }
 
   if(attached){text+=(text?'\n\n':'')+'[Attached: '+attached.name+']\n'+attached.content.slice(0,8000);clearAttach();}
 
-  // ── Pre-send cost check ──
-  const allowed = await checkCostBefore(text);
-  if (!allowed) return;
+  const allowed=await checkCostBefore(text);
+  if(!allowed)return;
 
   inp.value='';inp.style.height='auto';loading=true;
   const sb=document.getElementById('sendBtn');sb.textContent='■ Stop';sb.className='send stop';sb.onclick=stopGen;
@@ -1542,90 +1549,153 @@ async function sendMessage() {
   addTyping();await maybeCompress();
 
   const t0=Date.now();ctrl=new AbortController();
-  const isGroq   =selectedModel.startsWith('groq:');
-  const isOllama =selectedModel.startsWith('ollama:');
-  const modelId  =isGroq?selectedModel.slice(5):isOllama?selectedModel.slice(7):selectedModel;
-  const apiKey   =localStorage.getItem('apiKey')||undefined;
-  const groqKey  =localStorage.getItem('groqKey')||undefined;
+  const isGroq  =selectedModel.startsWith('groq:');
+  const isOllama=selectedModel.startsWith('ollama:');
+  const modelId =isGroq?selectedModel.slice(5):isOllama?selectedModel.slice(7):selectedModel;
+  const apiKey  =localStorage.getItem('apiKey')||undefined;
+  const groqKey =localStorage.getItem('groqKey')||undefined;
+
+  const payload={
+    messages:history.slice(-15),workbookData,activeSheet,summary,
+    model:modelId,useOllama:isOllama,useGroq:isGroq,apiKey,groqKey,
+    options:{
+      deepThink:opts.deep,dynamicDepth:opts.dynamic,autoModel:opts.auto,plan:opts.plan,
+      noThink:slashNoThink==='on',allowThink:slashNoThink==='off',
+      pinnedMemory,coreMemory,preferences:userPreferences,costLimit:getCostLimit(),
+      availableModels:opts.auto?allModelsFlat().filter(m=>!m.id.startsWith('ollama:')).map(m=>({id:m.id,name:m.name,in:m.in,out:m.out,tags:m.tags})):undefined
+    }
+  };
+
+  // ── Streaming state ──
+  let streamEl=null,thinkEl=null,streamBody=null,answerText='',thinkCollapsed=false;
+  const box=document.getElementById('messages');
+
+  function ensureStreamEl(){
+    if(streamEl)return;
+    removeTyping(); // clears addTyping()'s interval
+    document.getElementById('emptyState')?.remove();
+    streamEl=document.createElement('div');streamEl.className='msg assistant';
+    streamEl.innerHTML='<div class="msg-head"><span class="msg-role assistant">Excel AI</span><span class="live-timer" id="streamTimer">0.0s</span></div>';
+    streamBody=document.createElement('div');streamBody.className='msg-body';streamBody.id='streamBody';
+    streamEl.appendChild(streamBody);
+    box.appendChild(streamEl);box.scrollTop=box.scrollHeight;
+    timerInterval=setInterval(()=>{const t=document.getElementById('streamTimer');if(t)t.textContent=((Date.now()-t0)/1000).toFixed(1)+'s';},100);
+  }
+  function ensureThinkEl(){
+    if(thinkEl)return;
+    ensureStreamEl();
+    thinkEl=document.createElement('div');thinkEl.className='think-section';
+    thinkEl.innerHTML='<div class="think-header"><span class="think-arrow">▼</span> Thought process</div><div class="think-body"><pre class="think-text"></pre></div>';
+    thinkEl.querySelector('.think-header').onclick=()=>thinkEl.classList.toggle('collapsed');
+    streamEl.insertBefore(thinkEl,streamBody);
+  }
+  function collapseThink(){
+    if(thinkEl&&!thinkCollapsed){thinkEl.classList.add('collapsed');thinkCollapsed=true;}
+  }
 
   try{
-    const res=await fetch('/api/chat',{
+    const resp=await fetch('/api/chat/stream',{
       method:'POST',headers:{'Content-Type':'application/json'},signal:ctrl.signal,
-      body:JSON.stringify({
-        messages:history.slice(-15),workbookData,activeSheet,summary,
-        model:modelId,useOllama:isOllama,useGroq:isGroq,apiKey,groqKey,
-        options:{
-          deepThink:  opts.deep,
-          dynamicDepth: opts.dynamic,
-          autoModel:  opts.auto,
-          plan:       opts.plan,
-          noThink:    slashNoThink === 'on',
-          allowThink: slashNoThink === 'off',
-          pinnedMemory,
-          coreMemory,
-          preferences: userPreferences,
-          costLimit:  getCostLimit(),
-          availableModels: opts.auto
-            ? allModelsFlat().filter(m=>!m.id.startsWith('ollama:')).map(m=>({id:m.id,name:m.name,in:m.in,out:m.out,tags:m.tags}))
-            : undefined,
-        }
-      })
+      body:JSON.stringify(payload)
     });
-    const data=await res.json();
-    const ms=Date.now()-t0;
-    removeTyping();
 
-    if(data.error){
-      addMsg('assistant','⚠ '+data.error,true,ms);
-    }else{
-      const{response:reply,code,vba,usage,selectedModel:autoSelected,plan}=data;
-      if(plan){history.push({role:'assistant',content:'📋 Plan:\n'+plan});addMsg('assistant','📋 Plan:\n'+plan);}
-      const tok=usage?.completion_tokens??null;
-      if(tok){totalTok+=tok;updateTok();}
-      if(usage)addActualCost(usage, autoSelected||selectedModel);
+    const reader=resp.body.getReader(),decoder=new TextDecoder();
+    let buf='';
+    while(true){
+      const{done,value}=await reader.read();
+      if(done)break;
+      buf+=decoder.decode(value,{stream:true});
+      const lines=buf.split('\n');buf=lines.pop();
+      for(const line of lines){
+        if(!line.startsWith('data: '))continue;
+        let ev;try{ev=JSON.parse(line.slice(6));}catch{continue;}
 
-      const viaName = autoSelected
-        ? (allModelsFlat().find(m=>m.id===autoSelected)?.name||autoSelected)
-        : null;
+        if(ev.type==='think'){
+          ensureThinkEl();
+          thinkEl.querySelector('.think-text').textContent+=ev.token;
+          box.scrollTop=box.scrollHeight;
+        }else if(ev.type==='think_end'){
+          collapseThink();
+        }else if(ev.type==='token'){
+          ensureStreamEl();
+          if(thinkEl)collapseThink();
+          answerText+=ev.token;
+          streamBody.textContent=answerText;
+          box.scrollTop=box.scrollHeight;
+        }else if(ev.type==='plan'){
+          history.push({role:'assistant',content:'📋 Plan:\n'+ev.text});
+          addMsg('assistant','📋 Plan:\n'+ev.text);
+        }else if(ev.type==='done'){
+          clearInterval(timerInterval);timerInterval=null;
+          const ms=Date.now()-t0;
+          const{code,vba,cleaned,usage,selectedModel:autoSelected}=ev;
+          const tok=usage?.completion_tokens??null;
+          if(tok){totalTok+=tok;updateTok();}
+          if(usage)addActualCost(usage,autoSelected||selectedModel);
 
-      const isFirst=history.filter(m=>m.role==='assistant').length===0;
-      if(reply){
-        history.push({role:'assistant',content:reply,ms,tok,time:new Date().toISOString(),via:viaName});
-        addMsg('assistant',reply,false,ms,tok,null,viaName);
-      }
-      if(code){
-        const r=await execCode(code);
-        if(showCode){const last=document.getElementById('messages').lastElementChild;if(last&&!last.querySelector('.code-block'))last.appendChild(mkCode(code));}
-        if(r.ok){
-          if(r.result){history.push({role:'assistant',content:r.result});addMsg('assistant',r.result,false,null,null);}
-          else if(!reply){addMsg('assistant','✓ Done.');}
-        }else{
-          addMsg('assistant','⚠ Error: '+r.err,true);
-          // Auto-feedback: code execution failure is a hard signal
-          try{fetch('/api/feedback/auto',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({tier:'hard',prompt:text,response:reply||'',code:code,model:autoSelected||modelId})});}catch{}
-          history.push({role:'user',content:'The code failed: "'+r.err+'". Fix it with a corrected CODE_JS block.'});
-          const rr=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},signal:ctrl.signal,body:JSON.stringify({messages:history.slice(-8),workbookData,activeSheet,summary,model:modelId,useOllama:isOllama,useGroq:isGroq,apiKey,groqKey})});
-          const rd=await rr.json();
-          if(rd.error){addMsg('assistant','⚠ Retry failed: '+rd.error,true);}
-          else if(rd.code){const rres=await execCode(rd.code);if(rd.response)history.push({role:'assistant',content:rd.response});addMsg('assistant',rres.ok?'✓ Fixed.':'⚠ Retry failed: '+rres.err,!rres.ok);}
+          const viaName=autoSelected?(allModelsFlat().find(m=>m.id===autoSelected)?.name||autoSelected):null;
+          const finalText=cleaned||answerText;
+
+          ensureStreamEl();
+          streamBody.textContent=finalText;
+          // Update header with real timing
+          const parts=[];
+          if(ms!=null)parts.push((ms/1000).toFixed(1)+'s');
+          if(tok!=null)parts.push(tok.toLocaleString()+' tok');
+          parts.push(new Date().toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'}));
+          streamEl.querySelector('.msg-head').innerHTML=
+            '<span class="msg-role assistant">Excel AI</span>'
+            +(viaName?'<span class="msg-via">via '+esc(viaName)+'</span>':'')
+            +'<span class="msg-meta">'+parts.join(' · ')+'</span>';
+          // Actions
+          const acts=document.createElement('div');acts.className='msg-actions';
+          const cpb=document.createElement('button');cpb.className='copy-msg-btn';cpb.innerHTML='⎘ Copy';
+          cpb.onclick=()=>{navigator.clipboard.writeText(finalText).then(()=>{cpb.innerHTML='✓ Copied';cpb.classList.add('copied');setTimeout(()=>{cpb.innerHTML='⎘ Copy';cpb.classList.remove('copied');},1500);});};
+          acts.appendChild(cpb);
+          const rb=document.createElement('button');rb.className='report-btn';rb.title='Report';rb.innerHTML='⚑ Report';
+          rb.onclick=()=>reportMsg(rb,finalText,code);acts.appendChild(rb);
+          streamEl.appendChild(acts);
+
+          const isFirst=history.filter(m=>m.role==='assistant').length===0;
+          if(finalText)history.push({role:'assistant',content:finalText,ms,tok,time:new Date().toISOString(),via:viaName});
+
+          if(code){
+            const r=await execCode(code);
+            if(showCode)streamEl.appendChild(mkCode(code));
+            if(r.ok){
+              if(r.result){history.push({role:'assistant',content:r.result});addMsg('assistant',r.result,false,null,null);}
+              else if(!finalText)addMsg('assistant','✓ Done.');
+            }else{
+              addMsg('assistant','⚠ Error: '+r.err,true);
+              try{fetch('/api/feedback/auto',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({tier:'hard',prompt:text,response:finalText||'',code,model:autoSelected||modelId})});}catch{}
+              history.push({role:'user',content:'The code failed: "'+r.err+'". Fix it with a corrected CODE_JS block.'});
+              const rr=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},signal:ctrl.signal,body:JSON.stringify({messages:history.slice(-8),workbookData,activeSheet,summary,model:modelId,useOllama:isOllama,useGroq:isGroq,apiKey,groqKey})});
+              const rd=await rr.json();
+              if(rd.error)addMsg('assistant','⚠ Retry failed: '+rd.error,true);
+              else if(rd.code){const rres=await execCode(rd.code);if(rd.response)history.push({role:'assistant',content:rd.response});addMsg('assistant',rres.ok?'✓ Fixed.':'⚠ Retry failed: '+rres.err,!rres.ok);}
+            }
+          }
+          if(vba){
+            streamEl.appendChild(mkVba(vba));
+            history.push({role:'assistant',content:'[VBA macro provided]',vba});
+          }
+          if(getCostLimit()>0&&costLimitType==='session'&&sessionCost>getCostLimit()){
+            const over=(sessionCost-getCostLimit()).toFixed(3);
+            addMsg('assistant',`⚠ Session cost ($${sessionCost.toFixed(3)}) has exceeded your $${getCostLimit().toFixed(2)} limit by $${over}. You'll need to confirm each subsequent prompt.`,true);
+          }
+          if(isFirst&&finalText){const title=await generateTitle(text,finalText);if(title)await saveChat(title);else await saveChat();}
+          else await saveChat();
+
+        }else if(ev.type==='error'){
+          clearInterval(timerInterval);timerInterval=null;
+          ensureStreamEl();
+          streamBody.textContent='⚠ '+ev.message;
+          streamEl.classList.add('error');
         }
       }
-      if(vba){
-        const last=document.getElementById('messages').lastElementChild;
-        if(last)last.appendChild(mkVba(vba));
-        history.push({role:'assistant',content:'[VBA macro provided]',vba:vba});
-      }
-
-      // ── Mid-session cost check ──
-      if(getCostLimit()>0&&costLimitType==='session'&&sessionCost>getCostLimit()){
-        const over=(sessionCost-getCostLimit()).toFixed(3);
-        addMsg('assistant',`⚠ Session cost ($${sessionCost.toFixed(3)}) has exceeded your $${getCostLimit().toFixed(2)} limit by $${over}. You'll need to confirm each subsequent prompt.`,true);
-      }
-
-      if(isFirst&&reply){const title=await generateTitle(text,reply);if(title)await saveChat(title);else await saveChat();}
-      else await saveChat();
     }
   }catch(e){
+    clearInterval(timerInterval);timerInterval=null;
     removeTyping();
     if(e.name!=='AbortError')addMsg('assistant','⚠ Could not reach the server. Is it running?',true);
   }
