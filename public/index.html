@@ -1227,22 +1227,36 @@ async function execCode(code) {
 // ── Slash commands ────────────────────────────────────────────────────────────
 const SLASH_CMDS = {
   '/set': {
-    desc: 'Configure settings',
+    desc: 'Configure a setting',
     sub: {
+      // ── Think mode ──
       'no_think':   { desc: 'Disable thinking for local models (faster)',               fn: () => applyNoThink('on')  },
       'think':      { desc: 'Enable thinking for local models (full reasoning)',         fn: () => applyNoThink('off') },
-      'auto_think': { desc: 'Auto-detect per model (Qwen=no_think, others=think)',       fn: () => applyNoThink(null)  },
-      'deep':       { desc: 'Toggle Deep Think  — refines prompt + max reasoning',       fn: () => slashToggleOpt('deep')    },
+      'auto_think': { desc: 'Auto-detect per model (Qwen → no_think, others → think)',  fn: () => applyNoThink(null)  },
+      // ── Chat options ──
+      'deep':       { desc: 'Toggle Deep Think — refines prompt + max reasoning budget', fn: () => slashToggleOpt('deep')    },
       'dynamic':    { desc: 'Toggle Dynamic Depth — AI calibrates token budget',         fn: () => slashToggleOpt('dynamic') },
-      'plan':       { desc: 'Toggle Plan First  — brief plan before executing',          fn: () => slashToggleOpt('plan')    },
-      'auto':       { desc: 'Toggle Auto Model  — AI picks best model per prompt',       fn: () => slashToggleOpt('auto')    },
+      'plan':       { desc: 'Toggle Plan First — shows a plan before executing',         fn: () => slashToggleOpt('plan')    },
+      'auto':       { desc: 'Toggle Auto Model — AI picks best model per prompt',        fn: () => slashToggleOpt('auto')    },
+      // ── UI ──
+      'theme_light':{ desc: 'Switch to light theme',                                     fn: () => { setTheme('light'); addSysMsg('Theme: light'); } },
+      'theme_dark': { desc: 'Switch to dark theme',                                      fn: () => { setTheme('dark');  addSysMsg('Theme: dark');  } },
+      'code_show':  { desc: 'Show generated code blocks in chat',                        fn: () => { if (!showCode) togSet('showCode','showCodeTog'); addSysMsg('Show code: ON');  } },
+      'code_hide':  { desc: 'Hide generated code blocks in chat',                        fn: () => { if (showCode)  togSet('showCode','showCodeTog'); addSysMsg('Show code: OFF'); } },
+      // ── Sync ──
+      'sync_on':    { desc: 'Enable auto-sync (workbook state read before each message)',fn: () => { if (!autoSync) togSet('autoSync','autoSyncTog'); addSysMsg('Auto-sync: ON');  } },
+      'sync_off':   { desc: 'Disable auto-sync (manual sync only)',                      fn: () => { if (autoSync)  togSet('autoSync','autoSyncTog'); addSysMsg('Auto-sync: OFF'); } },
+      // ── Cost ──
+      'cost_off':   { desc: 'Disable cost limit',                                        fn: () => { updateCostSlider(0); addSysMsg('Cost limit: OFF'); } },
+      'cost_prompt':{ desc: 'Switch cost limit to per-prompt mode',                      fn: () => { setCostLimitType('prompt');  addSysMsg('Cost limit: per-prompt ($' + getCostLimit() + ')'); } },
+      'cost_session':{ desc: 'Switch cost limit to per-session mode',                    fn: () => { setCostLimitType('session'); addSysMsg('Cost limit: per-session ($' + getCostLimit() + ')'); } },
     }
   },
-  '/no_think': { desc: 'Disable thinking for local models  (= /set no_think)',  fn: () => applyNoThink('on')  },
-  '/think':    { desc: 'Enable thinking for local models   (= /set think)',     fn: () => applyNoThink('off') },
-  '/clear':    { desc: 'Clear chat history and start fresh',                    fn: () => slashClear()        },
-  '/help':     { desc: 'List all available slash commands',                     fn: () => slashHelp()         },
-  '/status':   { desc: 'Show current settings / active toggles',                fn: () => slashStatus()       },
+  '/no_think': { desc: 'Disable thinking for local models  (shortcut: /set no_think)', fn: () => applyNoThink('on')  },
+  '/think':    { desc: 'Enable thinking for local models   (shortcut: /set think)',    fn: () => applyNoThink('off') },
+  '/clear':    { desc: 'Clear chat history and start fresh',                           fn: () => slashClear()        },
+  '/help':     { desc: 'List all available slash commands',                            fn: () => slashHelp()         },
+  '/status':   { desc: 'Show current settings and active toggles',                     fn: () => slashStatus()       },
 };
 
 function applyNoThink(val) {
@@ -1262,7 +1276,7 @@ function slashClear() {
 function slashHelp() {
   let lines = ['Available commands:'];
   for (const [cmd, def] of Object.entries(SLASH_CMDS)) {
-    lines.push('  ' + cmd + (def.sub ? ' <subcommand>' : '') + '  —  ' + def.desc);
+    lines.push('  ' + cmd + (def.sub ? ' <subcommand>' : def.fn?.length ? ' <arg>' : '') + '  —  ' + def.desc);
     if (def.sub) Object.entries(def.sub).forEach(([s,d]) => lines.push('      ' + cmd + ' ' + s + '  —  ' + d.desc));
   }
   addSysMsg(lines.join('\n'));
@@ -1270,7 +1284,17 @@ function slashHelp() {
 function slashStatus() {
   const think = slashNoThink === 'on' ? 'no_think (forced)' : slashNoThink === 'off' ? 'think (forced)' : 'auto';
   const flags = Object.entries(opts).filter(([,v])=>v).map(([k])=>k).join(', ') || 'none';
-  addSysMsg('think mode: ' + think + '\nactive opts: ' + flags + '\nmodel: ' + (allModelsFlat().find(m=>m.id===selectedModel)?.name || selectedModel));
+  const lim = getCostLimit();
+  addSysMsg(
+    'model:       ' + (allModelsFlat().find(m=>m.id===selectedModel)?.name || selectedModel) +
+    '\nthink mode:  ' + think +
+    '\nopts:        ' + flags +
+    '\ntheme:       ' + (localStorage.getItem('theme') || 'light') +
+    '\nauto-sync:   ' + (autoSync ? 'ON' : 'OFF') +
+    '\nshow code:   ' + (showCode ? 'ON' : 'OFF') +
+    '\ncost limit:  ' + (lim ? ('$' + lim + ' per ' + costLimitType) : 'OFF') +
+    '\nsession $:   $' + sessionCost.toFixed(3)
+  );
 }
 function addSysMsg(text) {
   const el = document.createElement('div');
