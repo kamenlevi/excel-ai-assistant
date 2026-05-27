@@ -401,62 +401,46 @@ ALWAYS prefer CODE_JS when both can do the job — it runs automatically without
 If unsure whether Office JS supports something, use CODE_JS first. Only fall back to VBA_MACRO for the specific cases listed above.
 
 // EVAL-IMPROVEMENTS-START
-When sorting, ensure the column name is correct and handle potential errors.
+When counting columns with headers, verify the column headers exist and are not empty.
+'''javascript
+const sheet = workbook.worksheets.getActiveWorksheet();
+const used = sheet.getUsedRange();
+used.load("values");
+await context.sync();
+const hdr = used.values[0].filter(h => h !== null && h !== undefined && String(h).trim() !== "");
+return "Found " + hdr.length + " columns with headers.";
+'''
+For filtering, use the applyColumnFilter method and handle missing columns.
 '''javascript
 try {
-  await sortByColumn("A", true);
-} catch (error) {
-  console.error(error);
-}
-'''
-For conditional formatting, use efficient methods and consider data type checks.
-'''javascript
-const sheet = workbook.worksheets.getActiveWorksheet();
-const used = sheet.getUsedRange();
-used.load("values");
-await context.sync();
-const conditionalFormat = used.conditionalFormats.add();
-conditionalFormat.type = Excel.ConditionalFormatType.cellValue;
-conditionalFormat.format = { fill: { color: "FF0000" } };
-conditionalFormat.criteria = { formula: "=A1<50" };
-'''
-When freezing panes, verify the row or column index.
-'''javascript
-const sheet = workbook.worksheets.getActiveWorksheet();
-sheet.freezePanes("A1");
-await context.sync();
-'''
-To clear content in a column, specify the column letter and use the 'clear' method.
-'''javascript
-const sheet = workbook.worksheets.getActiveWorksheet();
-const range = sheet.getRange("C:C");
-range.clear(Excel.ClearApplyTo.contents);
-await context.sync();
-'''
-When describing functions like VLOOKUP, provide clear explanations and examples.
-'''javascript
-console.log("VLOOKUP searches for a value in the first column of a range and returns a value in the same row from another column.");
-'''
-For filtering, verify the column exists before applying the filter.
-'''javascript
-const sheet = workbook.worksheets.getActiveWorksheet();
-const used = sheet.getUsedRange();
-used.load("values");
-await context.sync();
-const hdr = used.values[0].map(h => String(h).toLowerCase().trim());
-const col = hdr.indexOf("department");
-if (col!== -1) {
   const autoFilter = sheet.getAutoFilter();
   autoFilter.applyColumnFilter("Department", "Engineering");
   await context.sync();
-} else {
-  console.error("Column 'Department' not found.");
+} catch (error) {
+  console.error("Error applying filter: " + error);
 }
 '''
-When inserting shapes, consider the cell position and header row.
+When clearing filters, specify the column or columns to clear.
+'''javascript
+const autoFilter = sheet.getAutoFilter();
+autoFilter.clearFilters(["X", "Y"]);
+await context.sync();
+'''
+When adding hyperlinks, ensure the cell is not already occupied.
+'''javascript
+const range = sheet.getRange("A1");
+if (range.value === null || range.value === undefined) {
+  range.hyperlink = { address: "https://www.google.com", displayAs: "Google" };
+  await context.sync();
+}
+'''
+When inserting shapes, account for existing content and header rows.
 '''javascript
 const sheet = workbook.worksheets.getActiveWorksheet();
-const shape = sheet.shapes.addRectangle(100, 50, 100, 20);
+const used = sheet.getUsedRange();
+used.load("address");
+await context.sync();
+const shape = sheet.shapes.addRectangle(used.address.split(":")[1].split("!")[1].split("$")[3], 0, 100, 20);
 await context.sync();
 '''
 // EVAL-IMPROVEMENTS-END
