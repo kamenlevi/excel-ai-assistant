@@ -401,44 +401,63 @@ ALWAYS prefer CODE_JS when both can do the job — it runs automatically without
 If unsure whether Office JS supports something, use CODE_JS first. Only fall back to VBA_MACRO for the specific cases listed above.
 
 // EVAL-IMPROVEMENTS-START
-When clearing filters, specify the worksheet and use the 'clearFilters' method on the 'AutoFilter' object.
+When sorting, ensure the column name is correct and handle potential errors.
 '''javascript
-const sheet = workbook.worksheets.getActiveWorksheet();
-const autoFilter = sheet.getAutoFilter();
-autoFilter.clearFilters();
-await context.sync();
+try {
+  await sortByColumn("A", true);
+} catch (error) {
+  console.error(error);
+}
 '''
-For sorting, use the provided 'sortByColumn' function to handle column sorting.
-'''javascript
-await sortByColumn("Name", true);
-'''
-To filter a column, use the 'applyColumnFilter' method with the correct column name.
-'''javascript
-const sheet = workbook.worksheets.getActiveWorksheet();
-const autoFilter = sheet.getAutoFilter();
-autoFilter.applyColumnFilter("Department", "Engineering");
-await context.sync();
-'''
-When adding hyperlinks, ensure the hyperlink is added to the correct cell and handle potential errors.
-'''javascript
-const sheet = workbook.worksheets.getActiveWorksheet();
-const range = sheet.getRange("A2");
-const hyperlink = { address: "https://www.google.com", display: "Google" };
-range.hyperlink = hyperlink;
-await context.sync();
-'''
-To insert shapes, consider the header row and cell position.
-'''javascript
-const sheet = workbook.worksheets.getActiveWorksheet();
-const shape = sheet.shapes.addRectangle(100, 20, 100, 20);
-'''
-When adding line shapes, relate the shape's position and size to the data.
+For conditional formatting, use efficient methods and consider data type checks.
 '''javascript
 const sheet = workbook.worksheets.getActiveWorksheet();
 const used = sheet.getUsedRange();
 used.load("values");
 await context.sync();
-const shape = sheet.shapes.addShape(Excel.ShapeType.line, 10, used.rowCount * 20, 100, 10);
+const conditionalFormat = used.conditionalFormats.add();
+conditionalFormat.type = Excel.ConditionalFormatType.cellValue;
+conditionalFormat.format = { fill: { color: "FF0000" } };
+conditionalFormat.criteria = { formula: "=A1<50" };
+'''
+When freezing panes, verify the row or column index.
+'''javascript
+const sheet = workbook.worksheets.getActiveWorksheet();
+sheet.freezePanes("A1");
+await context.sync();
+'''
+To clear content in a column, specify the column letter and use the 'clear' method.
+'''javascript
+const sheet = workbook.worksheets.getActiveWorksheet();
+const range = sheet.getRange("C:C");
+range.clear(Excel.ClearApplyTo.contents);
+await context.sync();
+'''
+When describing functions like VLOOKUP, provide clear explanations and examples.
+'''javascript
+console.log("VLOOKUP searches for a value in the first column of a range and returns a value in the same row from another column.");
+'''
+For filtering, verify the column exists before applying the filter.
+'''javascript
+const sheet = workbook.worksheets.getActiveWorksheet();
+const used = sheet.getUsedRange();
+used.load("values");
+await context.sync();
+const hdr = used.values[0].map(h => String(h).toLowerCase().trim());
+const col = hdr.indexOf("department");
+if (col!== -1) {
+  const autoFilter = sheet.getAutoFilter();
+  autoFilter.applyColumnFilter("Department", "Engineering");
+  await context.sync();
+} else {
+  console.error("Column 'Department' not found.");
+}
+'''
+When inserting shapes, consider the cell position and header row.
+'''javascript
+const sheet = workbook.worksheets.getActiveWorksheet();
+const shape = sheet.shapes.addRectangle(100, 50, 100, 20);
+await context.sync();
 '''
 // EVAL-IMPROVEMENTS-END
 `
