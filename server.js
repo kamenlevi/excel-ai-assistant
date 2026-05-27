@@ -411,7 +411,7 @@ For page layout margin properties use inches: sheet.pageLayout.topMargin = 1 set
 function injectNoThink(messages, model) {
   if (!model.toLowerCase().includes('qwen')) return messages;
   return messages.map(m =>
-    m.role === 'system' && !m.content.includes('/no_think')
+    m.role === 'system' && !m.content.includes('/no_think') && !m.content.includes('__ALLOW_THINK__')
       ? { ...m, content: m.content + '\n/no_think' }
       : m
   );
@@ -1119,6 +1119,8 @@ app.post('/api/chat', async (req, res) => {
   const dynamicDepth  = options?.dynamicDepth  || false;
   const autoModel     = options?.autoModel     || false;
   const planFirst     = options?.plan          || false;
+  const forceNoThink  = options?.noThink       || false; // /set no_think
+  const forceThink    = options?.allowThink    || false; // /set think
 
   let maxTokens = 4096;
   let effectiveModel = model || null;
@@ -1239,8 +1241,12 @@ app.post('/api/chat', async (req, res) => {
     { role: 'assistant', content: 'Got it, I have the context of what we did earlier.' }
   ] : [];
 
+  let systemContent = SYSTEM_PROMPT + prefsSection;
+  if (forceNoThink && !systemContent.includes('/no_think')) systemContent += '\n/no_think';
+  if (forceThink) systemContent += '__ALLOW_THINK__'; // sentinel: prevents injectNoThink from adding /no_think
+
   const allMessages = [
-    { role: 'system', content: SYSTEM_PROMPT + prefsSection },
+    { role: 'system', content: systemContent },
     ...contextMessages,
     ...summaryMessages,
     ...recentMessages
