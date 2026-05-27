@@ -685,7 +685,7 @@ Respond with ONLY this JSON: {"modelId":"exact-id-from-list","reason":"2-3 sente
     // Try full parse first, then greedy regex extraction
     try { parsed = JSON.parse(clean); } catch {}
     if (!parsed) {
-      const match = clean.match(/\{[\s\S]*\}/); // greedy — matches first { to last }
+      const match = clean.match(/\{[\s\S]*?\}/); // non-greedy — matches first complete {...}
       if (match) try { parsed = JSON.parse(match[0]); } catch {}
     }
     if (parsed?.modelId) {
