@@ -459,7 +459,7 @@ html,body{height:100%;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;
         <div class="slabel">History</div>
         <button class="sdanger" onclick="clearAllHistory()">Delete all chat history</button>
       </div>
-      <div class="sfooter" style="cursor:pointer" onclick="openChangelog()" title="Click to see version history">Excel AI Assistant · <strong id="versionLabel">v5.1.0</strong></div>
+      <div class="sfooter" style="cursor:pointer" onclick="openChangelog()" title="Click to see version history">Excel AI Assistant · <strong id="versionLabel">v5.1.1</strong></div>
     </div>
 
     <!-- Preferences tab -->
@@ -543,8 +543,9 @@ let costLimitType = localStorage.getItem('costLimitType') || 'prompt';
 let costLimitIdx  = parseInt(localStorage.getItem('costLimitIdx') || '0');
 let sessionCost = 0;
 let pendingSendResolve = null;
-const APP_VERSION = 'v5.1.0';
+const APP_VERSION = 'v5.1.1';
 const CHANGELOG = [
+  { ver: 'v5.1.1', date: '2026-05-27', summary: 'Fix: Groq model costs were not tracked — addActualCost received stripped model ID, failing the lookup. Session cost and cost limits now work correctly for Groq models.' },
   { ver: 'v5.1.0', date: '2026-05-27', summary: 'Slash command system: /set no_think, /set think, /clear, /help, /status and more — each command shows its subcommands; think mode persists across sessions.' },
   { ver: 'v5.0.0', date: '2026-05-25', summary: 'VBA macro support: AI generates VBA for tasks Office JS cannot handle (pivot tables, advanced charts, etc.) with styled code blocks and step-by-step instructions.' },
   { ver: 'v4.1.0', date: '2026-05-25', summary: 'Fix: AI no longer errors on greetings/chitchat. Version history is now a proper popup modal. Switched to semver (x.y.z).' },
@@ -1486,7 +1487,7 @@ async function sendMessage() {
       if(plan){history.push({role:'assistant',content:'📋 Plan:\n'+plan});addMsg('assistant','📋 Plan:\n'+plan);}
       const tok=usage?.completion_tokens??null;
       if(tok){totalTok+=tok;updateTok();}
-      if(usage)addActualCost(usage, autoSelected||modelId);
+      if(usage)addActualCost(usage, autoSelected||selectedModel);
 
       const viaName = autoSelected
         ? (allModelsFlat().find(m=>m.id===autoSelected)?.name||autoSelected)
