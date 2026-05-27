@@ -31,9 +31,9 @@ function readChats() {
 function writeChats(chats) { fs.writeFileSync(CHATS_FILE, JSON.stringify(chats, null, 2), 'utf8'); }
 
 // ── CONFIG ────────────────────────────────────────────────────────────────────
-const MACBOOK_IP     = '192.168.1.206';
-const MLX_PORT       = '8080';
-const OLLAMA_PORT    = '11434';
+const MACBOOK_IP     = process.env.OLLAMA_HOST || '192.168.1.206';
+const MLX_PORT       = process.env.MLX_PORT    || '8080';
+const OLLAMA_PORT    = process.env.OLLAMA_PORT  || '11434';
 
 const USE_OPENROUTER = true;
 const USE_MLX        = false;
@@ -520,8 +520,9 @@ async function callAI(messages, maxTokens = 4096, model = null, useOllama = fals
 // ── Parse code from response ─────────────────────────────────────────────────
 function parseResponse(text) {
   let code = null, vba = null;
-  const codeMatch = text.match(/CODE_JS::([\s\S]*?)::END_CODE/);
-  if (codeMatch) code = codeMatch[1].trim();
+  const codeMatches = [...text.matchAll(/CODE_JS::([\s\S]*?)::END_CODE/g)];
+  if (codeMatches.length) code = codeMatches[codeMatches.length - 1][1].trim(); // use last block
+  if (codeMatches.length > 1) console.log(`[server] ${codeMatches.length} CODE_JS blocks found — using last`);
   const vbaMatch = text.match(/VBA_MACRO::([\s\S]*?)::END_VBA/);
   if (vbaMatch) vba = vbaMatch[1].trim();
 
@@ -1127,7 +1128,7 @@ app.post('/api/chat', async (req, res) => {
   let selectedModel = null;
 
   const rawUserMessage = messages[messages.length - 1]?.content || '';
-  const recentMessages = messages.slice(-6).map(m => ({ ...m }));
+  const recentMessages = messages.map(m => ({ ...m })); // use all messages sent by frontend
 
   // ── Auto-feedback: detect if user is unhappy with previous AI response ────
   const dissatisfaction = detectDissatisfaction(rawUserMessage, messages);
@@ -1242,6 +1243,7 @@ app.post('/api/chat', async (req, res) => {
   ] : [];
 
   let systemContent = SYSTEM_PROMPT + prefsSection;
+  if (planText) systemContent += `\n\nYour plan for this request was:\n${planText}\nFollow this plan exactly.`;
   if (forceNoThink && !systemContent.includes('/no_think')) systemContent += '\n/no_think';
   if (forceThink) systemContent += '__ALLOW_THINK__'; // sentinel: prevents injectNoThink from adding /no_think
 
