@@ -560,14 +560,12 @@ html,body{height:100%;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;
       <div class="sgrp">
         <div class="slabel">Security</div>
         <div style="font-size:12px;color:var(--text2);margin-bottom:6px">Password required for critical operations (file deletion, shell commands). Leave blank to disable.</div>
-        <input class="sinput" type="password" id="secPwdInp" placeholder="Current password">
-        <div style="display:flex;gap:6px;margin-top:4px">
-          <input class="sinput" type="email" id="secPwdEmail" placeholder="Your email (for verification)" style="flex:1">
-          <button class="add-model-btn" onclick="startPwdChange()" style="flex-shrink:0">Change</button>
-        </div>
+        <input class="sinput" type="password" id="secCurPwd" placeholder="Current password (leave blank if not set)" style="margin-bottom:6px">
+        <input class="sinput" type="password" id="secNewPwd" placeholder="New password (leave blank to disable)">
+        <button class="add-model-btn" onclick="saveSecPwd()" style="margin-top:6px">Save password</button>
         <span class="sinote" id="secPwdNote">Not set — critical operations need only confirmation.</span>
       </div>
-      <div class="sfooter" style="cursor:pointer" onclick="openChangelog()" title="Click to see version history">Excel AI Assistant · <strong id="versionLabel">v5.8.0</strong></div>
+      <div class="sfooter" style="cursor:pointer" onclick="openChangelog()" title="Click to see version history">Excel AI Assistant · <strong id="versionLabel">v5.9.0</strong></div>
     </div>
 
     <!-- Preferences tab -->
@@ -629,21 +627,6 @@ html,body{height:100%;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;
   <div class="auth-card" id="authCard">
     <div class="auth-title" id="authTitle">Sign in to Excel AI</div>
     <div class="auth-sub" id="authSub">Your chats sync across devices</div>
-    <div id="authSocialBtns" style="display:flex;flex-direction:column;gap:8px">
-      <button class="auth-social-btn" id="authGoogleBtn" onclick="authSocial('google')">
-        <svg width="16" height="16" viewBox="0 0 48 48"><path fill="#4285F4" d="M46.145 24.5c0-1.566-.14-3.071-.4-4.5H24v8.521h12.44c-.536 2.9-2.17 5.357-4.626 7.006v5.82h7.49c4.382-4.037 6.84-9.984 6.84-16.847z"/><path fill="#34A853" d="M24 47c6.24 0 11.47-2.07 15.293-5.604l-7.49-5.82C29.76 37.24 27.02 38 24 38c-6.044 0-11.163-4.081-12.991-9.566H3.327v6.01A23.998 23.998 0 0 0 24 47z"/><path fill="#FBBC05" d="M11.009 28.434A14.47 14.47 0 0 1 10.25 24c0-1.537.264-3.03.759-4.434v-6.01H3.327A23.998 23.998 0 0 0 0 24c0 3.868.927 7.527 2.571 10.743"/><path fill="#EA4335" d="M24 9.5c3.408 0 6.463 1.172 8.87 3.473l6.65-6.65C35.462 2.634 30.232.5 24 .5A23.998 23.998 0 0 0 3.327 13.757l6.682 5.809C11.837 13.58 16.956 9.5 24 9.5z"/></svg>
-        Continue with Google
-      </button>
-      <button class="auth-social-btn" id="authGithubBtn" onclick="authSocial('github')">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.373 0 12c0 5.303 3.438 9.8 8.205 11.387.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23A11.509 11.509 0 0 1 12 5.803c1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.929.43.372.823 1.102.823 2.222 0 1.606-.015 2.896-.015 3.286 0 .315.216.69.825.57C20.565 21.796 24 17.3 24 12c0-6.627-5.373-12-12-12z"/></svg>
-        Continue with GitHub
-      </button>
-      <button class="auth-social-btn" id="authAppleBtn" title="Requires Apple Developer account" style="opacity:.6;cursor:not-allowed" disabled>
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98l-.09.06c-.22.14-2.19 1.28-2.17 3.8.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.79M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
-        Continue with Apple
-      </button>
-    </div>
-    <div class="auth-divider">or</div>
     <div id="authEmailForm" style="display:flex;flex-direction:column;gap:8px">
       <input class="auth-inp" type="email" id="authEmailInp" placeholder="Email address" autocomplete="email">
       <input class="auth-inp" type="password" id="authPwdInp" placeholder="Password" autocomplete="current-password">
@@ -657,17 +640,6 @@ html,body{height:100%;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;
   </div>
 </div>
 
-<!-- ── 2FA modal ── -->
-<div class="tfa-modal" id="tfaModal">
-  <div class="tfa-card">
-    <div class="tfa-title">Verify your email</div>
-    <div class="tfa-sub" id="tfaSub">A 6-digit code was sent to your email</div>
-    <input class="tfa-code-inp" type="text" id="tfaCodeInp" maxlength="6" inputmode="numeric" placeholder="000000" oninput="this.value=this.value.replace(/\D/g,'')">
-    <div class="tfa-err" id="tfaErr"></div>
-    <button class="auth-btn-primary" onclick="tfaVerify()">Verify</button>
-    <button class="auth-link" onclick="closeTfa()">Cancel</button>
-  </div>
-</div>
 
 <div id="toastEl" class="toast"></div>
 
@@ -703,8 +675,9 @@ let pendingSendResolve = null;
 // ── Security state ────────────────────────────────────────────────────────────
 let sessionDangerConfirmed = new Set(); // 'high', 'critical' confirmed this session
 let sessionPasswordVerified = false;    // password entered once this session
-const APP_VERSION = 'v5.8.0';
+const APP_VERSION = 'v5.9.0';
 const CHANGELOG = [
+  { ver: 'v5.9.0', date: '2026-05-28', summary: 'Simplify auth: removed OAuth social buttons and Gmail 2FA; accounts now use Supabase email/password only (2 keys in .env); security password change uses old-password verification instead of email codes.' },
   { ver: 'v5.8.0', date: '2026-05-28', summary: 'User accounts: sign in with Google, GitHub, or email/password via Supabase; chats sync across devices when logged in; security password change now requires email 2FA (6-digit code sent via Gmail).' },
   { ver: 'v5.7.0', date: '2026-05-28', summary: 'UX polish: input bar slimmed down (removed token counter footer, attach badge moves inline); code blocks and VBA blocks auto-collapsed by default; AI thought process shown as a live one-line summary pill — click to expand full reasoning.' },
   { ver: 'v5.6.0', date: '2026-05-27', summary: 'UX overhaul: spring animations for settings/sidebar/model picker; message fade-in; user messages right-aligned; AI responses render markdown (bold, lists, headers, code blocks); syntax highlighting in code blocks; input glow on focus; send button spring animation; sound effects (send click + done chime); haptic feedback; toast notifications replace inline system messages.' },
@@ -782,10 +755,26 @@ function loadSettings() {
   }
 }
 function saveSecPwd() {
-  // Legacy: kept for compatibility; actual password change now goes through startPwdChange() with 2FA
-  const v = document.getElementById('secPwdInp').value;
+  const cur    = document.getElementById('secCurPwd')?.value || '';
+  const newPwd = document.getElementById('secNewPwd')?.value || '';
+  const stored = localStorage.getItem('securityPassword');
+  if (stored) {
+    let storedPlain = stored;
+    try { storedPlain = atob(stored); } catch {}
+    if (cur !== storedPlain) { showToast('Incorrect current password'); return; }
+  }
   const note = document.getElementById('secPwdNote');
-  if (note) note.textContent = v ? 'Password set — required for critical operations.' : 'Not set — critical operations need only confirmation.';
+  if (newPwd) {
+    localStorage.setItem('securityPassword', btoa(newPwd));
+    if (note) note.textContent = 'Password set — required for critical operations.';
+    showToast('Security password saved');
+  } else {
+    localStorage.removeItem('securityPassword');
+    if (note) note.textContent = 'Not set — critical operations need only confirmation.';
+    showToast('Security password removed');
+  }
+  if (document.getElementById('secCurPwd')) document.getElementById('secCurPwd').value = '';
+  if (document.getElementById('secNewPwd')) document.getElementById('secNewPwd').value = '';
 }
 function setTheme(t, save=true) {
   document.documentElement.setAttribute('data-theme', t);
@@ -2158,80 +2147,6 @@ async function authSubmit() {
   btn.disabled = false;
 }
 
-async function authSocial(provider) {
-  if (!supabaseClient) { showToast('Supabase not configured — add keys to .env'); return; }
-  const btn = document.getElementById(`auth${provider.charAt(0).toUpperCase()+provider.slice(1)}Btn`);
-  if (btn) btn.disabled = true;
-  try {
-    const { error } = await supabaseClient.auth.signInWithOAuth({
-      provider,
-      options: { redirectTo: window.location.origin + '/auth/callback' }
-    });
-    if (error) throw error;
-  } catch (e) {
-    showToast('OAuth error: ' + e.message);
-    if (btn) btn.disabled = false;
-  }
-}
-
-// ── 2FA for password change ───────────────────────────────────────────────────
-let tfaResolve = null;
-
-function openTfa(email) {
-  document.getElementById('tfaSub').textContent = `A 6-digit code was sent to ${email}`;
-  document.getElementById('tfaCodeInp').value = '';
-  document.getElementById('tfaErr').textContent = '';
-  document.getElementById('tfaModal').classList.add('open');
-  setTimeout(() => document.getElementById('tfaCodeInp').focus(), 200);
-  return new Promise(resolve => { tfaResolve = resolve; });
-}
-
-function closeTfa() {
-  document.getElementById('tfaModal').classList.remove('open');
-  if (tfaResolve) { tfaResolve(false); tfaResolve = null; }
-}
-
-async function tfaVerify() {
-  const code = document.getElementById('tfaCodeInp').value.trim();
-  const err  = document.getElementById('tfaErr');
-  if (code.length !== 6) { err.textContent = 'Enter the 6-digit code'; return; }
-  try {
-    const r = await fetch('/api/auth/verify-code', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: document.getElementById('secPwdEmail').value.trim(), code })
-    });
-    const j = await r.json();
-    if (!r.ok) { err.textContent = j.error || 'Incorrect code'; return; }
-    document.getElementById('tfaModal').classList.remove('open');
-    if (tfaResolve) { tfaResolve(true); tfaResolve = null; }
-  } catch { err.textContent = 'Network error'; }
-}
-
-async function startPwdChange() {
-  const email   = document.getElementById('secPwdEmail').value.trim();
-  const newPwd  = document.getElementById('secPwdInp').value;
-  if (!email) { showToast('Enter your email for verification'); return; }
-  if (!newPwd) { showToast('Enter the new password'); return; }
-  showToast('Sending verification code…');
-  try {
-    const r = await fetch('/api/auth/send-code', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email })
-    });
-    const j = await r.json();
-    if (!r.ok) { showToast(j.error || 'Could not send code'); return; }
-  } catch { showToast('Network error sending code'); return; }
-  const verified = await openTfa(email);
-  if (!verified) return;
-  // Save the new password locally
-  if (newPwd) {
-    localStorage.setItem('securityPassword', btoa(newPwd));
-    document.getElementById('secPwdInp').value = '';
-    document.getElementById('secPwdEmail').value = '';
-    document.getElementById('secPwdNote').textContent = 'Password set — required for critical operations.';
-    showToast('Password updated successfully');
-  }
-}
 
 // Start auth on load
 document.addEventListener('DOMContentLoaded', () => { setTimeout(initAuth, 500); });
