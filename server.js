@@ -403,6 +403,48 @@ If unsure whether Office JS supports something, use CODE_JS first. Only fall bac
 // EVAL-IMPROVEMENTS-START
 For formulas that sum/count a range, use getUsedRange().rowCount to find the last row dynamically rather than a hardcoded row number.
 For page layout margin properties use inches: sheet.pageLayout.topMargin = 1 sets a 1-inch margin.
+When counting columns with headers, verify the column headers exist and are not empty.
+'''javascript
+const sheet = workbook.worksheets.getActiveWorksheet();
+const used = sheet.getUsedRange();
+used.load("values");
+await context.sync();
+const hdr = used.values[0].filter(h => h !== null && h !== undefined && String(h).trim() !== "");
+return "Found " + hdr.length + " columns with headers.";
+'''
+For filtering, use the applyColumnFilter method and handle missing columns.
+'''javascript
+try {
+  const autoFilter = sheet.getAutoFilter();
+  autoFilter.applyColumnFilter("Department", "Engineering");
+  await context.sync();
+} catch (error) {
+  console.error("Error applying filter: " + error);
+}
+'''
+When clearing filters, specify the column or columns to clear.
+'''javascript
+const autoFilter = sheet.getAutoFilter();
+autoFilter.clearFilters(["X", "Y"]);
+await context.sync();
+'''
+When adding hyperlinks, ensure the cell is not already occupied.
+'''javascript
+const range = sheet.getRange("A1");
+if (range.value === null || range.value === undefined) {
+  range.hyperlink = { address: "https://www.google.com", displayAs: "Google" };
+  await context.sync();
+}
+'''
+When inserting shapes, account for existing content and header rows.
+'''javascript
+const sheet = workbook.worksheets.getActiveWorksheet();
+const used = sheet.getUsedRange();
+used.load("address");
+await context.sync();
+const shape = sheet.shapes.addRectangle(used.address.split(":")[1].split("!")[1].split("$")[3], 0, 100, 20);
+await context.sync();
+'''
 // EVAL-IMPROVEMENTS-END
 `
 + (DEFAULT_MODEL.toLowerCase().includes('qwen') ? '\n/no_think' : '');

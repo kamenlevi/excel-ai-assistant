@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-// Fallback runner — called by Task Scheduler every 8h05m.
-// Pulls from GitHub, checks if Actions ran in the last 8 hours.
+// Fallback runner — called by Task Scheduler weekly.
+// Pulls from GitHub, checks if Actions ran in the last 7 days.
 // If not, runs the eval locally so nothing is ever skipped.
 
 const { execSync } = require('child_process');
@@ -9,7 +9,7 @@ const path = require('path');
 
 const ROOT           = path.join(__dirname, '..');
 const LAST_RUN_FILE  = path.join(__dirname, 'last-run.txt');
-const THRESHOLD_MS   = 8 * 60 * 60 * 1000;
+const THRESHOLD_MS   = 7 * 24 * 60 * 60 * 1000;
 
 function log(msg) {
   const ts = new Date().toISOString();
