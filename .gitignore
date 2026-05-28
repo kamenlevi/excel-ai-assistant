@@ -10,6 +10,8 @@ node_modules/
 
 # Runtime data
 feedback.jsonl
+feedback-auto-hard.jsonl
+feedback-auto-soft.jsonl
 data/
 
 # Certs (generated locally, not committed)

@@ -3,7 +3,6 @@ const express = require('express');
 const https   = require('https');
 const path    = require('path');
 const fs      = require('fs');
-const selfsigned = require('selfsigned');
 const fetch   = require('node-fetch');
 const { v4: uuidv4 } = require('uuid');
 const { execFile } = require('child_process');
@@ -1107,7 +1106,6 @@ const SEARCH_DIRS = [
 ];
 
 function expandGlobs(dirs) {
-  const glob = require('path');
   const expanded = [];
   for (const d of dirs) {
     if (d.includes('*')) {

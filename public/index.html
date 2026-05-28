@@ -565,7 +565,7 @@ html,body{height:100%;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;
         <button class="add-model-btn" onclick="saveSecPwd()" style="margin-top:6px">Save password</button>
         <span class="sinote" id="secPwdNote">Not set — critical operations need only confirmation.</span>
       </div>
-      <div class="sfooter" style="cursor:pointer" onclick="openChangelog()" title="Click to see version history">Excel AI Assistant · <strong id="versionLabel">v5.9.2</strong></div>
+      <div class="sfooter" style="cursor:pointer" onclick="openChangelog()" title="Click to see version history">Excel AI Assistant · <strong id="versionLabel">v5.9.3</strong></div>
     </div>
 
     <!-- Preferences tab -->
@@ -675,8 +675,9 @@ let pendingSendResolve = null;
 // ── Security state ────────────────────────────────────────────────────────────
 let sessionDangerConfirmed = new Set(); // 'high', 'critical' confirmed this session
 let sessionPasswordVerified = false;    // password entered once this session
-const APP_VERSION = 'v5.9.2';
+const APP_VERSION = 'v5.9.3';
 const CHANGELOG = [
+  { ver: 'v5.9.3', date: '2026-05-28', summary: 'Audit follow-ups (on top of the v5.9.2 context-pollution fix): generated code is now persisted to history so the code block reappears when a chat is reloaded; raw CODE_JS/VBA markers no longer flash in the live streaming view (block renders once complete); the post-failure code retry now honours the danger classification (was executing fixed code without the confirmation banner); removed dead code (unused selfsigned import, redundant require in expandGlobs); .gitignore also excludes auto-feedback logs; package.json version synced to the app version.' },
   { ver: 'v5.9.2', date: '2026-05-28', summary: 'Fix critical context pollution bug: code-only AI responses were showing raw CODE_JS::...::END_CODE text as visible message — || fallback replaced with ?? so empty cleaned string is preserved instead of falling back to raw answerText. Removed junk tracked files and expanded .gitignore.' },
   { ver: 'v5.9.1', date: '2026-05-28', summary: 'Bug fixes: stream timer now updates the correct message (was always targeting first via stale ID); code retry now passes full options (preferences, memory, model settings) instead of bare payload; account button hidden when Supabase not configured; auth mode toggle uses ID selector instead of fragile querySelector; duplicate streamBody ID removed.' },
   { ver: 'v5.9.0', date: '2026-05-28', summary: 'Simplify auth: removed OAuth social buttons and Gmail 2FA; accounts now use Supabase email/password only (2 keys in .env); security password change uses old-password verification instead of email codes.' },
@@ -1963,7 +1964,9 @@ async function sendMessage() {
           ensureStreamEl();
           if(thinkEl)collapseThink();
           answerText+=ev.token;
-          streamBody.textContent=answerText;
+          // Hide CODE_JS / VBA markers from the live view — the block is rendered
+          // separately once streaming completes (matches the cleaned final text).
+          streamBody.textContent=answerText.split('CODE_JS::')[0].split('VBA_MACRO::')[0];
           box.scrollTop=box.scrollHeight;
         }else if(ev.type==='plan'){
           history.push({role:'assistant',content:'📋 Plan:\n'+ev.text});
@@ -2001,7 +2004,7 @@ async function sendMessage() {
           streamEl.appendChild(acts);
 
           const isFirst=history.filter(m=>m.role==='assistant').length===0;
-          if(finalText)history.push({role:'assistant',content:finalText,ms,tok,time:new Date().toISOString(),via:viaName});
+          if(finalText||code)history.push({role:'assistant',content:finalText,ms,tok,code:code||null,time:new Date().toISOString(),via:viaName});
 
           if(code){
             // ── Security check before execution ──
@@ -2027,7 +2030,12 @@ async function sendMessage() {
               const rr=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},signal:ctrl.signal,body:JSON.stringify({messages:history.slice(-8),workbookData,activeSheet,summary,model:modelId,useOllama:isOllama,useGroq:isGroq,apiKey,groqKey,options:payload.options})});
               const rd=await rr.json();
               if(rd.error)addMsg('assistant','⚠ Retry failed: '+rd.error,true);
-              else if(rd.code){const rres=await execCode(rd.code);if(rd.response)history.push({role:'assistant',content:rd.response});addMsg('assistant',rres.ok?'✓ Fixed.':'⚠ Retry failed: '+rres.err,!rres.ok);}
+              else if(rd.code){
+                let proceed=true;
+                if(rd.danger)proceed=await requestDangerConfirmation(rd.danger);
+                if(!proceed)addMsg('assistant','Operation cancelled.');
+                else{const rres=await execCode(rd.code);if(rd.response)history.push({role:'assistant',content:rd.response});addMsg('assistant',rres.ok?'✓ Fixed.':'⚠ Retry failed: '+rres.err,!rres.ok);}
+              }
             }
           }
           if(vba){

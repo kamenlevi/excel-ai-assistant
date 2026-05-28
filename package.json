@@ -1,6 +1,6 @@
 {
   "name": "excel-ai-assistant",
-  "version": "1.0.0",
+  "version": "5.9.3",
   "description": "Private local AI assistant for Excel",
   "scripts": {
     "start": "node server.js",
