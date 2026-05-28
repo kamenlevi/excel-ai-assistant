@@ -565,7 +565,7 @@ html,body{height:100%;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;
         <button class="add-model-btn" onclick="saveSecPwd()" style="margin-top:6px">Save password</button>
         <span class="sinote" id="secPwdNote">Not set — critical operations need only confirmation.</span>
       </div>
-      <div class="sfooter" style="cursor:pointer" onclick="openChangelog()" title="Click to see version history">Excel AI Assistant · <strong id="versionLabel">v5.9.1</strong></div>
+      <div class="sfooter" style="cursor:pointer" onclick="openChangelog()" title="Click to see version history">Excel AI Assistant · <strong id="versionLabel">v5.9.2</strong></div>
     </div>
 
     <!-- Preferences tab -->
@@ -675,8 +675,9 @@ let pendingSendResolve = null;
 // ── Security state ────────────────────────────────────────────────────────────
 let sessionDangerConfirmed = new Set(); // 'high', 'critical' confirmed this session
 let sessionPasswordVerified = false;    // password entered once this session
-const APP_VERSION = 'v5.9.1';
+const APP_VERSION = 'v5.9.2';
 const CHANGELOG = [
+  { ver: 'v5.9.2', date: '2026-05-28', summary: 'Fix critical context pollution bug: code-only AI responses were showing raw CODE_JS::...::END_CODE text as visible message — || fallback replaced with ?? so empty cleaned string is preserved instead of falling back to raw answerText. Removed junk tracked files and expanded .gitignore.' },
   { ver: 'v5.9.1', date: '2026-05-28', summary: 'Bug fixes: stream timer now updates the correct message (was always targeting first via stale ID); code retry now passes full options (preferences, memory, model settings) instead of bare payload; account button hidden when Supabase not configured; auth mode toggle uses ID selector instead of fragile querySelector; duplicate streamBody ID removed.' },
   { ver: 'v5.9.0', date: '2026-05-28', summary: 'Simplify auth: removed OAuth social buttons and Gmail 2FA; accounts now use Supabase email/password only (2 keys in .env); security password change uses old-password verification instead of email codes.' },
   { ver: 'v5.8.0', date: '2026-05-28', summary: 'User accounts: sign in with Google, GitHub, or email/password via Supabase; chats sync across devices when logged in; security password change now requires email 2FA (6-digit code sent via Gmail).' },
@@ -1977,7 +1978,7 @@ async function sendMessage() {
           if(usage)addActualCost(usage,autoSelected||selectedModel);
 
           const viaName=autoSelected?(allModelsFlat().find(m=>m.id===autoSelected)?.name||autoSelected):null;
-          const finalText=cleaned||answerText;
+          const finalText=cleaned??'';
 
           ensureStreamEl();
           streamBody.innerHTML=renderMd(finalText);
