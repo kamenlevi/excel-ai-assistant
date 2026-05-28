@@ -1480,7 +1480,7 @@ app.post('/api/chat', async (req, res) => {
       const { code: retryCode } = parseResponse(retryClean);
       if (retryCode) {
         const { cleaned } = parseResponse(responseText);
-        return res.json({ response: cleaned, code: retryCode, usage, selectedModel });
+        return res.json({ response: cleaned, code: retryCode, usage, selectedModel, danger: analyzeDanger(retryCode) });
       }
     }
 
