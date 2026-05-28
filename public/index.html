@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Excel AI</title>
 <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <style>
 :root {
   --bg:       #FAFAF8;
@@ -345,6 +346,37 @@ html,body{height:100%;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;
 .toast{position:fixed;bottom:75px;left:50%;transform:translateX(-50%) translateY(8px);background:var(--text);color:var(--bg);padding:7px 16px;border-radius:20px;font-size:12px;font-weight:500;opacity:0;pointer-events:none;transition:opacity .2s var(--ease),transform .2s var(--ease);white-space:nowrap;z-index:600;max-width:80vw;text-overflow:ellipsis;overflow:hidden}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 
+/* ── Auth modal ── */
+.auth-modal{position:fixed;inset:0;z-index:700;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.5);visibility:hidden;opacity:0;transition:opacity .2s,visibility .2s}
+.auth-modal.open{visibility:visible;opacity:1}
+.auth-card{background:var(--bg);border:1px solid var(--border);border-radius:var(--r);box-shadow:var(--shadow2);width:320px;max-width:calc(100vw - 24px);padding:24px;display:flex;flex-direction:column;gap:16px;transform:translateY(-8px) scale(.97);opacity:0;transition:transform .25s var(--spring),opacity .2s}
+.auth-modal.open .auth-card{transform:translateY(0) scale(1);opacity:1}
+.auth-title{font-size:16px;font-weight:700;color:var(--text);text-align:center}
+.auth-sub{font-size:12px;color:var(--text2);text-align:center;margin-top:-8px}
+.auth-divider{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--text3)}
+.auth-divider::before,.auth-divider::after{content:'';flex:1;height:1px;background:var(--border)}
+.auth-inp{width:100%;padding:9px 11px;background:var(--surf);border:1px solid var(--border);border-radius:var(--r2);color:var(--text);font-size:13px;font-family:inherit;outline:none;transition:border-color .15s}
+.auth-inp:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(var(--accent-rgb),.14)}
+.auth-btn-primary{width:100%;padding:10px;background:var(--accent);color:#fff;border:none;border-radius:var(--r2);font-size:14px;font-weight:600;cursor:pointer;transition:background .15s}
+.auth-btn-primary:hover{background:var(--accent2)}
+.auth-btn-primary:disabled{opacity:.5;cursor:not-allowed}
+.auth-social-btn{width:100%;padding:9px;background:var(--surf);border:1px solid var(--border);border-radius:var(--r2);font-size:13px;font-weight:500;color:var(--text);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:background .15s,border-color .15s}
+.auth-social-btn:hover{background:var(--surf2);border-color:var(--text2)}
+.auth-social-btn:disabled{opacity:.5;cursor:not-allowed}
+.auth-err{font-size:12px;color:var(--err);text-align:center;min-height:16px}
+.auth-link{font-size:12px;color:var(--accent);cursor:pointer;text-align:center;background:none;border:none;padding:0;font-family:inherit}
+.auth-link:hover{text-decoration:underline}
+.auth-avatar{width:28px;height:28px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px;font-weight:700;flex-shrink:0;cursor:pointer;border:none}
+/* ── 2FA verification modal ── */
+.tfa-modal{position:fixed;inset:0;z-index:800;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.5);visibility:hidden;opacity:0;transition:opacity .2s,visibility .2s}
+.tfa-modal.open{visibility:visible;opacity:1}
+.tfa-card{background:var(--bg);border:1px solid var(--border);border-radius:var(--r);box-shadow:var(--shadow2);width:300px;max-width:calc(100vw - 24px);padding:24px;display:flex;flex-direction:column;gap:14px}
+.tfa-title{font-size:15px;font-weight:700;color:var(--text);text-align:center}
+.tfa-sub{font-size:12px;color:var(--text2);text-align:center}
+.tfa-code-inp{width:100%;padding:12px;background:var(--surf);border:1px solid var(--border);border-radius:var(--r2);color:var(--text);font-size:22px;font-family:monospace;letter-spacing:8px;text-align:center;outline:none;transition:border-color .15s}
+.tfa-code-inp:focus{border-color:var(--accent)}
+.tfa-err{font-size:12px;color:var(--err);text-align:center;min-height:14px}
+
 ::-webkit-scrollbar{width:4px;height:4px}
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
@@ -372,6 +404,7 @@ html,body{height:100%;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;
       <div class="logo"><div class="logo-icon">AI</div><span>Excel AI</span></div>
       <button class="model-btn" id="modelBtn" onclick="openModelPicker()">Loading…</button>
       <span class="sync-dot busy" id="syncDot" title="Syncing…"></span>
+      <button class="auth-avatar" id="accountBtn" onclick="openAuthModal()" title="Account" style="display:none">?</button>
       <button class="btn-icon" onclick="openSettings()" title="Settings">⚙</button>
     </header>
 
@@ -527,10 +560,14 @@ html,body{height:100%;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;
       <div class="sgrp">
         <div class="slabel">Security</div>
         <div style="font-size:12px;color:var(--text2);margin-bottom:6px">Password required for critical operations (file deletion, shell commands). Leave blank to disable.</div>
-        <input class="sinput" type="password" id="secPwdInp" placeholder="Set security password…" oninput="saveSecPwd()">
+        <input class="sinput" type="password" id="secPwdInp" placeholder="Current password">
+        <div style="display:flex;gap:6px;margin-top:4px">
+          <input class="sinput" type="email" id="secPwdEmail" placeholder="Your email (for verification)" style="flex:1">
+          <button class="add-model-btn" onclick="startPwdChange()" style="flex-shrink:0">Change</button>
+        </div>
         <span class="sinote" id="secPwdNote">Not set — critical operations need only confirmation.</span>
       </div>
-      <div class="sfooter" style="cursor:pointer" onclick="openChangelog()" title="Click to see version history">Excel AI Assistant · <strong id="versionLabel">v5.7.0</strong></div>
+      <div class="sfooter" style="cursor:pointer" onclick="openChangelog()" title="Click to see version history">Excel AI Assistant · <strong id="versionLabel">v5.8.0</strong></div>
     </div>
 
     <!-- Preferences tab -->
@@ -587,6 +624,51 @@ html,body{height:100%;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;
   </div>
 </div>
 
+<!-- ── Auth modal ── -->
+<div class="auth-modal" id="authModal">
+  <div class="auth-card" id="authCard">
+    <div class="auth-title" id="authTitle">Sign in to Excel AI</div>
+    <div class="auth-sub" id="authSub">Your chats sync across devices</div>
+    <div id="authSocialBtns" style="display:flex;flex-direction:column;gap:8px">
+      <button class="auth-social-btn" id="authGoogleBtn" onclick="authSocial('google')">
+        <svg width="16" height="16" viewBox="0 0 48 48"><path fill="#4285F4" d="M46.145 24.5c0-1.566-.14-3.071-.4-4.5H24v8.521h12.44c-.536 2.9-2.17 5.357-4.626 7.006v5.82h7.49c4.382-4.037 6.84-9.984 6.84-16.847z"/><path fill="#34A853" d="M24 47c6.24 0 11.47-2.07 15.293-5.604l-7.49-5.82C29.76 37.24 27.02 38 24 38c-6.044 0-11.163-4.081-12.991-9.566H3.327v6.01A23.998 23.998 0 0 0 24 47z"/><path fill="#FBBC05" d="M11.009 28.434A14.47 14.47 0 0 1 10.25 24c0-1.537.264-3.03.759-4.434v-6.01H3.327A23.998 23.998 0 0 0 0 24c0 3.868.927 7.527 2.571 10.743"/><path fill="#EA4335" d="M24 9.5c3.408 0 6.463 1.172 8.87 3.473l6.65-6.65C35.462 2.634 30.232.5 24 .5A23.998 23.998 0 0 0 3.327 13.757l6.682 5.809C11.837 13.58 16.956 9.5 24 9.5z"/></svg>
+        Continue with Google
+      </button>
+      <button class="auth-social-btn" id="authGithubBtn" onclick="authSocial('github')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.373 0 12c0 5.303 3.438 9.8 8.205 11.387.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23A11.509 11.509 0 0 1 12 5.803c1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.929.43.372.823 1.102.823 2.222 0 1.606-.015 2.896-.015 3.286 0 .315.216.69.825.57C20.565 21.796 24 17.3 24 12c0-6.627-5.373-12-12-12z"/></svg>
+        Continue with GitHub
+      </button>
+      <button class="auth-social-btn" id="authAppleBtn" title="Requires Apple Developer account" style="opacity:.6;cursor:not-allowed" disabled>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98l-.09.06c-.22.14-2.19 1.28-2.17 3.8.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.79M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
+        Continue with Apple
+      </button>
+    </div>
+    <div class="auth-divider">or</div>
+    <div id="authEmailForm" style="display:flex;flex-direction:column;gap:8px">
+      <input class="auth-inp" type="email" id="authEmailInp" placeholder="Email address" autocomplete="email">
+      <input class="auth-inp" type="password" id="authPwdInp" placeholder="Password" autocomplete="current-password">
+      <div class="auth-err" id="authErr"></div>
+      <button class="auth-btn-primary" id="authSubmitBtn" onclick="authSubmit()">Sign in</button>
+      <div style="display:flex;justify-content:center;gap:12px">
+        <button class="auth-link" onclick="toggleAuthMode()">Create account</button>
+        <button class="auth-link" onclick="authSkip()">Skip for now</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── 2FA modal ── -->
+<div class="tfa-modal" id="tfaModal">
+  <div class="tfa-card">
+    <div class="tfa-title">Verify your email</div>
+    <div class="tfa-sub" id="tfaSub">A 6-digit code was sent to your email</div>
+    <input class="tfa-code-inp" type="text" id="tfaCodeInp" maxlength="6" inputmode="numeric" placeholder="000000" oninput="this.value=this.value.replace(/\D/g,'')">
+    <div class="tfa-err" id="tfaErr"></div>
+    <button class="auth-btn-primary" onclick="tfaVerify()">Verify</button>
+    <button class="auth-link" onclick="closeTfa()">Cancel</button>
+  </div>
+</div>
+
 <div id="toastEl" class="toast"></div>
 
 <script>
@@ -621,8 +703,9 @@ let pendingSendResolve = null;
 // ── Security state ────────────────────────────────────────────────────────────
 let sessionDangerConfirmed = new Set(); // 'high', 'critical' confirmed this session
 let sessionPasswordVerified = false;    // password entered once this session
-const APP_VERSION = 'v5.7.0';
+const APP_VERSION = 'v5.8.0';
 const CHANGELOG = [
+  { ver: 'v5.8.0', date: '2026-05-28', summary: 'User accounts: sign in with Google, GitHub, or email/password via Supabase; chats sync across devices when logged in; security password change now requires email 2FA (6-digit code sent via Gmail).' },
   { ver: 'v5.7.0', date: '2026-05-28', summary: 'UX polish: input bar slimmed down (removed token counter footer, attach badge moves inline); code blocks and VBA blocks auto-collapsed by default; AI thought process shown as a live one-line summary pill — click to expand full reasoning.' },
   { ver: 'v5.6.0', date: '2026-05-27', summary: 'UX overhaul: spring animations for settings/sidebar/model picker; message fade-in; user messages right-aligned; AI responses render markdown (bold, lists, headers, code blocks); syntax highlighting in code blocks; input glow on focus; send button spring animation; sound effects (send click + done chime); haptic feedback; toast notifications replace inline system messages.' },
   { ver: 'v5.5.0', date: '2026-05-27', summary: 'Security guardrails: server scans generated code for dangerous filesystem patterns (deletion, shell execution, bulk file moves, drive-wide search) and classifies as high/critical; inline confirmation banner before execution with session memory; critical ops require a security password (set in Settings); password verified once per session.' },
@@ -695,20 +778,14 @@ function loadSettings() {
   updateCostSlider(costLimitIdx, false);
   const sp = localStorage.getItem('securityPassword');
   if (sp) {
-    document.getElementById('secPwdInp').value = sp;
     document.getElementById('secPwdNote').textContent = 'Password set — required for critical operations.';
   }
 }
 function saveSecPwd() {
+  // Legacy: kept for compatibility; actual password change now goes through startPwdChange() with 2FA
   const v = document.getElementById('secPwdInp').value;
-  if (v) {
-    localStorage.setItem('securityPassword', v);
-    document.getElementById('secPwdNote').textContent = 'Password set — required for critical operations.';
-  } else {
-    localStorage.removeItem('securityPassword');
-    sessionPasswordVerified = false;
-    document.getElementById('secPwdNote').textContent = 'Not set — critical operations need only confirmation.';
-  }
+  const note = document.getElementById('secPwdNote');
+  if (note) note.textContent = v ? 'Password set — required for critical operations.' : 'Not set — critical operations need only confirmation.';
 }
 function setTheme(t, save=true) {
   document.documentElement.setAttribute('data-theme', t);
@@ -1435,7 +1512,10 @@ function requestDangerConfirmation(danger) {
         const inp = document.getElementById('dangerPwdInp');
         if (!inp) { cleanup(); resolve(false); return; }
         const entered = inp.value;
-        const stored  = localStorage.getItem('securityPassword');
+        const rawStored = localStorage.getItem('securityPassword');
+        // Support both plain-text (legacy) and btoa-encoded (new) passwords
+        let stored = rawStored;
+        try { stored = atob(rawStored); } catch {}
         if (entered !== stored) {
           inp.classList.add('err');
           inp.placeholder = 'Wrong password — try again';
@@ -1878,9 +1958,14 @@ async function sendMessage() {
 
         if(ev.type==='think'){
           ensureThinkEl();
-          thinkEl.querySelector('.think-text').textContent+=ev.token;
+          thinkBuf+=ev.token;
+          thinkEl.querySelector('.think-full-inner').textContent=thinkBuf;
+          const lines=thinkBuf.trim().split('\n').filter(l=>l.trim().length>3);
+          const last=lines[lines.length-1]||'Thinking…';
+          thinkEl.querySelector('.think-pill-text').textContent=last.length>72?'…'+last.slice(-70):last;
           box.scrollTop=box.scrollHeight;
         }else if(ev.type==='think_end'){
+          if(thinkEl){const elapsed=((Date.now()-t0)/1000).toFixed(1);thinkEl.querySelector('.think-pill-text').textContent='Thought for '+elapsed+'s — click to expand';}
           collapseThink();
         }else if(ev.type==='token'){
           ensureStreamEl();
@@ -1988,6 +2073,168 @@ async function reportMsg(btn,response,code) {
 }
 
 function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+// ── Auth (Supabase) ───────────────────────────────────────────────────────────
+let supabaseClient = null, currentUser = null, authMode = 'signin';
+
+async function initAuth() {
+  try {
+    const cfg = await fetch('/api/auth/config').then(r => r.json());
+    if (!cfg.supabaseUrl || !cfg.supabaseAnonKey) { showAccountBtn(null); return; }
+    supabaseClient = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey);
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    onAuthChange(session?.user || null);
+    supabaseClient.auth.onAuthStateChange((_ev, session) => onAuthChange(session?.user || null));
+  } catch { showAccountBtn(null); }
+}
+
+function onAuthChange(user) {
+  currentUser = user;
+  showAccountBtn(user);
+  if (user) {
+    document.getElementById('authModal')?.classList.remove('open');
+    loadChats(); // reload from Supabase-backed server
+  }
+}
+
+function showAccountBtn(user) {
+  const btn = document.getElementById('accountBtn');
+  if (!btn) return;
+  btn.style.display = '';
+  if (user) {
+    const initials = (user.email || '?').slice(0, 2).toUpperCase();
+    btn.textContent = initials;
+    btn.title = user.email;
+  } else {
+    btn.textContent = '→';
+    btn.title = 'Sign in';
+  }
+}
+
+function openAuthModal() {
+  if (currentUser) {
+    if (confirm(`Signed in as ${currentUser.email}\n\nSign out?`)) {
+      supabaseClient?.auth.signOut();
+    }
+    return;
+  }
+  document.getElementById('authModal').classList.add('open');
+  setTimeout(() => document.getElementById('authEmailInp')?.focus(), 200);
+}
+
+function authSkip() { document.getElementById('authModal').classList.remove('open'); }
+
+function toggleAuthMode() {
+  authMode = authMode === 'signin' ? 'signup' : 'signin';
+  document.getElementById('authTitle').textContent = authMode === 'signup' ? 'Create account' : 'Sign in to Excel AI';
+  document.getElementById('authSubmitBtn').textContent = authMode === 'signup' ? 'Create account' : 'Sign in';
+  const link = document.querySelector('.auth-link');
+  if (link) link.textContent = authMode === 'signup' ? 'Already have an account? Sign in' : 'Create account';
+  document.getElementById('authErr').textContent = '';
+}
+
+async function authSubmit() {
+  if (!supabaseClient) return;
+  const email = document.getElementById('authEmailInp').value.trim();
+  const pwd   = document.getElementById('authPwdInp').value;
+  const btn   = document.getElementById('authSubmitBtn');
+  const err   = document.getElementById('authErr');
+  if (!email || !pwd) { err.textContent = 'Enter email and password'; return; }
+  btn.disabled = true; err.textContent = '';
+  try {
+    let result;
+    if (authMode === 'signup') {
+      result = await supabaseClient.auth.signUp({ email, password: pwd });
+      if (result.error) throw result.error;
+      if (result.data.user && !result.data.session) {
+        err.style.color = 'var(--ok)'; err.textContent = 'Check your email to confirm your account!';
+        btn.disabled = false; return;
+      }
+    } else {
+      result = await supabaseClient.auth.signInWithPassword({ email, password: pwd });
+      if (result.error) throw result.error;
+    }
+  } catch (e) { err.style.color = 'var(--err)'; err.textContent = e.message; }
+  btn.disabled = false;
+}
+
+async function authSocial(provider) {
+  if (!supabaseClient) { showToast('Supabase not configured — add keys to .env'); return; }
+  const btn = document.getElementById(`auth${provider.charAt(0).toUpperCase()+provider.slice(1)}Btn`);
+  if (btn) btn.disabled = true;
+  try {
+    const { error } = await supabaseClient.auth.signInWithOAuth({
+      provider,
+      options: { redirectTo: window.location.origin + '/auth/callback' }
+    });
+    if (error) throw error;
+  } catch (e) {
+    showToast('OAuth error: ' + e.message);
+    if (btn) btn.disabled = false;
+  }
+}
+
+// ── 2FA for password change ───────────────────────────────────────────────────
+let tfaResolve = null;
+
+function openTfa(email) {
+  document.getElementById('tfaSub').textContent = `A 6-digit code was sent to ${email}`;
+  document.getElementById('tfaCodeInp').value = '';
+  document.getElementById('tfaErr').textContent = '';
+  document.getElementById('tfaModal').classList.add('open');
+  setTimeout(() => document.getElementById('tfaCodeInp').focus(), 200);
+  return new Promise(resolve => { tfaResolve = resolve; });
+}
+
+function closeTfa() {
+  document.getElementById('tfaModal').classList.remove('open');
+  if (tfaResolve) { tfaResolve(false); tfaResolve = null; }
+}
+
+async function tfaVerify() {
+  const code = document.getElementById('tfaCodeInp').value.trim();
+  const err  = document.getElementById('tfaErr');
+  if (code.length !== 6) { err.textContent = 'Enter the 6-digit code'; return; }
+  try {
+    const r = await fetch('/api/auth/verify-code', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: document.getElementById('secPwdEmail').value.trim(), code })
+    });
+    const j = await r.json();
+    if (!r.ok) { err.textContent = j.error || 'Incorrect code'; return; }
+    document.getElementById('tfaModal').classList.remove('open');
+    if (tfaResolve) { tfaResolve(true); tfaResolve = null; }
+  } catch { err.textContent = 'Network error'; }
+}
+
+async function startPwdChange() {
+  const email   = document.getElementById('secPwdEmail').value.trim();
+  const newPwd  = document.getElementById('secPwdInp').value;
+  if (!email) { showToast('Enter your email for verification'); return; }
+  if (!newPwd) { showToast('Enter the new password'); return; }
+  showToast('Sending verification code…');
+  try {
+    const r = await fetch('/api/auth/send-code', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email })
+    });
+    const j = await r.json();
+    if (!r.ok) { showToast(j.error || 'Could not send code'); return; }
+  } catch { showToast('Network error sending code'); return; }
+  const verified = await openTfa(email);
+  if (!verified) return;
+  // Save the new password locally
+  if (newPwd) {
+    localStorage.setItem('securityPassword', btoa(newPwd));
+    document.getElementById('secPwdInp').value = '';
+    document.getElementById('secPwdEmail').value = '';
+    document.getElementById('secPwdNote').textContent = 'Password set — required for critical operations.';
+    showToast('Password updated successfully');
+  }
+}
+
+// Start auth on load
+document.addEventListener('DOMContentLoaded', () => { setTimeout(initAuth, 500); });
 </script>
 </body>
 </html>

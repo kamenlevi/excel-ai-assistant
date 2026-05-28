@@ -9,10 +9,28 @@ const { v4: uuidv4 } = require('uuid');
 const { execFile } = require('child_process');
 const ExcelJS = require('exceljs');
 const os = require('os');
+const { createClient } = require('@supabase/supabase-js');
+const nodemailer = require('nodemailer');
 
 const app = express();
 app.use(express.json({ limit: '20mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
+
+// ── Supabase client ───────────────────────────────────────────────────────────
+const supabase = process.env.SUPABASE_URL && process.env.SUPABASE_ANON_KEY
+  ? createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY)
+  : null;
+
+// ── Gmail transporter ─────────────────────────────────────────────────────────
+const mailer = process.env.GMAIL_USER && process.env.GMAIL_APP_PASSWORD
+  ? nodemailer.createTransport({
+      service: 'gmail',
+      auth: { user: process.env.GMAIL_USER, pass: process.env.GMAIL_APP_PASSWORD }
+    })
+  : null;
+
+// In-memory verification codes: { email -> { code, expires } }
+const pendingCodes = new Map();
 
 // ── SSL cert — use office-addin-dev-certs (trusted by Excel desktop) ──
 const DEV_CERTS_DIR = path.join(process.env.USERPROFILE || process.env.HOME, '.office-addin-dev-certs');
@@ -1682,6 +1700,65 @@ app.post('/api/chat/stream', async (req, res) => {
     sse({ type: 'error', message: err.message });
     res.end();
   }
+});
+
+// ── Auth config (sends public Supabase keys to frontend) ─────────────────────
+app.get('/api/auth/config', (req, res) => {
+  res.json({
+    supabaseUrl:     process.env.SUPABASE_URL     || null,
+    supabaseAnonKey: process.env.SUPABASE_ANON_KEY || null,
+  });
+});
+
+// ── Email 2FA: send verification code ────────────────────────────────────────
+app.post('/api/auth/send-code', async (req, res) => {
+  const { email } = req.body || {};
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return res.status(400).json({ error: 'Invalid email' });
+  }
+  if (!mailer) return res.status(503).json({ error: 'Email not configured. Add GMAIL_USER and GMAIL_APP_PASSWORD to .env' });
+
+  const code = String(Math.floor(100000 + Math.random() * 900000));
+  pendingCodes.set(email, { code, expires: Date.now() + 10 * 60 * 1000 }); // 10 min
+
+  try {
+    await mailer.sendMail({
+      from: `"Excel AI" <${process.env.GMAIL_USER}>`,
+      to: email,
+      subject: 'Your Excel AI verification code',
+      text: `Your verification code is: ${code}\n\nThis code expires in 10 minutes.`,
+      html: `<p>Your Excel AI verification code is:</p><h2 style="letter-spacing:4px">${code}</h2><p>Expires in 10 minutes.</p>`,
+    });
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('Email send error:', err.message);
+    res.status(500).json({ error: 'Failed to send email: ' + err.message });
+  }
+});
+
+// ── Email 2FA: verify code ────────────────────────────────────────────────────
+app.post('/api/auth/verify-code', (req, res) => {
+  const { email, code } = req.body || {};
+  const entry = pendingCodes.get(email);
+  if (!entry) return res.status(400).json({ error: 'No code pending for this email' });
+  if (Date.now() > entry.expires) { pendingCodes.delete(email); return res.status(400).json({ error: 'Code expired' }); }
+  if (entry.code !== String(code)) return res.status(400).json({ error: 'Incorrect code' });
+  pendingCodes.delete(email);
+  res.json({ ok: true });
+});
+
+// OAuth callback — Supabase redirects here after social sign-in
+app.get('/auth/callback', (req, res) => {
+  res.send(`<!DOCTYPE html><html><head><title>Signing in…</title></head><body>
+    <script>
+      if (window.opener) {
+        window.opener.postMessage({ type: 'supabase-auth-callback', hash: window.location.hash }, window.location.origin);
+        window.close();
+      } else {
+        window.location.href = '/index.html' + window.location.hash;
+      }
+    <\/script>
+    <p>Signing in…</p></body></html>`);
 });
 
 const server = https.createServer({ key: pems.private, cert: pems.cert }, app);
