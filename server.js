@@ -540,6 +540,17 @@ async function* streamAI(messages, maxTokens, model, useOllama, useGroq, apiKey,
   }
 
   const res = await fetch(url, { method: 'POST', headers, body: JSON.stringify(reqBody) });
+  if (!res.ok) {
+    // Provider returned an error (bad key, rate limit, invalid model, …). The body
+    // is a JSON error, not an SSE stream — surface it instead of silently yielding
+    // nothing (which would show the user an empty response).
+    let body = '';
+    try { body = await res.text(); } catch {}
+    let msg = `Provider error ${res.status}`;
+    try { const j = JSON.parse(body); msg = j.error?.message || (typeof j.error === 'string' ? j.error : null) || msg; }
+    catch { if (body) msg = body.slice(0, 300); }
+    throw new Error(msg);
+  }
   let pendingUsage = null;
   for await (const line of readLines(res.body)) {
     if (!line.startsWith('data: ')) continue;
@@ -1359,6 +1370,21 @@ app.post('/api/attachments/xlsx', async (req, res) => {
   }
 });
 
+// ── Sanitize frontend messages into the {role, content} shape the LLM APIs
+// expect. Drops UI-only fields (code, vba, ms, tok, time, via) and gives
+// empty-content assistant turns (code/VBA-only replies) a short placeholder so
+// strict providers don't reject a blank message. ──────────────────────────────
+function sanitizeMessages(msgs) {
+  return (msgs || []).map(m => {
+    let content = m.content || '';
+    if (!content.trim()) {
+      if (m.code)      content = '[generated and ran Office JS code]';
+      else if (m.vba)  content = '[generated a VBA macro]';
+    }
+    return { role: m.role, content };
+  });
+}
+
 // ── Main chat route ──────────────────────────────────────────────────────────
 app.post('/api/chat', async (req, res) => {
   const { messages, workbookData, activeSheet, summary, model, useOllama, useGroq, apiKey, groqKey, options } = req.body;
@@ -1378,7 +1404,7 @@ app.post('/api/chat', async (req, res) => {
   let selectedModel = null;
 
   const rawUserMessage = messages[messages.length - 1]?.content || '';
-  const recentMessages = messages.map(m => ({ ...m })); // use all messages sent by frontend
+  const recentMessages = sanitizeMessages(messages); // {role, content} only — drop UI fields
 
   // ── Auto-feedback: detect if user is unhappy with previous AI response ────
   const dissatisfaction = detectDissatisfaction(rawUserMessage, messages);
@@ -1564,7 +1590,7 @@ app.post('/api/chat/stream', async (req, res) => {
   let selectedModel  = null;
 
   const rawUserMessage = messages[messages.length - 1]?.content || '';
-  const recentMessages = messages.map(m => ({ ...m }));
+  const recentMessages = sanitizeMessages(messages);
 
   const dissatisfaction = detectDissatisfaction(rawUserMessage, messages);
   if (dissatisfaction && messages.length >= 2) {
