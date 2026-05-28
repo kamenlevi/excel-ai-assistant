@@ -148,14 +148,15 @@ html,body{height:100%;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;
 .danger-pwd-inp{flex:1;font-size:12px;padding:5px 8px;border-radius:var(--r);border:1px solid var(--border);background:var(--bg);color:var(--text)}
 .danger-pwd-inp.err{border-color:#c94040}
 
-.think-section{border:1px solid var(--border);border-radius:var(--r);margin-bottom:8px;overflow:hidden}
-.think-header{display:flex;align-items:center;gap:6px;padding:6px 10px;cursor:pointer;user-select:none;color:var(--text3);font-size:12px;background:var(--surf2)}
-.think-header:hover{color:var(--text2)}
-.think-arrow{font-size:10px;transition:transform .2s;display:inline-block}
-.think-section.collapsed .think-arrow{transform:rotate(-90deg)}
-.think-body{max-height:300px;overflow-y:auto;transition:max-height .25s ease}
-.think-section.collapsed .think-body{max-height:0}
-.think-text{margin:0;padding:8px 10px;font-size:11px;color:var(--text2);white-space:pre-wrap;word-break:break-word;font-family:inherit;line-height:1.5}
+.think-wrap{margin-bottom:6px}
+.think-pill{display:flex;align-items:center;gap:8px;padding:5px 10px;background:var(--surf);border:1px solid var(--border);border-radius:var(--r2);cursor:pointer;font-size:12px;color:var(--text2);transition:background .1s;user-select:none}
+.think-pill:hover{background:var(--surf2)}
+.think-pill-icon{flex-shrink:0;font-size:13px}
+.think-pill-text{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-style:italic}
+.think-pill-arrow{flex-shrink:0;font-size:10px;transition:transform .2s}
+.think-pill.open .think-pill-arrow{transform:rotate(90deg)}
+.think-full{max-height:0;overflow:hidden;transition:max-height .3s ease}
+.think-full-inner{padding:8px 10px;font-size:11px;color:var(--text2);white-space:pre-wrap;word-break:break-word;font-family:inherit;line-height:1.5;background:var(--code-bg);border:1px solid var(--border);border-top:none;border-radius:0 0 var(--r2) var(--r2)}
 
 .code-block{margin-top:6px;border:1px solid var(--border);border-radius:var(--r2);overflow:hidden;font-size:12px}
 .code-head{background:var(--surf);padding:5px 10px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none}
@@ -187,6 +188,8 @@ html,body{height:100%;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;
 .input-box{background:var(--input-bg);border:1px solid var(--border);border-radius:var(--r);transition:border-color .15s}
 .input-box:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px rgba(var(--accent-rgb),.14)}
 .input-row{display:flex;align-items:flex-end;gap:4px;padding:8px}
+.attach-strip{display:none;padding:4px 10px;border-bottom:1px solid var(--border);background:var(--input-bg);border-radius:var(--r) var(--r) 0 0;font-size:12px;color:var(--text2);align-items:center;gap:6px}
+.attach-strip.show{display:flex}
 #msgInput{flex:1;background:none;border:none;outline:none;color:var(--text);font-size:14px;font-family:inherit;resize:none;min-height:20px;max-height:120px;line-height:1.5}
 #msgInput::placeholder{color:var(--text3)}
 .input-btns{display:flex;align-items:center;gap:3px;flex-shrink:0}
@@ -198,7 +201,6 @@ html,body{height:100%;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;
 .send:disabled{opacity:.5;cursor:not-allowed}
 .send.stop{background:var(--err)}
 .send.stop:hover{background:#C04444}
-.input-foot{padding:4px 8px 0;display:flex;align-items:center;justify-content:space-between;min-height:18px}
 .tok-info{font-size:11px;color:var(--text3)}
 .attach-badge{font-size:11px;color:var(--accent);display:flex;align-items:center;gap:4px}
 .attach-x{cursor:pointer;color:var(--text3);font-size:10px;border:none;background:none;padding:0 2px;line-height:1}
@@ -391,6 +393,9 @@ html,body{height:100%;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;
     <div class="input-area">
       <div class="input-box">
         <div class="slash-popup" id="slashPopup"></div>
+        <div id="attachStrip" class="attach-strip">
+          <span id="attachBadge" style="display:flex;align-items:center;gap:4px"></span>
+        </div>
         <div class="input-row">
           <textarea id="msgInput" placeholder="Ask anything… (type / for commands)" rows="1"
             onkeydown="handleKey(event)" oninput="autoResize(this);updateSlashPopup(this.value)"></textarea>
@@ -421,10 +426,6 @@ html,body{height:100%;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;
             </div>
             <button class="send" id="sendBtn" onclick="sendMessage()">Send</button>
           </div>
-        </div>
-        <div class="input-foot">
-          <span id="attachBadge"></span>
-          <span class="tok-info" id="tokInfo"></span>
         </div>
       </div>
     </div>
@@ -529,7 +530,7 @@ html,body{height:100%;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;
         <input class="sinput" type="password" id="secPwdInp" placeholder="Set security password…" oninput="saveSecPwd()">
         <span class="sinote" id="secPwdNote">Not set — critical operations need only confirmation.</span>
       </div>
-      <div class="sfooter" style="cursor:pointer" onclick="openChangelog()" title="Click to see version history">Excel AI Assistant · <strong id="versionLabel">v5.6.0</strong></div>
+      <div class="sfooter" style="cursor:pointer" onclick="openChangelog()" title="Click to see version history">Excel AI Assistant · <strong id="versionLabel">v5.7.0</strong></div>
     </div>
 
     <!-- Preferences tab -->
@@ -620,8 +621,9 @@ let pendingSendResolve = null;
 // ── Security state ────────────────────────────────────────────────────────────
 let sessionDangerConfirmed = new Set(); // 'high', 'critical' confirmed this session
 let sessionPasswordVerified = false;    // password entered once this session
-const APP_VERSION = 'v5.6.0';
+const APP_VERSION = 'v5.7.0';
 const CHANGELOG = [
+  { ver: 'v5.7.0', date: '2026-05-28', summary: 'UX polish: input bar slimmed down (removed token counter footer, attach badge moves inline); code blocks and VBA blocks auto-collapsed by default; AI thought process shown as a live one-line summary pill — click to expand full reasoning.' },
   { ver: 'v5.6.0', date: '2026-05-27', summary: 'UX overhaul: spring animations for settings/sidebar/model picker; message fade-in; user messages right-aligned; AI responses render markdown (bold, lists, headers, code blocks); syntax highlighting in code blocks; input glow on focus; send button spring animation; sound effects (send click + done chime); haptic feedback; toast notifications replace inline system messages.' },
   { ver: 'v5.5.0', date: '2026-05-27', summary: 'Security guardrails: server scans generated code for dangerous filesystem patterns (deletion, shell execution, bulk file moves, drive-wide search) and classifies as high/critical; inline confirmation banner before execution with session memory; critical ops require a security password (set in Settings); password verified once per session.' },
   { ver: 'v5.4.0', date: '2026-05-27', summary: 'Streaming responses: all AI output streams live token-by-token via SSE (/api/chat/stream); thinking models show a collapsible "Thought process" section that auto-collapses when the answer starts; non-thinking models stream their answer directly; live timer updates while streaming.' },
@@ -1304,8 +1306,8 @@ function mkMsg(role,text,isErr,ms,tok,code,savedTime,via) {
 function mkCode(code) {
   const w=document.createElement('div');w.className='code-block';
   const h=document.createElement('div');h.className='code-head';
-  h.innerHTML='<span>Generated Code</span><span class="code-toggle">hide ▲</span>';
-  const b=document.createElement('div');b.className='code-body';
+  h.innerHTML='<span>Generated Code</span><span class="code-toggle">show ▼</span>';
+  const b=document.createElement('div');b.className='code-body hidden';
   const p=document.createElement('pre');p.innerHTML=highlightJS(code);b.appendChild(p);
   const footer=document.createElement('div');footer.className='code-footer';
   const cb=document.createElement('button');cb.className='copy-code-btn';cb.textContent='⎘ Copy code';
@@ -1317,8 +1319,8 @@ function mkCode(code) {
 function mkVba(vbaCode) {
   const w=document.createElement('div');w.className='vba-block';
   const h=document.createElement('div');h.className='vba-head';
-  h.innerHTML='<span>VBA Macro</span><span class="code-toggle">hide ▲</span>';
-  const b=document.createElement('div');b.className='code-body';
+  h.innerHTML='<span>VBA Macro</span><span class="code-toggle">show ▼</span>';
+  const b=document.createElement('div');b.className='code-body hidden';
   const p=document.createElement('pre');p.textContent=vbaCode;b.appendChild(p);
   const footer=document.createElement('div');footer.className='code-footer';
   const cb=document.createElement('button');cb.className='copy-code-btn';cb.textContent='⎘ Copy macro';
@@ -1327,7 +1329,7 @@ function mkVba(vbaCode) {
   const steps=document.createElement('div');steps.className='vba-steps';
   steps.innerHTML='<strong>How to run:</strong> 1. Click <strong>Copy macro</strong> above &nbsp;2. Press <strong>Alt+F11</strong> to open VBA Editor &nbsp;3. Click <strong>Insert > Module</strong> &nbsp;4. Paste the code &nbsp;5. Press <strong>F5</strong> to run';
   h.onclick=()=>{const hide=b.classList.toggle('hidden');steps.style.display=hide?'none':'';h.querySelector('.code-toggle').textContent=hide?'show ▼':'hide ▲';};
-  w.appendChild(h);w.appendChild(b);w.appendChild(steps);return w;
+  steps.style.display='none';w.appendChild(h);w.appendChild(b);w.appendChild(steps);return w;
 }
 function addTyping() {
   document.getElementById('emptyState')?.remove();
@@ -1339,7 +1341,7 @@ function addTyping() {
   timerInterval=setInterval(()=>{sec+=0.1;const t=document.getElementById('liveTimer');if(t)t.textContent=sec.toFixed(1)+'s';},100);
 }
 function removeTyping(){clearInterval(timerInterval);timerInterval=null;document.getElementById('typing')?.remove();}
-function updateTok(){document.getElementById('tokInfo').textContent=totalTok>0?totalTok.toLocaleString()+' tok this chat':'';}
+function updateTok(){}
 
 // ── Sync ──────────────────────────────────────────────────────────────────────
 function setSyncStatus(state,text){const d=document.getElementById('syncDot');d.className='sync-dot'+(state==='busy'?' busy':state==='err'?' err':'');d.title=text;}
@@ -1729,8 +1731,8 @@ function handleKey(e){
 }
 function autoResize(el){el.style.height='auto';el.style.height=Math.min(el.scrollHeight,120)+'px';}
 function useSugg(btn){document.getElementById('msgInput').value=btn.textContent;sendMessage();}
-function attachFile(e){const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{attached={name:f.name,content:ev.target.result};document.getElementById('attachBadge').innerHTML='📎 <span style="color:var(--text2)">'+esc(f.name)+'</span> <button class="attach-x" onclick="clearAttach()">✕</button>';};r.readAsText(f);e.target.value='';}
-function clearAttach(){attached=null;document.getElementById('attachBadge').innerHTML='';}
+function attachFile(e){const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{attached={name:f.name,content:ev.target.result};document.getElementById('attachBadge').innerHTML='📎 <span style="color:var(--text2)">'+esc(f.name)+'</span> <button class="attach-x" onclick="clearAttach()">✕</button>';document.getElementById('attachStrip').classList.add('show');};r.readAsText(f);e.target.value='';}
+function clearAttach(){attached=null;document.getElementById('attachBadge').innerHTML='';document.getElementById('attachStrip').classList.remove('show');}
 
 // ── Memory strip ──────────────────────────────────────────────────────────────
 function renderMemoryStrip() {
@@ -1825,7 +1827,7 @@ async function sendMessage() {
   };
 
   // ── Streaming state ──
-  let streamEl=null,thinkEl=null,streamBody=null,answerText='',thinkCollapsed=false;
+  let streamEl=null,thinkEl=null,streamBody=null,answerText='',thinkCollapsed=false,thinkBuf='';
   const box=document.getElementById('messages');
 
   function ensureStreamEl(){
@@ -1842,14 +1844,20 @@ async function sendMessage() {
   function ensureThinkEl(){
     if(thinkEl)return;
     ensureStreamEl();
-    thinkEl=document.createElement('div');thinkEl.className='think-section';
-    thinkEl.innerHTML='<div class="think-header"><span class="think-arrow">▼</span> Thought process</div><div class="think-body"><pre class="think-text"></pre></div>';
-    thinkEl.querySelector('.think-header').onclick=()=>thinkEl.classList.toggle('collapsed');
+    thinkEl=document.createElement('div');thinkEl.className='think-wrap';
+    const pill=document.createElement('div');pill.className='think-pill';
+    pill.innerHTML='<span class="think-pill-icon">💭</span><span class="think-pill-text">Thinking…</span><span class="think-pill-arrow">▸</span>';
+    const full=document.createElement('div');full.className='think-full';
+    const inner=document.createElement('div');inner.className='think-full-inner';
+    full.appendChild(inner);
+    pill.onclick=()=>{
+      pill.classList.toggle('open');
+      full.style.maxHeight=pill.classList.contains('open')?(inner.scrollHeight+20)+'px':'0';
+    };
+    thinkEl.appendChild(pill);thinkEl.appendChild(full);
     streamEl.insertBefore(thinkEl,streamBody);
   }
-  function collapseThink(){
-    if(thinkEl&&!thinkCollapsed){thinkEl.classList.add('collapsed');thinkCollapsed=true;}
-  }
+  function collapseThink(){thinkCollapsed=true;}
 
   try{
     const resp=await fetch('/api/chat/stream',{
