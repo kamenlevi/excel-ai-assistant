@@ -565,7 +565,7 @@ html,body{height:100%;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;
         <button class="add-model-btn" onclick="saveSecPwd()" style="margin-top:6px">Save password</button>
         <span class="sinote" id="secPwdNote">Not set — critical operations need only confirmation.</span>
       </div>
-      <div class="sfooter" style="cursor:pointer" onclick="openChangelog()" title="Click to see version history">Excel AI Assistant · <strong id="versionLabel">v5.9.6</strong></div>
+      <div class="sfooter" style="cursor:pointer" onclick="openChangelog()" title="Click to see version history">Excel AI Assistant · <strong id="versionLabel">v5.9.7</strong></div>
     </div>
 
     <!-- Preferences tab -->
@@ -675,8 +675,9 @@ let pendingSendResolve = null;
 // ── Security state ────────────────────────────────────────────────────────────
 let sessionDangerConfirmed = new Set(); // 'high', 'critical' confirmed this session
 let sessionPasswordVerified = false;    // password entered once this session
-const APP_VERSION = 'v5.9.6';
+const APP_VERSION = 'v5.9.7';
 const CHANGELOG = [
+  { ver: 'v5.9.7', date: '2026-05-28', summary: 'Sorting bug fixed: sortByColumn called range.sort.apply without hasHeaders, so Office JS defaulted it to false and sorted the header row down into the data — now passes hasHeaders=true so the header stays put. Also: the Report button no longer attributes feedback to the internal "code failed" retry prompt, and the workbook context note no longer claims sheets were dropped "due to size limit" when they were simply empty.' },
   { ver: 'v5.9.6', date: '2026-05-28', summary: 'Robustness fixes: streaming provider errors (bad key, rate limit, invalid model) now surface as a visible error instead of a silent empty response — streamAI throws on non-2xx instead of skipping the non-SSE error body; conversation history sent to the model is sanitised to {role, content}, which drops UI-only fields and gives code/VBA-only turns a short placeholder so strict providers do not reject empty-content messages; the internal "the code failed, fix it" retry prompt no longer shows up as a fake user message when a chat is reloaded.' },
   { ver: 'v5.9.5', date: '2026-05-28', summary: 'Workbook attachments done right: attaching an .xlsx/.xlsm now sends the file to a new /api/attachments/xlsx endpoint that parses it with ExcelJS and returns compact "Cell:value" text the model can read — instead of FileReader.readAsText producing binary ZIP garbage. The attach picker accepts .xlsx/.xlsm again and shows a "reading…" state while parsing.' },
   { ver: 'v5.9.4', date: '2026-05-28', summary: 'More audit fixes: VBA macros now reappear when a chat is reloaded (mkMsg/renderMsgs never re-rendered the saved vba); stream-error path no longer leaks a live timer interval (ensureStreamEl could start a new timer after the clear); the forgot-code retry endpoint now returns the danger classification so the retry honours the confirmation banner; removed .xlsx from the attach picker (readAsText produced binary garbage for workbooks — text formats only).' },
@@ -1427,10 +1428,10 @@ async function readWorkbook() {
   try{await Excel.run(async ctx=>{
     const wb=ctx.workbook,sheets=wb.worksheets,act=wb.worksheets.getActiveWorksheet();
     sheets.load('items/name');act.load('name');await ctx.sync();
-    activeSheet=act.name;const parts=[];let totalChars=0;
+    activeSheet=act.name;const parts=[];let totalChars=0;let hitLimit=false;
     const ordered=[...sheets.items].sort((a,b)=>a.name===activeSheet?-1:b.name===activeSheet?1:0);
     for(const sh of ordered){
-      if(totalChars>=MAX_TOTAL_CHARS)break;
+      if(totalChars>=MAX_TOTAL_CHARS){hitLimit=true;break;}
       try{const u=sh.getUsedRange();u.load('values,rowCount,columnCount');await ctx.sync();
       if(!u.values?.length)continue;
       const hdrs=u.values[0];
@@ -1450,7 +1451,7 @@ async function readWorkbook() {
       parts.push(sheetInfo+'\n'+hLine+'\nData:\n'+dLines.join('\n')+trunc);
       }catch{}
     }
-    if(parts.length<sheets.items.length){parts.push('[+'+(sheets.items.length-parts.length)+' more sheets not shown due to size limit]');}
+    if(parts.length<sheets.items.length){const more=sheets.items.length-parts.length;parts.push('[+'+more+' more sheet(s) not shown'+(hitLimit?' — workbook too large':'')+']');}
     workbookData=parts.join('\n\n---\n\n');setSyncStatus('ok','Synced — '+activeSheet);
   });}catch(e){setSyncStatus('err','Sync failed');console.error('readWorkbook error',e);}
 }
@@ -1548,7 +1549,7 @@ async function execCode(code) {
       const wb=ctx.workbook;
       async function applyColumnFilter(col,vals){const sh=wb.worksheets.getActiveWorksheet(),u=sh.getUsedRange();u.load('values');await ctx.sync();const hdrs=u.values[0],ci=hdrs.findIndex(h=>String(h).toLowerCase().trim()===String(col).toLowerCase().trim());if(ci===-1)throw new Error('Column "'+col+'" not found. Available: '+hdrs.filter(Boolean).join(', '));const v=(Array.isArray(vals)?vals:[vals]).map(x=>String(x));try{sh.autoFilter.clearFilters();await ctx.sync();}catch(e){}sh.autoFilter.apply(u,ci,{filterOn:Excel.FilterOn.values,values:v});await ctx.sync();}
       async function clearFilters(){const sh=wb.worksheets.getActiveWorksheet();try{sh.autoFilter.clearFilters();await ctx.sync();}catch(e){}}
-      async function sortByColumn(col,asc=true){const sh=wb.worksheets.getActiveWorksheet(),u=sh.getUsedRange();u.load('values');await ctx.sync();const hdrs=u.values[0],ci=hdrs.findIndex(h=>String(h).toLowerCase().trim()===String(col).toLowerCase().trim());if(ci===-1)throw new Error('Column "'+col+'" not found. Available: '+hdrs.filter(Boolean).join(', '));u.sort.apply([{key:ci,ascending:asc}]);await ctx.sync();}
+      async function sortByColumn(col,asc=true){const sh=wb.worksheets.getActiveWorksheet(),u=sh.getUsedRange();u.load('values');await ctx.sync();const hdrs=u.values[0],ci=hdrs.findIndex(h=>String(h).toLowerCase().trim()===String(col).toLowerCase().trim());if(ci===-1)throw new Error('Column "'+col+'" not found. Available: '+hdrs.filter(Boolean).join(', '));u.sort.apply([{key:ci,ascending:asc}],false,true);await ctx.sync();}
       async function searchWorkbooks(query,limit){const r=await fetch('/api/workbooks/search',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({query:query,limit:limit||50})});return await r.json();}
       async function searchWorkbooksByContent(query,limit){const r=await fetch('/api/workbooks/search-content',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({query:query,limit:limit||20})});return await r.json();}
       async function readExternalWorkbook(filePath,sheetNames){const r=await fetch('/api/workbooks/read',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({filePath:filePath,sheetNames:sheetNames||[]})});const d=await r.json();if(d.error)throw new Error(d.error);return d;}
@@ -2101,7 +2102,7 @@ async function sendMessage() {
 
 async function reportMsg(btn,response,code) {
   if(btn.classList.contains('sent'))return;
-  const prompt=history.slice().reverse().find(m=>m.role==='user')?.content||'';
+  const prompt=history.slice().reverse().find(m=>m.role==='user'&&!m.internal)?.content||'';
   try{await fetch('/api/feedback',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt,response,code:code||null,model:selectedModel,timestamp:new Date().toISOString()})});btn.innerHTML='✓ Reported';btn.classList.add('sent');}catch{btn.innerHTML='⚑ Report';}
 }
 
