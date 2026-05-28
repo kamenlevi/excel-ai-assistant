@@ -71,7 +71,7 @@ RULES FOR YOUR CODE:
 - Always use .load() before reading properties, then await context.sync()
 - This runs in Excel Online — only use APIs available in ExcelApi 1.1 through 1.17
 - Do NOT use sheet.autoFilter.getColumnFilter() — it does not exist in Excel Online
-- Pivot tables: use context.workbook.worksheets to add a new sheet, then sheet.pivotTables.add(name, sourceRange, destinationCell) to create the pivot table. Use pivotTable.rowHierarchies, columnHierarchies, dataHierarchies, and filterHierarchies to configure fields.
+- PivotTables ARE supported via Office JS (ExcelApi 1.8+) — do NOT use VBA for them. Prefer the createPivotTable() helper below.
 - Keep code simple and direct. No unnecessary abstractions.
 - NEVER use console.log in your code. Use throw new Error() to surface problems.
 
@@ -92,6 +92,36 @@ HELPER FUNCTIONS — always use these instead of raw Office JS for filtering and
     — example: await sortByColumn("Date", false);
 
 NEVER write manual autoFilter or sort code when these helpers exist. Just call them.
+
+DATA, STRUCTURE & FORMAT HELPERS — prefer these over hand-written code:
+
+  createPivotTable(sourceRange, rowFields, valueFields, columnFields?)
+    — builds a PivotTable on a NEW sheet using Office JS (never VBA)
+    — fields are column header names; each of rowFields/valueFields/columnFields may be a string or array
+    — omit sourceRange (pass null) to use the active sheet's used range
+    — example: await createPivotTable("A1:E500", "Region", ["Sales"], "Quarter");
+
+  createTable(rangeAddress?, hasHeaders=true)
+    — converts a range into a native Excel Table (ListObject). Omit rangeAddress to use the whole used range.
+    — example: await createTable();   await createTable("A1:D50");
+
+  setNumberFormat(rangeAddress, format)
+    — applies a number/date/currency format to every cell in the range
+    — examples: await setNumberFormat("B2:B100", "$#,##0.00");
+                await setNumberFormat("C2:C100", "0.0%");
+                await setNumberFormat("A2:A100", "yyyy-mm-dd");
+
+  dedupeRows(columnNames?)
+    — removes duplicate rows on the active sheet, keeping the header. Omit for an all-column match, or pass key column name(s).
+    — example: await dedupeRows();   await dedupeRows(["Email"]);
+
+  fillDown(columnName)
+    — fills blank cells in a column with the value above (e.g. un-flattens grouped labels)
+    — example: await fillDown("Category");
+
+  trimCells(columnName?)
+    — trims leading/trailing whitespace. Omit columnName to trim the whole sheet.
+    — example: await trimCells("Name");
 
 DELETING AND CLEARING — these are the correct patterns:
 
@@ -251,6 +281,97 @@ sheet.getRange("B10").formulas = [["=SUM(B2:B9)"]];
 await context.sync();
 ::END_CODE
 
+POWER FEATURES — PivotTables, Tables, cleaning, lookups, formula help:
+
+User: "make a pivot table of sales by region and quarter"
+Response:
+Building a PivotTable of Sales by Region and Quarter.
+CODE_JS::
+await createPivotTable(null, "Region", ["Sales"], "Quarter");
+::END_CODE
+
+User: "turn my data into a table"
+Response:
+Converting the data range into an Excel Table.
+CODE_JS::
+await createTable();
+::END_CODE
+
+User: "format column C as currency"
+Response:
+Formatting column C as currency.
+CODE_JS::
+const sheet = workbook.worksheets.getActiveWorksheet();
+const used = sheet.getUsedRange();
+used.load("rowCount");
+await context.sync();
+await setNumberFormat("C2:C" + used.rowCount, "$#,##0.00");
+::END_CODE
+
+User: "remove duplicate rows by email"
+Response:
+Removing duplicate rows keyed on Email.
+CODE_JS::
+await dedupeRows(["Email"]);
+::END_CODE
+
+User: "fill the blank category cells with the value above and trim spaces"
+Response:
+Filling down Category and trimming whitespace.
+CODE_JS::
+await fillDown("Category");
+await trimCells();
+::END_CODE
+
+User: "split the Full Name column into first and last name"
+Response:
+Splitting Full Name on the space into two new columns.
+CODE_JS::
+const sheet = workbook.worksheets.getActiveWorksheet();
+const used = sheet.getUsedRange();
+used.load("values");
+await context.sync();
+const rows = used.values;
+const hdr = rows[0].map(h => String(h).toLowerCase().trim());
+const ci = hdr.indexOf("full name");
+if (ci === -1) throw new Error("Column 'Full Name' not found.");
+const out = rows.map((r, i) => i === 0 ? ["First Name", "Last Name"] : String(r[ci]).split(" ").length > 1 ? [String(r[ci]).split(" ")[0], String(r[ci]).split(" ").slice(1).join(" ")] : [r[ci], ""]);
+// write into two columns just past the used range
+sheet.getRangeByIndexes(0, rows[0].length, out.length, 2).values = out;
+await context.sync();
+::END_CODE
+
+User: "look up each Product's price from the Prices sheet"
+Response:
+Adding an XLOOKUP against the Prices sheet.
+CODE_JS::
+const sheet = workbook.worksheets.getActiveWorksheet();
+const used = sheet.getUsedRange();
+used.load("values,rowCount");
+await context.sync();
+const hdr = used.values[0].map(h => String(h).toLowerCase().trim());
+const pc = hdr.indexOf("product");
+if (pc === -1) throw new Error("Column 'Product' not found.");
+const col = String.fromCharCode(65 + pc);
+const out = ["Price"];
+for (let r = 2; r <= used.rowCount; r++) out.push("=XLOOKUP(" + col + r + ",Prices!A:A,Prices!B:B,\\"Not found\\")");
+sheet.getRangeByIndexes(0, used.values[0].length, out.length, 1).values = out.map(v => [v]);
+await context.sync();
+::END_CODE
+
+READING / EXPLAINING / DEBUGGING FORMULAS — for "explain B2" or "why is C5 an error", load the formula and answer in prose (return a string), do not change the sheet unless asked to fix it.
+
+User: "explain the formula in B2"
+Response:
+Reading the formula in B2.
+CODE_JS::
+const sheet = workbook.worksheets.getActiveWorksheet();
+const c = sheet.getRange("B2");
+c.load("formulas,values");
+await context.sync();
+return "B2 contains " + c.formulas[0][0] + " which currently evaluates to " + c.values[0][0] + ".";
+::END_CODE
+
 MULTI-WORKBOOK SUPPORT:
 You can work with MULTIPLE workbooks on the user's computer — not just the one currently open. Use these helper functions inside CODE_JS blocks:
 
@@ -388,7 +509,6 @@ End Sub
 ::END_VBA
 
 USE VBA_MACRO (not CODE_JS) for:
-- Creating or modifying pivot tables (Office JS has read-only pivot support)
 - Custom UserForms / input dialogs beyond simple prompts
 - ActiveX or Form controls on worksheets
 - Advanced page setup (custom headers/footers, print areas, page breaks)
