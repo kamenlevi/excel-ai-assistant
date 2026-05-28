@@ -1311,6 +1311,54 @@ app.post('/api/workbooks/search-content', async (req, res) => {
   res.json(matches);
 });
 
+// ── Attachments: parse an uploaded .xlsx/.xlsm into compact text (ExcelJS) ────
+// The browser can't read a binary workbook as text, so the file is sent here
+// (base64) and turned into the same "Cell:value" text the model sees elsewhere.
+app.post('/api/attachments/xlsx', async (req, res) => {
+  const { dataBase64 } = req.body;
+  if (!dataBase64) return res.status(400).json({ error: 'No file data provided' });
+  const cellText = (v) => {
+    if (v === null || v === undefined) return '';
+    if (v instanceof Date) return v.toISOString().slice(0, 10);
+    if (typeof v === 'object') {
+      if (v.result !== undefined)       return String(v.result);      // formula result
+      if (v.text !== undefined)         return String(v.text);        // hyperlink / rich text
+      if (Array.isArray(v.richText))    return v.richText.map(t => t.text).join('');
+      if (v.hyperlink)                  return String(v.text || v.hyperlink);
+      return JSON.stringify(v);
+    }
+    return String(v);
+  };
+  try {
+    const wb = new ExcelJS.Workbook();
+    await wb.xlsx.load(Buffer.from(dataBase64, 'base64'));
+    const MAX_ROWS = 100, MAX_CELL = 100, MAX_CHARS = 12000;
+    const parts = [];
+    let total = 0;
+    for (const ws of wb.worksheets) {
+      if (total >= MAX_CHARS) break;
+      const rowsOut = [];
+      ws.eachRow({ includeEmpty: false }, (row) => {
+        if (rowsOut.length >= MAX_ROWS) return;
+        const cells = [];
+        row.eachCell({ includeEmpty: false }, (cell) => {
+          cells.push(cell.address + ':' + cellText(cell.value).slice(0, MAX_CELL));
+        });
+        if (cells.length) rowsOut.push(cells.join(' | '));
+      });
+      if (!rowsOut.length) continue;
+      const block = `Sheet: ${ws.name} (${ws.rowCount} rows, ${ws.columnCount} cols)\n` + rowsOut.join('\n');
+      parts.push(block);
+      total += block.length;
+    }
+    let text = parts.join('\n\n---\n\n') || '(empty workbook)';
+    if (text.length > MAX_CHARS) text = text.slice(0, MAX_CHARS) + '\n[...truncated]';
+    res.json({ text, sheetCount: wb.worksheets.length });
+  } catch (err) {
+    res.status(400).json({ error: `Could not parse workbook: ${err.message}` });
+  }
+});
+
 // ── Main chat route ──────────────────────────────────────────────────────────
 app.post('/api/chat', async (req, res) => {
   const { messages, workbookData, activeSheet, summary, model, useOllama, useGroq, apiKey, groqKey, options } = req.body;
