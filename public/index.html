@@ -122,6 +122,10 @@ html,body{height:100%;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;
 .report-btn{background:none;border:none;color:var(--text3);cursor:pointer;font-size:11px;padding:2px 6px;border-radius:4px;display:flex;align-items:center;gap:3px;transition:color .1s,background .1s}
 .report-btn:hover{color:var(--err);background:rgba(217,79,79,.08)}
 .report-btn.sent{color:var(--ok);cursor:default}
+.undo-btn{background:none;border:none;color:var(--text3);cursor:pointer;font-size:11px;padding:2px 6px;border-radius:4px;display:flex;align-items:center;gap:3px;transition:color .1s,background .1s}
+.undo-btn:hover{color:var(--accent);background:var(--surf2)}
+.undo-btn:disabled{cursor:default}
+.undo-btn.done{color:var(--ok)}
 .copy-msg-btn{background:none;border:none;color:var(--text3);cursor:pointer;font-size:11px;padding:2px 6px;border-radius:4px;transition:color .1s,background .1s}
 .copy-msg-btn:hover{color:var(--text);background:var(--surf2)}
 .copy-msg-btn.copied{color:var(--ok)}
@@ -565,7 +569,7 @@ html,body{height:100%;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;
         <button class="add-model-btn" onclick="saveSecPwd()" style="margin-top:6px">Save password</button>
         <span class="sinote" id="secPwdNote">Not set — critical operations need only confirmation.</span>
       </div>
-      <div class="sfooter" style="cursor:pointer" onclick="openChangelog()" title="Click to see version history">Excel AI Assistant · <strong id="versionLabel">v5.9.7</strong></div>
+      <div class="sfooter" style="cursor:pointer" onclick="openChangelog()" title="Click to see version history">Excel AI Assistant · <strong id="versionLabel">v5.10.0</strong></div>
     </div>
 
     <!-- Preferences tab -->
@@ -675,8 +679,9 @@ let pendingSendResolve = null;
 // ── Security state ────────────────────────────────────────────────────────────
 let sessionDangerConfirmed = new Set(); // 'high', 'critical' confirmed this session
 let sessionPasswordVerified = false;    // password entered once this session
-const APP_VERSION = 'v5.9.7';
+const APP_VERSION = 'v5.10.0';
 const CHANGELOG = [
+  { ver: 'v5.10.0', date: '2026-05-28', summary: 'Undo: every AI message that changes the workbook now gets a "↩ Undo" button. Before running generated code, the app snapshots each sheet\'s used-range formulas + number formats; Undo restores them — reverting value edits, formula changes, sorts, clears and number-format changes in one click. Snapshots are in-session only; pure fill/font formatting is not captured.' },
   { ver: 'v5.9.7', date: '2026-05-28', summary: 'Sorting bug fixed: sortByColumn called range.sort.apply without hasHeaders, so Office JS defaulted it to false and sorted the header row down into the data — now passes hasHeaders=true so the header stays put. Also: the Report button no longer attributes feedback to the internal "code failed" retry prompt, and the workbook context note no longer claims sheets were dropped "due to size limit" when they were simply empty.' },
   { ver: 'v5.9.6', date: '2026-05-28', summary: 'Robustness fixes: streaming provider errors (bad key, rate limit, invalid model) now surface as a visible error instead of a silent empty response — streamAI throws on non-2xx instead of skipping the non-SSE error body; conversation history sent to the model is sanitised to {role, content}, which drops UI-only fields and gives code/VBA-only turns a short placeholder so strict providers do not reject empty-content messages; the internal "the code failed, fix it" retry prompt no longer shows up as a fake user message when a chat is reloaded.' },
   { ver: 'v5.9.5', date: '2026-05-28', summary: 'Workbook attachments done right: attaching an .xlsx/.xlsm now sends the file to a new /api/attachments/xlsx endpoint that parses it with ExcelJS and returns compact "Cell:value" text the model can read — instead of FileReader.readAsText producing binary ZIP garbage. The attach picker accepts .xlsx/.xlsm again and shows a "reading…" state while parsing.' },
@@ -1563,6 +1568,57 @@ async function execCode(code) {
   }catch(e){return{ok:false,err:e.message,result:null};}
 }
 
+// ── Undo: snapshot every sheet's used-range formulas + number formats before a
+// write so the AI's change can be reverted. In-session only (snapshots aren't
+// persisted). Restores values, formulas, sort order and number formats; pure
+// cell-formatting (fill/font) changes are not captured. ───────────────────────
+async function captureSnapshot(){
+  try{
+    return await Excel.run(async ctx=>{
+      const sheets=ctx.workbook.worksheets;sheets.load('items/name');await ctx.sync();
+      const pending=sheets.items.map(sh=>{const u=sh.getUsedRangeOrNullObject();u.load('address,formulas,numberFormat,rowCount,columnCount');return{name:sh.name,u};});
+      await ctx.sync();
+      const snap=[];
+      for(const p of pending){
+        if(p.u.isNullObject)continue;
+        if((p.u.rowCount||0)*(p.u.columnCount||0)>200000)continue; // too large to snapshot safely
+        snap.push({sheet:p.name,address:p.u.address,formulas:p.u.formulas,numberFormat:p.u.numberFormat});
+      }
+      return snap;
+    });
+  }catch{return null;}
+}
+async function restoreSnapshot(snap){
+  if(!snap||!snap.length){showToast('Nothing to undo');return false;}
+  try{
+    await Excel.run(async ctx=>{
+      const items=snap.map(s=>{const sh=ctx.workbook.worksheets.getItemOrNullObject(s.sheet);sh.load('isNullObject');return{s,sh};});
+      await ctx.sync();
+      for(const {s,sh} of items){
+        if(sh.isNullObject)continue;
+        const rng=sh.getRange(s.address.split('!').pop());
+        rng.formulas=s.formulas;
+        rng.numberFormat=s.numberFormat;
+      }
+      await ctx.sync();
+    });
+    await readWorkbook();
+    return true;
+  }catch(e){showToast('Undo failed: '+e.message);return false;}
+}
+function addUndoButton(actionsEl,snap){
+  const ub=document.createElement('button');ub.className='undo-btn';ub.innerHTML='↩ Undo';
+  ub.title='Revert this change (restores cell values, formulas and number formats)';
+  ub.onclick=async()=>{
+    if(ub.disabled)return;
+    ub.disabled=true;ub.innerHTML='↩ Undoing…';
+    const ok=await restoreSnapshot(snap);
+    if(ok){ub.innerHTML='✓ Reverted';ub.classList.add('done');}
+    else{ub.disabled=false;ub.innerHTML='↩ Undo';}
+  };
+  actionsEl.appendChild(ub);
+}
+
 // ── Slash commands ────────────────────────────────────────────────────────────
 const SLASH_CMDS = {
   '/set': {
@@ -2052,11 +2108,13 @@ async function sendMessage() {
                 return;
               }
             }
+            const undoSnap=await captureSnapshot(); // snapshot before the write so it can be reverted
+            let applied=false;
             const r=await execCode(code);
             if(showCode)streamEl.appendChild(mkCode(code));
             if(r.ok){
               if(r.result){history.push({role:'assistant',content:r.result});addMsg('assistant',r.result,false,null,null);}
-              else if(!finalText)addMsg('assistant','✓ Done.');
+              else{applied=true;if(!finalText)addMsg('assistant','✓ Done.');}
             }else{
               addMsg('assistant','⚠ Error: '+r.err,true);
               try{fetch('/api/feedback/auto',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({tier:'hard',prompt:text,response:finalText||'',code,model:autoSelected||modelId})});}catch{}
@@ -2068,9 +2126,10 @@ async function sendMessage() {
                 let proceed=true;
                 if(rd.danger)proceed=await requestDangerConfirmation(rd.danger);
                 if(!proceed)addMsg('assistant','Operation cancelled.');
-                else{const rres=await execCode(rd.code);if(rd.response)history.push({role:'assistant',content:rd.response});addMsg('assistant',rres.ok?'✓ Fixed.':'⚠ Retry failed: '+rres.err,!rres.ok);}
+                else{const rres=await execCode(rd.code);if(rres.ok&&!rres.result)applied=true;if(rd.response)history.push({role:'assistant',content:rd.response});addMsg('assistant',rres.ok?'✓ Fixed.':'⚠ Retry failed: '+rres.err,!rres.ok);}
               }
             }
+            if(applied&&undoSnap&&undoSnap.length)addUndoButton(acts,undoSnap);
           }
           if(vba){
             streamEl.appendChild(mkVba(vba));
