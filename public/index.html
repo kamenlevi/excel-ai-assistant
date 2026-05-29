@@ -569,7 +569,7 @@ html,body{height:100%;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;
         <button class="add-model-btn" onclick="saveSecPwd()" style="margin-top:6px">Save password</button>
         <span class="sinote" id="secPwdNote">Not set — critical operations need only confirmation.</span>
       </div>
-      <div class="sfooter" style="cursor:pointer" onclick="openChangelog()" title="Click to see version history">Excel AI Assistant · <strong id="versionLabel">v5.11.1</strong></div>
+      <div class="sfooter" style="cursor:pointer" onclick="openChangelog()" title="Click to see version history">Excel AI Assistant · <strong id="versionLabel">v5.11.2</strong></div>
     </div>
 
     <!-- Preferences tab -->
@@ -679,8 +679,9 @@ let pendingSendResolve = null;
 // ── Security state ────────────────────────────────────────────────────────────
 let sessionDangerConfirmed = new Set(); // 'high', 'critical' confirmed this session
 let sessionPasswordVerified = false;    // password entered once this session
-const APP_VERSION = 'v5.11.1';
+const APP_VERSION = 'v5.11.2';
 const CHANGELOG = [
+  { ver: 'v5.11.2', date: '2026-05-29', summary: 'Bug fixes: dedupeRows key separator was empty string causing false deduplication (e.g. ["ab","c"] and ["a","bc"] both hashed to "abc") — fixed to \\u0001; Undo button now appears for helper-based code that returns a result string (dedupeRows, fillDown, createTable, etc.); server-side chat I/O uses in-memory cache — no more blocking readFileSync/writeFileSync per request; auto-feedback logging is now async (appendFile instead of appendFileSync).' },
   { ver: 'v5.11.1', date: '2026-05-29', summary: 'Bug fixes: Undo now deletes sheets the AI added (pivot sheets, temp sheets) instead of leaving orphans behind; restoreSnapshot accepts the new {sheetNames, cells} snapshot shape. dedupeRows key-collision fix (separator was already \\u0001, confirmed).' },
   { ver: 'v5.11.0', date: '2026-05-28', summary: 'Power features for Excel pros. New reliable helpers the AI can call: createPivotTable (native Office JS pivots — no more VBA), createTable (Excel Tables/ListObjects), setNumberFormat (currency/percent/date), dedupeRows, fillDown and trimCells for data cleaning. System prompt now teaches native pivots, data cleaning, Excel Tables + number formats, XLOOKUP/cross-sheet lookups, and reading/explaining/debugging formulas. PivotTables removed from the VBA-only list.' },
   { ver: 'v5.10.0', date: '2026-05-28', summary: 'Undo: every AI message that changes the workbook now gets a "↩ Undo" button. Before running generated code, the app snapshots each sheet\'s used-range formulas + number formats; Undo restores them — reverting value edits, formula changes, sorts, clears and number-format changes in one click. Snapshots are in-session only; pure fill/font formatting is not captured.' },
@@ -2130,8 +2131,9 @@ async function sendMessage() {
             const r=await execCode(code);
             if(showCode)streamEl.appendChild(mkCode(code));
             if(r.ok){
+              applied=true;
               if(r.result){history.push({role:'assistant',content:r.result});addMsg('assistant',r.result,false,null,null);}
-              else{applied=true;if(!finalText)addMsg('assistant','✓ Done.');}
+              else{if(!finalText)addMsg('assistant','✓ Done.');}
             }else{
               addMsg('assistant','⚠ Error: '+r.err,true);
               try{fetch('/api/feedback/auto',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({tier:'hard',prompt:text,response:finalText||'',code,model:autoSelected||modelId})});}catch{}
@@ -2143,7 +2145,7 @@ async function sendMessage() {
                 let proceed=true;
                 if(rd.danger)proceed=await requestDangerConfirmation(rd.danger);
                 if(!proceed)addMsg('assistant','Operation cancelled.');
-                else{const rres=await execCode(rd.code);if(rres.ok&&!rres.result)applied=true;if(rd.response)history.push({role:'assistant',content:rd.response});addMsg('assistant',rres.ok?'✓ Fixed.':'⚠ Retry failed: '+rres.err,!rres.ok);}
+                else{const rres=await execCode(rd.code);if(rres.ok)applied=true;if(rd.response)history.push({role:'assistant',content:rd.response});addMsg('assistant',rres.ok?'✓ Fixed.':'⚠ Retry failed: '+rres.err,!rres.ok);}
               }
             }
             if(applied&&undoSnap&&undoSnap.cells&&undoSnap.cells.length)addUndoButton(acts,undoSnap);

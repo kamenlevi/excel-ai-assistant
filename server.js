@@ -30,10 +30,20 @@ const pems = {
 const DATA_DIR    = path.join(__dirname, 'data');
 const CHATS_FILE  = path.join(DATA_DIR, 'chats.json');
 fs.mkdirSync(DATA_DIR, { recursive: true });
+
+// In-memory cache — avoids blocking readFileSync/writeFileSync on every request
+let _chatsCache = null;
 function readChats() {
-  try { return JSON.parse(fs.readFileSync(CHATS_FILE, 'utf8')); } catch { return {}; }
+  if (_chatsCache) return _chatsCache;
+  try { _chatsCache = JSON.parse(fs.readFileSync(CHATS_FILE, 'utf8')); } catch { _chatsCache = {}; }
+  return _chatsCache;
 }
-function writeChats(chats) { fs.writeFileSync(CHATS_FILE, JSON.stringify(chats, null, 2), 'utf8'); }
+function writeChats(chats) {
+  _chatsCache = chats;
+  fs.writeFile(CHATS_FILE, JSON.stringify(chats, null, 2), 'utf8', err => {
+    if (err) console.error('[chats] write error:', err.message);
+  });
+}
 
 // ── CONFIG ────────────────────────────────────────────────────────────────────
 const MACBOOK_IP     = process.env.OLLAMA_HOST || '192.168.1.206';
@@ -1076,7 +1086,9 @@ function similarity(a, b) {
 function logAutoFeedback(tier, prompt, response, code, model) {
   const file = tier === 'hard' ? FEEDBACK_FILES.autoHard : FEEDBACK_FILES.autoSoft;
   const entry = { prompt, response, code: code || null, model, tier, timestamp: new Date().toISOString() };
-  fs.appendFileSync(file, JSON.stringify(entry) + '\n');
+  fs.appendFile(file, JSON.stringify(entry) + '\n', err => {
+    if (err) console.error(`[auto-feedback][${tier}] write error:`, err.message);
+  });
   console.log(`[auto-feedback][${tier}] Logged for prompt: ${prompt?.slice(0, 60)}`);
 }
 
