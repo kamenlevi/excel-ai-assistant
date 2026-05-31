@@ -569,7 +569,7 @@ html,body{height:100%;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;
         <button class="add-model-btn" onclick="saveSecPwd()" style="margin-top:6px">Save password</button>
         <span class="sinote" id="secPwdNote">Not set — critical operations need only confirmation.</span>
       </div>
-      <div class="sfooter" style="cursor:pointer" onclick="openChangelog()" title="Click to see version history">Excel AI Assistant · <strong id="versionLabel">v5.11.2</strong></div>
+      <div class="sfooter" style="cursor:pointer" onclick="openChangelog()" title="Click to see version history">Excel AI Assistant · <strong id="versionLabel">v5.11.3</strong></div>
     </div>
 
     <!-- Preferences tab -->
@@ -679,8 +679,9 @@ let pendingSendResolve = null;
 // ── Security state ────────────────────────────────────────────────────────────
 let sessionDangerConfirmed = new Set(); // 'high', 'critical' confirmed this session
 let sessionPasswordVerified = false;    // password entered once this session
-const APP_VERSION = 'v5.11.2';
+const APP_VERSION = 'v5.11.3';
 const CHANGELOG = [
+  { ver: 'v5.11.3', date: '2026-05-31', summary: 'Undo correctness: when the AI extended data outside the original used range (added a new column, appended rows), Undo used to leave those orphan cells behind. restoreSnapshot now clears each sheet\'s current used range before writing the original formulas + number formats back, so the sheet returns fully to its pre-action state.' },
   { ver: 'v5.11.2', date: '2026-05-29', summary: 'Bug fixes: dedupeRows key separator was empty string causing false deduplication (e.g. ["ab","c"] and ["a","bc"] both hashed to "abc") — fixed to \\u0001; Undo button now appears for helper-based code that returns a result string (dedupeRows, fillDown, createTable, etc.); server-side chat I/O uses in-memory cache — no more blocking readFileSync/writeFileSync per request; auto-feedback logging is now async (appendFile instead of appendFileSync).' },
   { ver: 'v5.11.1', date: '2026-05-29', summary: 'Bug fixes: Undo now deletes sheets the AI added (pivot sheets, temp sheets) instead of leaving orphans behind; restoreSnapshot accepts the new {sheetNames, cells} snapshot shape. dedupeRows key-collision fix (separator was already \\u0001, confirmed).' },
   { ver: 'v5.11.0', date: '2026-05-28', summary: 'Power features for Excel pros. New reliable helpers the AI can call: createPivotTable (native Office JS pivots — no more VBA), createTable (Excel Tables/ListObjects), setNumberFormat (currency/percent/date), dedupeRows, fillDown and trimCells for data cleaning. System prompt now teaches native pivots, data cleaning, Excel Tables + number formats, XLOOKUP/cross-sheet lookups, and reading/explaining/debugging formulas. PivotTables removed from the VBA-only list.' },
@@ -1610,10 +1611,12 @@ async function restoreSnapshot(snap){
         if(!origNames.has(sh.name))sh.delete();
       }
       // Restore cell data on pre-existing sheets
-      const items=snap.cells.map(s=>{const sh=ctx.workbook.worksheets.getItemOrNullObject(s.sheet);sh.load('isNullObject');return{s,sh};});
+      const items=snap.cells.map(s=>{const sh=ctx.workbook.worksheets.getItemOrNullObject(s.sheet);sh.load('isNullObject');const cur=sh.getUsedRangeOrNullObject();cur.load('isNullObject');return{s,sh,cur};});
       await ctx.sync();
-      for(const {s,sh} of items){
+      for(const {s,sh,cur} of items){
         if(sh.isNullObject)continue;
+        // Clear any cells the AI added outside the original used range before writing originals back
+        if(!cur.isNullObject)cur.clear(Excel.ClearApplyTo.contents);
         const rng=sh.getRange(s.address.split('!').pop());
         rng.formulas=s.formulas;
         rng.numberFormat=s.numberFormat;
