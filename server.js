@@ -536,50 +536,69 @@ ALWAYS prefer CODE_JS when both can do the job — it runs automatically without
 If unsure whether Office JS supports something, use CODE_JS first. Only fall back to VBA_MACRO for the specific cases listed above.
 
 // EVAL-IMPROVEMENTS-START
-For formulas that sum/count a range, use getUsedRange().rowCount to find the last row dynamically rather than a hardcoded row number.
-For page layout margin properties use inches: sheet.pageLayout.topMargin = 1 sets a 1-inch margin.
-When counting columns with headers, verify the column headers exist and are not empty.
+**Rules:**
+
+* For filtering, use the 'applyColumnFilter' method with 'filterByValues' and handle missing columns.
+* When clearing filters, specify the column or columns to clear.
+* When counting rows, consider the header row.
+* When creating a new workbook, include actual data creation.
+* When using 'applyColumnFilter', ensure the 'ExcelScriptContext' object is used.
+
+**Examples:**
+
 '''javascript
+// L1-filter-002
+const sheet = workbook.worksheets.getActiveWorksheet();
+await applyColumnFilter("Status", "Active", "filterByValues");
+
+// gen-L1-filtering-easy-053
+const sheet = workbook.worksheets.getActiveWorksheet();
+const context = workbook.context;
+await applyColumnFilter("X", "val", "filterByValues", context);
+
+// gen-L1-filtering-easy-054
+const sheet = workbook.worksheets.getActiveWorksheet();
+const autoFilter = sheet.getAutoFilter();
+autoFilter.clearFilters(["X", "Y"]);
+await context.sync();
+
+// gen-L1-formatting-easy-310
+const sheet = workbook.worksheets.getActiveWorksheet();
+sheet.getUsedRange().load("font");
+await context.sync();
+sheet.getUsedRange().font.bold = true;
+await context.sync();
+
+// gen-L1-conditional-formatting-easy-502
 const sheet = workbook.worksheets.getActiveWorksheet();
 const used = sheet.getUsedRange();
 used.load("values");
 await context.sync();
-const hdr = used.values[0].filter(h => h !== null && h !== undefined && String(h).trim() !== "");
-return "Found " + hdr.length + " columns with headers.";
-'''
-For filtering, use the applyColumnFilter method and handle missing columns.
-'''javascript
-try {
-  const autoFilter = sheet.getAutoFilter();
-  autoFilter.applyColumnFilter("Department", "Engineering");
-  await context.sync();
-} catch (error) {
-  console.error("Error applying filter: " + error);
-}
-'''
-When clearing filters, specify the column or columns to clear.
-'''javascript
-const autoFilter = sheet.getAutoFilter();
-autoFilter.clearFilters(["X", "Y"]);
-await context.sync();
-'''
-When adding hyperlinks, ensure the cell is not already occupied.
-'''javascript
-const range = sheet.getRange("A1");
-if (range.value === null || range.value === undefined) {
-  range.hyperlink = { address: "https://www.google.com", displayAs: "Google" };
+const values = used.values;
+const col = values[0].indexOf("Y");
+if (col!== -1) {
+  values.forEach(row => {
+    if (row[col] > 2) {
+      row[col] = "yellow";
+    }
+  });
+  sheet.getRangeByIndexes(0, col, values.length, 1).values = values.map(r => [r[col]]);
   await context.sync();
 }
-'''
-When inserting shapes, account for existing content and header rows.
-'''javascript
+
+// L1-data-001
 const sheet = workbook.worksheets.getActiveWorksheet();
-const used = sheet.getUsedRange();
-used.load("address");
+const src = sheet.getRange("A1:B" + (sheet.getUsedRange().rowCount - 1));
+const dst = sheet.getRange("D1");
+dst.copyFrom(src, Excel.RangeCopyType.all, false, false);
 await context.sync();
-const shape = sheet.shapes.addRectangle(used.address.split(":")[1].split("!")[1].split("$")[3], 0, 100, 20);
+
+// gen-L1-sheet-operations-easy-055
+const workbook = context.workbook;
+const sheet = workbook.worksheets.add("Sheet1");
+const data = [["Name", "Age"], ["John", 25], ["Jane", 30]];
+sheet.getRange("A1").values = data;
 await context.sync();
-'''
 // EVAL-IMPROVEMENTS-END
 `
 + (DEFAULT_MODEL.toLowerCase().includes('qwen') ? '\n/no_think' : '');
