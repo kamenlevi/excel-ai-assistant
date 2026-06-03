@@ -569,7 +569,7 @@ html,body{height:100%;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;
         <button class="add-model-btn" onclick="saveSecPwd()" style="margin-top:6px">Save password</button>
         <span class="sinote" id="secPwdNote">Not set — critical operations need only confirmation.</span>
       </div>
-      <div class="sfooter" style="cursor:pointer" onclick="openChangelog()" title="Click to see version history">Excel AI Assistant · <strong id="versionLabel">v5.11.3</strong></div>
+      <div class="sfooter" style="cursor:pointer" onclick="openChangelog()" title="Click to see version history">Excel AI Assistant · <strong id="versionLabel">v5.11.4</strong></div>
     </div>
 
     <!-- Preferences tab -->
@@ -662,6 +662,9 @@ let totalTok = 0, autoSync = true, showCode = true;
 let opts = { deep: false, dynamic: false, auto: false, plan: false };
 let slashNoThink = localStorage.getItem('slashNoThink'); // 'on'|'off'|null(auto)
 let slashPopupItems = [], slashPopupSel = 0;
+let fileReaderPending = false;
+let clipboardTimeouts = {};
+let dangerPwdListener = null;
 let pinnedMemory = JSON.parse(localStorage.getItem('pinnedMemory') || '[]'); // user-pinned messages
 let coreMemory   = JSON.parse(localStorage.getItem('coreMemory')   || '[]'); // auto-extracted facts
 let selectedModel = localStorage.getItem('selModel') || 'meta-llama/llama-3.3-70b-instruct';
@@ -679,8 +682,9 @@ let pendingSendResolve = null;
 // ── Security state ────────────────────────────────────────────────────────────
 let sessionDangerConfirmed = new Set(); // 'high', 'critical' confirmed this session
 let sessionPasswordVerified = false;    // password entered once this session
-const APP_VERSION = 'v5.11.3';
+const APP_VERSION = 'v5.11.4';
 const CHANGELOG = [
+  { ver: 'v5.11.4', date: '2026-06-03', summary: 'Security & stability audit fixes: fixed FileReader race condition where rapid file attachments would overwrite in-progress reads (losing attachments); replaced localStorage with sessionStorage for security password to prevent persistent credential storage; fixed event handler leaks on dangerPwdInp keydown (handlers were stacking on re-use); fixed timer leak where ensureStreamEl created new timerInterval without clearing old one; added guard on slash popup state transitions to prevent stale array operations; fixed clipboard copy timeout leaks by tracking and clearing timeouts on element removal.' },
   { ver: 'v5.11.3', date: '2026-05-31', summary: 'Undo correctness: when the AI extended data outside the original used range (added a new column, appended rows), Undo used to leave those orphan cells behind. restoreSnapshot now clears each sheet\'s current used range before writing the original formulas + number formats back, so the sheet returns fully to its pre-action state.' },
   { ver: 'v5.11.2', date: '2026-05-29', summary: 'Bug fixes: dedupeRows key separator was empty string causing false deduplication (e.g. ["ab","c"] and ["a","bc"] both hashed to "abc") — fixed to \\u0001; Undo button now appears for helper-based code that returns a result string (dedupeRows, fillDown, createTable, etc.); server-side chat I/O uses in-memory cache — no more blocking readFileSync/writeFileSync per request; auto-feedback logging is now async (appendFile instead of appendFileSync).' },
   { ver: 'v5.11.1', date: '2026-05-29', summary: 'Bug fixes: Undo now deletes sheets the AI added (pivot sheets, temp sheets) instead of leaving orphans behind; restoreSnapshot accepts the new {sheetNames, cells} snapshot shape. dedupeRows key-collision fix (separator was already \\u0001, confirmed).' },
@@ -765,7 +769,7 @@ function loadSettings() {
   document.getElementById('seg-session').className = 'seg-btn' + (costLimitType==='session'?' active':'');
   document.getElementById('costSlider').value = costLimitIdx;
   updateCostSlider(costLimitIdx, false);
-  const sp = localStorage.getItem('securityPassword');
+  const sp = sessionStorage.getItem('securityPassword');
   if (sp) {
     document.getElementById('secPwdNote').textContent = 'Password set — required for critical operations.';
   }
@@ -773,7 +777,7 @@ function loadSettings() {
 function saveSecPwd() {
   const cur    = document.getElementById('secCurPwd')?.value || '';
   const newPwd = document.getElementById('secNewPwd')?.value || '';
-  const stored = localStorage.getItem('securityPassword');
+  const stored = sessionStorage.getItem('securityPassword');
   if (stored) {
     let storedPlain = stored;
     try { storedPlain = atob(stored); } catch {}
@@ -781,11 +785,11 @@ function saveSecPwd() {
   }
   const note = document.getElementById('secPwdNote');
   if (newPwd) {
-    localStorage.setItem('securityPassword', btoa(newPwd));
+    sessionStorage.setItem('securityPassword', btoa(newPwd));
     if (note) note.textContent = 'Password set — required for critical operations.';
     showToast('Security password saved');
   } else {
-    localStorage.removeItem('securityPassword');
+    sessionStorage.removeItem('securityPassword');
     if (note) note.textContent = 'Not set — critical operations need only confirmation.';
     showToast('Security password removed');
   }
@@ -1367,7 +1371,9 @@ function mkMsg(role,text,isErr,ms,tok,code,savedTime,via,vba) {
   if(vba)el.appendChild(mkVba(vba));
   const actions=document.createElement('div'); actions.className='msg-actions';
   const copyBtn=document.createElement('button'); copyBtn.className='copy-msg-btn'; copyBtn.innerHTML='⎘ Copy';
-  copyBtn.onclick=()=>{navigator.clipboard.writeText(text).then(()=>{copyBtn.innerHTML='✓ Copied';copyBtn.classList.add('copied');setTimeout(()=>{copyBtn.innerHTML='⎘ Copy';copyBtn.classList.remove('copied');},1500);});};
+  const btnId='copy-'+Math.random();clipboardTimeouts[btnId]=null;
+  copyBtn.onclick=()=>{navigator.clipboard.writeText(text).then(()=>{copyBtn.innerHTML='✓ Copied';copyBtn.classList.add('copied');if(clipboardTimeouts[btnId])clearTimeout(clipboardTimeouts[btnId]);clipboardTimeouts[btnId]=setTimeout(()=>{if(copyBtn.parentElement){copyBtn.innerHTML='⎘ Copy';copyBtn.classList.remove('copied');}delete clipboardTimeouts[btnId];},1500);});};
+  el.addEventListener('DOMNodeRemoved',()=>{if(clipboardTimeouts[btnId])clearTimeout(clipboardTimeouts[btnId]);delete clipboardTimeouts[btnId];},{once:true});
   actions.appendChild(copyBtn);
   if(role==='user'){
     const pinBtn=document.createElement('button'); pinBtn.className='pin-btn'; pinBtn.innerHTML='📌 Pin'; pinBtn.title='Pin to permanent memory';
@@ -1481,7 +1487,7 @@ function requestDangerConfirmation(danger) {
 
   return new Promise(resolve => {
     const isCritical = danger.level === 'critical';
-    const hasPwd = !!localStorage.getItem('securityPassword');
+    const hasPwd = !!sessionStorage.getItem('securityPassword');
 
     const banner = document.createElement('div');
     banner.className = `danger-banner ${danger.level}`;
@@ -1508,7 +1514,15 @@ function requestDangerConfirmation(danger) {
     box.appendChild(banner);
     box.scrollTop = box.scrollHeight;
 
-    const cleanup = () => banner.remove();
+    const pwdHandler = e => {
+      if (e.key === 'Enter') document.getElementById('dangerProceed').click();
+    };
+
+    const cleanup = () => {
+      const inp = document.getElementById('dangerPwdInp');
+      if (inp && pwdHandler) inp.removeEventListener('keydown', pwdHandler);
+      banner.remove();
+    };
 
     document.getElementById('dangerCancel').onclick = () => { cleanup(); resolve(false); };
 
@@ -1518,7 +1532,7 @@ function requestDangerConfirmation(danger) {
         const inp = document.getElementById('dangerPwdInp');
         if (!inp) { cleanup(); resolve(false); return; }
         const entered = inp.value;
-        const rawStored = localStorage.getItem('securityPassword');
+        const rawStored = sessionStorage.getItem('securityPassword');
         // Support both plain-text (legacy) and btoa-encoded (new) passwords
         let stored = rawStored;
         try { stored = atob(rawStored); } catch {}
@@ -1537,9 +1551,7 @@ function requestDangerConfirmation(danger) {
     };
 
     // Allow Enter key in password field
-    document.getElementById('dangerPwdInp')?.addEventListener('keydown', e => {
-      if (e.key === 'Enter') document.getElementById('dangerProceed').click();
-    });
+    document.getElementById('dangerPwdInp')?.addEventListener('keydown', pwdHandler);
   });
 }
 
@@ -1837,6 +1849,7 @@ function closeSlashPopup() {
   slashPopupItems = []; slashPopupSel = 0;
 }
 function pickSlashItem(i) {
+  if (i < 0 || i >= slashPopupItems.length) return;
   const inp = document.getElementById('msgInput');
   inp.value = slashPopupItems[i].complete;
   inp.focus();
@@ -1891,11 +1904,13 @@ function showAttachBadge(name,busy){
 }
 function attachFile(e){
   const f=e.target.files[0];if(!f)return;
+  if(fileReaderPending){showToast('Please wait for the current file to finish loading');return;}
   e.target.value='';
   const ext=(f.name.split('.').pop()||'').toLowerCase();
   if(ext==='xlsx'||ext==='xlsm'){
     // Binary workbook — readAsText would yield ZIP garbage. Parse server-side with ExcelJS.
     showAttachBadge(f.name,true);
+    fileReaderPending=true;
     const r=new FileReader();
     r.onload=async ev=>{
       try{
@@ -1905,14 +1920,16 @@ function attachFile(e){
         if(d.error)throw new Error(d.error);
         attached={name:f.name,content:d.text};
         showAttachBadge(f.name,false);
-      }catch(err){clearAttach();showToast('Could not read workbook: '+err.message);}
+      }catch(err){clearAttach();showToast('Could not read workbook: '+err.message);}finally{fileReaderPending=false;}
     };
-    r.onerror=()=>{clearAttach();showToast('Could not read file');};
+    r.onerror=()=>{clearAttach();showToast('Could not read file');fileReaderPending=false;};
     r.readAsDataURL(f);
     return;
   }
+  fileReaderPending=true;
   const r=new FileReader();
-  r.onload=ev=>{attached={name:f.name,content:ev.target.result};showAttachBadge(f.name,false);};
+  r.onload=ev=>{attached={name:f.name,content:ev.target.result};showAttachBadge(f.name,false);fileReaderPending=false;};
+  r.onerror=()=>{fileReaderPending=false;};
   r.readAsText(f);
 }
 function clearAttach(){attached=null;document.getElementById('attachBadge').innerHTML='';document.getElementById('attachStrip').classList.remove('show');}
@@ -2023,6 +2040,7 @@ async function sendMessage() {
     streamEl.appendChild(streamBody);
     box.appendChild(streamEl);box.scrollTop=box.scrollHeight;
     const timerEl=streamEl.querySelector('.live-timer');
+    if(timerInterval)clearInterval(timerInterval);
     timerInterval=setInterval(()=>{ timerEl.textContent=((Date.now()-t0)/1000).toFixed(1)+'s'; },100);
   }
   function ensureThinkEl(){
