@@ -46,7 +46,7 @@ function writeChats(chats) {
 }
 
 // ── CONFIG ────────────────────────────────────────────────────────────────────
-const MACBOOK_IP     = process.env.OLLAMA_HOST || '192.168.1.206';
+const OLLAMA_HOST    = process.env.OLLAMA_HOST || '127.0.0.1';
 const MLX_PORT       = process.env.MLX_PORT    || '8080';
 const OLLAMA_PORT    = process.env.OLLAMA_PORT  || '11434';
 
@@ -665,14 +665,14 @@ async function* streamAI(messages, maxTokens, model, useOllama, useGroq, apiKey,
       stream: true, stream_options: { include_usage: true } };
   } else if (USE_MLX) {
     const msgsToSend = injectNoThink(messages, effectiveModel);
-    url = `http://${MACBOOK_IP}:${MLX_PORT}/v1/chat/completions`;
+    url = `http://${OLLAMA_HOST}:${MLX_PORT}/v1/chat/completions`;
     headers = { 'Content-Type': 'application/json' };
     reqBody = { model: effectiveModel, messages: msgsToSend, max_tokens: maxTokens, temperature: 0.15, top_p: 0.9, stream: true };
   } else {
     // Fallback: Ollama on MacBook
     const fallbackModel = 'qwen3:32b';
     const fallbackMsgs  = injectNoThink(messages, fallbackModel);
-    const res = await fetch(`http://${MACBOOK_IP}:${OLLAMA_PORT}/api/chat`, {
+    const res = await fetch(`http://${OLLAMA_HOST}:${OLLAMA_PORT}/api/chat`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, timeout: 120000,
       body: JSON.stringify({ model: fallbackModel, messages: fallbackMsgs, stream: true,
         options: { num_ctx: 8192, num_predict: maxTokens, temperature: 0.15, top_p: 0.9, repeat_penalty: 1.1 } })
@@ -781,7 +781,7 @@ async function callAI(messages, maxTokens = 4096, model = null, useOllama = fals
 
   if (USE_MLX) {
     const msgsToSend = injectNoThink(messages, effectiveModel);
-    const res = await fetch(`http://${MACBOOK_IP}:${MLX_PORT}/v1/chat/completions`, {
+    const res = await fetch(`http://${OLLAMA_HOST}:${MLX_PORT}/v1/chat/completions`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       timeout: 120000,
@@ -801,7 +801,7 @@ async function callAI(messages, maxTokens = 4096, model = null, useOllama = fals
   // Fallback: Ollama on MacBook
   const fallbackModel = 'qwen3:32b';
   const fallbackMsgs  = injectNoThink(messages, fallbackModel);
-  const res = await fetch(`http://${MACBOOK_IP}:${OLLAMA_PORT}/api/chat`, {
+  const res = await fetch(`http://${OLLAMA_HOST}:${OLLAMA_PORT}/api/chat`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     timeout: 120000,

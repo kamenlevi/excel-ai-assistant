@@ -569,7 +569,7 @@ html,body{height:100%;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;
         <button class="add-model-btn" onclick="saveSecPwd()" style="margin-top:6px">Save password</button>
         <span class="sinote" id="secPwdNote">Not set — critical operations need only confirmation.</span>
       </div>
-      <div class="sfooter" style="cursor:pointer" onclick="openChangelog()" title="Click to see version history">Excel AI Assistant · <strong id="versionLabel">v5.11.4</strong></div>
+      <div class="sfooter" style="cursor:pointer" onclick="openChangelog()" title="Click to see version history">Excel AI Assistant · <strong id="versionLabel">v5.11.5</strong></div>
     </div>
 
     <!-- Preferences tab -->
@@ -682,8 +682,9 @@ let pendingSendResolve = null;
 // ── Security state ────────────────────────────────────────────────────────────
 let sessionDangerConfirmed = new Set(); // 'high', 'critical' confirmed this session
 let sessionPasswordVerified = false;    // password entered once this session
-const APP_VERSION = 'v5.11.4';
+const APP_VERSION = 'v5.11.5';
 const CHANGELOG = [
+  { ver: 'v5.11.5', date: '2026-06-03', summary: 'Docs + cleanup: README rewritten end-to-end — clear install steps, two SSL-cert paths (office-addin-dev-certs vs. self-signed openssl), both API-key paths (in-app vs. .env) documented side by side, full feature list, slash-command table, danger-system explainer, troubleshooting + FAQ. Removed a hardcoded personal LAN IP from server.js — Ollama host now defaults to 127.0.0.1 and is overridable via OLLAMA_HOST env var. .env.example expanded with inline documentation for every variable.' },
   { ver: 'v5.11.4', date: '2026-06-03', summary: 'Security & stability audit fixes: fixed FileReader race condition where rapid file attachments would overwrite in-progress reads (losing attachments); replaced localStorage with sessionStorage for security password to prevent persistent credential storage; fixed event handler leaks on dangerPwdInp keydown (handlers were stacking on re-use); fixed timer leak where ensureStreamEl created new timerInterval without clearing old one; added guard on slash popup state transitions to prevent stale array operations; fixed clipboard copy timeout leaks by tracking and clearing timeouts on element removal.' },
   { ver: 'v5.11.3', date: '2026-05-31', summary: 'Undo correctness: when the AI extended data outside the original used range (added a new column, appended rows), Undo used to leave those orphan cells behind. restoreSnapshot now clears each sheet\'s current used range before writing the original formulas + number formats back, so the sheet returns fully to its pre-action state.' },
   { ver: 'v5.11.2', date: '2026-05-29', summary: 'Bug fixes: dedupeRows key separator was empty string causing false deduplication (e.g. ["ab","c"] and ["a","bc"] both hashed to "abc") — fixed to \\u0001; Undo button now appears for helper-based code that returns a result string (dedupeRows, fillDown, createTable, etc.); server-side chat I/O uses in-memory cache — no more blocking readFileSync/writeFileSync per request; auto-feedback logging is now async (appendFile instead of appendFileSync).' },
