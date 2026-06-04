@@ -2226,8 +2226,8 @@ function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').repl
 //    2. Project Settings → API → copy "Project URL" and "anon public" key
 //    3. Paste them below. See docs/SETUP_AUTH.md for the full walkthrough.
 const SUPABASE_CONFIG = {
-  url:     'YOUR_SUPABASE_URL_HERE',      // e.g. 'https://abcdefghijklmnop.supabase.co'
-  anonKey: 'YOUR_SUPABASE_ANON_KEY_HERE'  // long string starting with 'eyJ...'
+  url:     'https://lkawnsjynczzsixkfivy.supabase.co',
+  anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxrYXduc2p5bmN6enNpeGtmaXZ5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA1OTA0NzQsImV4cCI6MjA5NjE2NjQ3NH0.9DcZ-PXRRamAjw6eHAXlCYNa7WJwOrgL_0xlumgDU2E'
 };
 
 let supabaseClient = null, currentUser = null, authMode = 'signin';
