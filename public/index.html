@@ -703,13 +703,16 @@ let convSearchOpen = false, convSearchIdx = 0, convSearchTotal = 0;
 let _lastCategory = 'other';
 
 // ── Usage analytics ──────────────────────────────────────────────────────────
-let usageLog = JSON.parse(localStorage.getItem('usage_log') || '[]');
+let usageLog;
+try { usageLog = JSON.parse(localStorage.getItem('usage_log') || '[]'); if (!Array.isArray(usageLog)) usageLog = []; } catch { usageLog = []; }
 const USAGE_MAX = 10000;
 function logUsage(entry) {
-  entry.ts = new Date().toISOString();
-  usageLog.push(entry);
-  if (usageLog.length > USAGE_MAX) usageLog.splice(0, Math.floor(USAGE_MAX * 0.2));
-  localStorage.setItem('usage_log', JSON.stringify(usageLog));
+  try {
+    entry.ts = new Date().toISOString();
+    usageLog.push(entry);
+    if (usageLog.length > USAGE_MAX) usageLog.splice(0, Math.floor(USAGE_MAX * 0.2));
+    localStorage.setItem('usage_log', JSON.stringify(usageLog));
+  } catch {}
 }
 function classifyIntent(text) {
   const t = (text || '').toLowerCase();
@@ -1843,6 +1846,7 @@ function setSyncStatus(state, text, info) {
 
 async function readWorkbook() {
   setSyncStatus('busy','Reading workbook…');
+  if (typeof Excel === 'undefined' || !Excel.run) { setSyncStatus('err','Not in Excel'); return; }
   const MAX_TOTAL_CHARS=80000;
   const MAX_ROWS_PER_SHEET=200;
   const MAX_CELL_LEN=100;
@@ -2902,20 +2906,30 @@ async function authSubmit() {
   const err   = document.getElementById('authErr');
   if (!email || !pwd) { err.textContent = 'Enter email and password'; return; }
   btn.disabled = true; err.textContent = '';
+  btn.textContent = authMode === 'signup' ? 'Creating account…' : 'Signing in…';
   try {
     let result;
     if (authMode === 'signup') {
-      result = await supabaseClient.auth.signUp({ email, password: pwd });
+      result = await supabaseClient.auth.signUp({ email, password: pwd, options: { emailRedirectTo: window.location.origin } });
       if (result.error) throw result.error;
-      if (result.data.user && !result.data.session) {
-        err.style.color = 'var(--ok)'; err.textContent = 'Check your email to confirm your account!';
-        btn.disabled = false; return;
+      if (result.data.session) {
+        // Auto-confirmed — already signed in
+      } else {
+        // Try immediate sign-in (works if email confirmation is disabled in Supabase)
+        const signIn = await supabaseClient.auth.signInWithPassword({ email, password: pwd });
+        if (signIn.error) {
+          err.style.color = 'var(--ok)';
+          err.textContent = 'Account created! Check your email (including spam) to confirm, then sign in.';
+          btn.textContent = authMode === 'signup' ? 'Create account' : 'Sign in';
+          btn.disabled = false; return;
+        }
       }
     } else {
       result = await supabaseClient.auth.signInWithPassword({ email, password: pwd });
       if (result.error) throw result.error;
     }
   } catch (e) { err.style.color = 'var(--err)'; err.textContent = e.message; }
+  btn.textContent = authMode === 'signup' ? 'Create account' : 'Sign in';
   btn.disabled = false;
 }
 
