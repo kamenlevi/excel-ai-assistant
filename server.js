@@ -881,6 +881,22 @@ app.get('/api/chats', (req, res) => {
   res.json(list);
 });
 
+app.get('/api/chats/search', (req, res) => {
+  const q = (req.query.q || '').toLowerCase();
+  if (!q) return res.json([]);
+  const chats = readChats();
+  const results = Object.values(chats).filter(c =>
+    (c.title || '').toLowerCase().includes(q) ||
+    (c.messages || []).some(m => (m.content || '').toLowerCase().includes(q))
+  ).sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt)).slice(0, 20).map(c => {
+    const matchMsg = (c.messages || []).find(m => (m.content || '').toLowerCase().includes(q));
+    const idx = matchMsg ? matchMsg.content.toLowerCase().indexOf(q) : -1;
+    const preview = matchMsg ? matchMsg.content.slice(Math.max(0, idx - 30), idx + 70) : null;
+    return { id: c.id, title: c.title, updatedAt: c.updatedAt, matchPreview: preview };
+  });
+  res.json(results);
+});
+
 app.post('/api/chats', (req, res) => {
   const chats = readChats();
   const id = uuidv4();

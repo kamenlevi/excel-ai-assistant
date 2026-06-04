@@ -329,6 +329,67 @@ html,body{height:100%;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;
 .sdanger{width:100%;padding:8px;background:none;border:1px solid var(--err);color:var(--err);border-radius:var(--r2);cursor:pointer;font-size:13px;transition:all .15s}
 .sdanger:hover{background:rgba(217,79,79,.08)}
 .sfooter{font-size:11px;color:var(--text3);text-align:center;padding-top:4px}
+/* ── Usage dashboard ── */
+.usage-section{margin-bottom:18px}
+.usage-section-title{font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}
+.usage-stats{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.stat-card{background:var(--surf);border-radius:var(--r2);padding:10px;text-align:center}
+.stat-val{font-size:20px;font-weight:700;color:var(--text)}
+.stat-label{font-size:10px;color:var(--text3);margin-top:2px}
+.cal-grid{display:grid;grid-template-columns:repeat(53,1fr);gap:1px}
+.cal-cell{width:100%;aspect-ratio:1;border-radius:1px;background:var(--surf)}
+.cal-cell[data-lvl="1"]{background:rgba(var(--accent-rgb),.25)}
+.cal-cell[data-lvl="2"]{background:rgba(var(--accent-rgb),.5)}
+.cal-cell[data-lvl="3"]{background:rgba(var(--accent-rgb),.75)}
+.cal-cell[data-lvl="4"]{background:var(--accent)}
+.cal-row-label{font-size:8px;color:var(--text3);width:14px;text-align:right;flex-shrink:0}
+.cal-wrap{display:flex;gap:2px}
+.cal-days{display:flex;flex-direction:column;gap:1px;justify-content:space-between;padding:1px 0}
+.cal-months{display:flex;gap:0;font-size:8px;color:var(--text3);margin-bottom:2px;padding-left:16px}
+.cal-months span{flex:1;min-width:0}
+.streak-row{display:flex;gap:12px;margin-top:6px;font-size:11px;color:var(--text2)}
+.streak-row strong{color:var(--text)}
+.heat-grid{display:grid;grid-template-columns:repeat(24,1fr);gap:1px}
+.heat-cell{aspect-ratio:1;border-radius:1px;background:var(--surf);position:relative}
+.heat-cell[data-lvl="1"]{background:rgba(var(--accent-rgb),.2)}
+.heat-cell[data-lvl="2"]{background:rgba(var(--accent-rgb),.4)}
+.heat-cell[data-lvl="3"]{background:rgba(var(--accent-rgb),.65)}
+.heat-cell[data-lvl="4"]{background:var(--accent)}
+.heat-labels{display:flex;justify-content:space-between;font-size:8px;color:var(--text3);margin-top:2px;padding:0 2px}
+.heat-day-labels{display:flex;flex-direction:column;gap:1px;font-size:8px;color:var(--text3);justify-content:space-between;width:18px;flex-shrink:0;text-align:right;padding-right:2px}
+.bar-row{display:flex;align-items:center;gap:6px;margin-bottom:4px}
+.bar-label{font-size:11px;color:var(--text2);width:70px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex-shrink:0;text-align:right}
+.bar-track{flex:1;height:14px;background:var(--surf);border-radius:3px;overflow:hidden}
+.bar-fill{height:100%;background:var(--accent);border-radius:3px;transition:width .3s}
+.bar-pct{font-size:10px;color:var(--text3);min-width:28px}
+.donut-wrap{display:flex;align-items:center;gap:14px}
+.donut{width:80px;height:80px;border-radius:50%;flex-shrink:0}
+.donut-legend{display:flex;flex-direction:column;gap:3px;font-size:11px;color:var(--text2)}
+.donut-legend-item{display:flex;align-items:center;gap:5px}
+.donut-dot{width:8px;height:8px;border-radius:2px;flex-shrink:0}
+.error-row{display:flex;align-items:center;gap:12px}
+.error-big{font-size:22px;font-weight:700}
+.error-detail{font-size:11px;color:var(--text2);line-height:1.5}
+.trend-up{color:var(--ok)}
+.trend-down{color:var(--err)}
+.cost-table{width:100%;font-size:11px;border-collapse:collapse}
+.cost-table th{text-align:left;color:var(--text3);font-weight:600;padding:4px 6px;border-bottom:1px solid var(--border)}
+.cost-table td{padding:4px 6px;color:var(--text2);border-bottom:1px solid var(--border)}
+.cost-table tr:last-child td{border-bottom:none}
+/* ── Sidebar search ── */
+.sidebar-search{width:100%;padding:7px 10px;background:var(--surf);border:1px solid var(--border);border-radius:var(--r2);color:var(--text);font-size:12px;font-family:inherit;margin-bottom:6px;box-sizing:border-box}
+.sidebar-search:focus{outline:none;border-color:var(--accent)}
+.chat-match{font-size:10px;color:var(--text3);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* ── In-conversation search ── */
+.conv-search{position:absolute;top:0;left:0;right:0;z-index:50;background:var(--bg);border-bottom:1px solid var(--border);padding:6px 10px;display:flex;align-items:center;gap:6px;transform:translateY(-100%);transition:transform .2s var(--ease)}
+.conv-search.open{transform:translateY(0)}
+.conv-search input{flex:1;padding:5px 8px;background:var(--surf);border:1px solid var(--border);border-radius:var(--r2);color:var(--text);font-size:12px;font-family:inherit}
+.conv-search input:focus{outline:none;border-color:var(--accent)}
+.conv-search-count{font-size:11px;color:var(--text3);white-space:nowrap}
+.conv-search button{background:none;border:none;color:var(--text2);cursor:pointer;font-size:14px;padding:2px 4px;border-radius:3px}
+.conv-search button:hover{background:var(--surf2)}
+mark.search-hl{background:rgba(var(--accent-rgb),.3);color:inherit;border-radius:2px;padding:0 1px}
+mark.search-hl.current{background:rgba(var(--accent-rgb),.6)}
 .seg-ctrl{display:flex;background:var(--surf);border:1px solid var(--border);border-radius:var(--r2);padding:2px;gap:2px}
 .seg-btn{background:none;border:none;border-radius:4px;padding:3px 10px;font-size:12px;cursor:pointer;color:var(--text2);transition:all .15s;white-space:nowrap}
 .seg-btn.active{background:var(--bg);color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,.12)}
@@ -417,7 +478,15 @@ html,body{height:100%;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;
     </header>
 
     <div class="memory-strip" id="memoryStrip"></div>
-    <div class="messages" id="messages">
+    <div style="position:relative;flex:1;display:flex;flex-direction:column;overflow:hidden">
+    <div class="conv-search" id="convSearch">
+      <input id="convSearchInput" placeholder="Find in conversation…" oninput="doConvSearch(this.value)">
+      <span class="conv-search-count" id="convSearchCount"></span>
+      <button onclick="convSearchNav(-1)" title="Previous">↑</button>
+      <button onclick="convSearchNav(1)" title="Next">↓</button>
+      <button onclick="closeConvSearch()" title="Close">✕</button>
+    </div>
+    <div class="messages" id="messages" style="flex:1">
       <div class="empty-state" id="emptyState">
         <div class="empty-icon">✦</div>
         <div class="empty-title">Excel AI Assistant</div>
@@ -430,6 +499,7 @@ html,body{height:100%;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;
         </div>
       </div>
     </div>
+    </div><!-- /conv-search wrapper -->
 
     <div class="input-area">
       <div class="input-box">
@@ -481,6 +551,7 @@ html,body{height:100%;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;
       <button class="new-chat" onclick="newChat()">+ New Chat</button>
       <button class="sidebar-close" onclick="closeSidebar()">✕</button>
     </div>
+    <input class="sidebar-search" id="sidebarSearch" placeholder="Search chats…" oninput="searchChats(this.value)">
     <div class="chat-list" id="chatList"><div class="no-chats">No chats yet</div></div>
   </div>
 </div>
@@ -622,11 +693,34 @@ function activeLimitIdx() { return costLimitType === 'prompt' ? promptLimitIdx :
 function setActiveLimitIdx(v) { if (costLimitType === 'prompt') { promptLimitIdx = v; localStorage.setItem('promptLimitIdx', v); } else { sessionLimitIdx = v; localStorage.setItem('sessionLimitIdx', v); } }
 let sessionCost = 0;
 let pendingSendResolve = null;
+let convSearchOpen = false, convSearchIdx = 0, convSearchTotal = 0;
+let _lastCategory = 'other';
+
+// ── Usage analytics ──────────────────────────────────────────────────────────
+let usageLog = JSON.parse(localStorage.getItem('usage_log') || '[]');
+const USAGE_MAX = 10000;
+function logUsage(entry) {
+  entry.ts = new Date().toISOString();
+  usageLog.push(entry);
+  if (usageLog.length > USAGE_MAX) usageLog.splice(0, Math.floor(USAGE_MAX * 0.2));
+  localStorage.setItem('usage_log', JSON.stringify(usageLog));
+}
+function classifyIntent(text) {
+  const t = (text || '').toLowerCase();
+  if (/\b(formula|sum|average|vlookup|xlookup|if\(|countif|index|match|hlookup|sumif)\b/.test(t)) return 'formula';
+  if (/\b(chart|graph|plot|pie|bar chart|line chart|visualization|sparkline)\b/.test(t)) return 'chart';
+  if (/\b(format|color|bold|italic|font|style|border|highlight|conditional|number format|currency|percent)\b/.test(t)) return 'format';
+  if (/\b(sort|filter|pivot|table|merge|dedupe|duplicate|clean|trim|split|join|transpose|import|export|csv)\b/.test(t)) return 'data';
+  if (/\b(macro|vba|script|module|sub |function )\b/.test(t)) return 'vba';
+  if (/\b(analy[sz]e|statistic|average|trend|compare|regression|forecast|summary|insight|calculate)\b/.test(t)) return 'analysis';
+  return 'other';
+}
 // ── Security state ────────────────────────────────────────────────────────────
 let sessionDangerConfirmed = new Set(); // 'high', 'critical' confirmed this session
 let sessionPasswordVerified = false;    // password entered once this session
-const APP_VERSION = 'v5.13.0';
+const APP_VERSION = 'v5.14.0';
 const CHANGELOG = [
+  { ver: 'v5.14.0', date: '2026-06-04', summary: 'Usage dashboard: GitHub-style activity calendar, time-of-day heatmap, model usage bars, task category donut chart, code execution success rate, cost breakdown table, streak tracking. 12 new slash commands: /undo, /redo, /export (md/json), /usage, /search, /model, /provider, /pin, /forget, /version, /find. Sidebar search: filter chat history by title or message content with live previews. In-conversation search (Ctrl+F): highlights matches with up/down navigation. Full analytics tracking engine logs every interaction (messages, code executions, undos, slash commands) with auto-classified task categories.' },
   { ver: 'v5.13.0', date: '2026-06-04', summary: 'Major settings redesign: full-overlay settings panel (Claude-style) replaces the old drawer. 7 subcategories: Profile, General, Providers, Capabilities, Preferences, Privacy & Security, History. Universal provider system — pick from 10 providers (OpenRouter, Groq, OpenAI, Anthropic, Google AI, Mistral, Together, Ollama, MLX, Custom) with per-provider API key fields. Server refactored to route by provider config (3 format branches: openai-compat, ollama, anthropic). Header redesigned: logo shrunk, sync status is now an informative box with hover tooltip (sheet name, rows, cols, last sync time), settings button removed — account icon opens settings. Cost limit bug fixed (prompt/session modes no longer cross-contaminate). Input placeholder simplified.' },
   { ver: 'v5.12.0', date: '2026-06-04', summary: 'One-click sign-in: Google + Microsoft OAuth (personal + work/school accounts) added to the auth modal alongside the existing email/password flow. Supabase config is now baked into the client (SUPABASE_CONFIG constant at the top of index.html, public anon key — safe by design) so end users no longer need their own Supabase project. Server-side env vars still override if set, for self-hosters. New docs/SETUP_AUTH.md walks through creating the Supabase project, enabling OAuth providers in Google Cloud + Azure, and redirect-URL configuration. OAuth uses a popup → /auth/callback → postMessage → setSession() flow that works inside the Excel task pane.' },
   { ver: 'v5.11.5', date: '2026-06-03', summary: 'Docs + cleanup: README rewritten end-to-end — clear install steps, two SSL-cert paths (office-addin-dev-certs vs. self-signed openssl), both API-key paths (in-app vs. .env) documented side by side, full feature list, slash-command table, danger-system explainer, troubleshooting + FAQ. Removed a hardcoded personal LAN IP from server.js — Ollama host now defaults to 127.0.0.1 and is overridable via OLLAMA_HOST env var. .env.example expanded with inline documentation for every variable.' },
@@ -836,6 +930,7 @@ const SETTINGS_TABS = [
   { id: 'capabilities', label: 'Capabilities' },
   { id: 'preferences',  label: 'Preferences' },
   { id: 'privacy',      label: 'Privacy' },
+  { id: 'usage',        label: 'Usage' },
   { id: 'history',      label: 'History' },
 ];
 let activeSettingsTab = 'profile';
@@ -872,6 +967,7 @@ function renderSettingsTab() {
     capabilities: renderCapabilitiesTab,
     preferences: renderPreferencesTab,
     privacy: renderPrivacyTab,
+    usage: renderUsageTab,
     history: renderHistoryTab,
   }[activeSettingsTab];
   el.innerHTML = fn ? fn() : '';
@@ -934,6 +1030,187 @@ function renderPrivacyTab() {
 function renderHistoryTab() {
   return `<div class="sgrp"><div class="slabel">Chat History</div><button class="sdanger" onclick="clearAllHistory()">Delete all chat history</button><span class="sinote" style="margin-top:4px">This cannot be undone.</span></div>`;
 }
+function renderUsageTab() {
+  const log = usageLog;
+  const msgs = log.filter(e => e.type === 'message');
+  const execs = log.filter(e => e.type === 'code_exec');
+
+  // ── Stats ──
+  const totalMessages = msgs.length;
+  const totalTokens = msgs.reduce((s,e) => s + (e.inTok||0) + (e.outTok||0), 0);
+  const totalCost = msgs.reduce((s,e) => s + (e.cost||0), 0);
+  const daySet = new Set(log.map(e => e.ts?.slice(0,10)).filter(Boolean));
+  const activeDays = daySet.size;
+  function fmtTok(n) { return n >= 1e6 ? (n/1e6).toFixed(1)+'M' : n >= 1e3 ? (n/1e3).toFixed(1)+'K' : String(n); }
+
+  // ── Activity calendar (52 weeks) ──
+  const today = new Date();
+  const dayCounts = {};
+  msgs.forEach(e => { const d = e.ts?.slice(0,10); if(d) dayCounts[d] = (dayCounts[d]||0)+1; });
+  function calLevel(n) { return n === 0 ? 0 : n <= 3 ? 1 : n <= 10 ? 2 : n <= 25 ? 3 : 4; }
+  let calCells = '';
+  const startDate = new Date(today);
+  startDate.setDate(startDate.getDate() - 363);
+  startDate.setDate(startDate.getDate() - startDate.getDay());
+  const monthLabels = [];
+  let lastMonth = -1;
+  for (let i = 0; i < 371; i++) {
+    const d = new Date(startDate);
+    d.setDate(d.getDate() + i);
+    if (d > today) { calCells += '<div class="cal-cell" style="visibility:hidden"></div>'; continue; }
+    const ds = d.toISOString().slice(0,10);
+    const cnt = dayCounts[ds] || 0;
+    const dow = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d.getDay()];
+    calCells += `<div class="cal-cell" data-lvl="${calLevel(cnt)}" title="${ds}: ${cnt} messages"></div>`;
+    if (i % 7 === 0 && d.getMonth() !== lastMonth) { lastMonth = d.getMonth(); monthLabels.push({ col: Math.floor(i/7), label: d.toLocaleString('default',{month:'short'}) }); }
+  }
+  let monthsHtml = '<div class="cal-months">';
+  for (let w = 0; w < 53; w++) {
+    const ml = monthLabels.find(m => m.col === w);
+    monthsHtml += `<span>${ml ? ml.label : ''}</span>`;
+  }
+  monthsHtml += '</div>';
+
+  // Streaks
+  let curStreak = 0, maxStreak = 0, streak = 0;
+  const todayStr = today.toISOString().slice(0,10);
+  for (let i = 0; i < 365; i++) {
+    const d = new Date(today); d.setDate(d.getDate() - i);
+    const ds = d.toISOString().slice(0,10);
+    if (dayCounts[ds]) { streak++; maxStreak = Math.max(maxStreak, streak); if (i === 0 || i === curStreak) curStreak = streak; }
+    else { streak = 0; }
+  }
+
+  // ── Time-of-day heatmap ──
+  const hourDay = {};
+  msgs.forEach(e => { if (!e.ts) return; const d = new Date(e.ts); const key = d.getDay() + '-' + d.getHours(); hourDay[key] = (hourDay[key]||0)+1; });
+  const maxHD = Math.max(1, ...Object.values(hourDay));
+  function hdLevel(n) { const r = n/maxHD; return r === 0 ? 0 : r <= 0.25 ? 1 : r <= 0.5 ? 2 : r <= 0.75 ? 3 : 4; }
+  let heatCells = '';
+  const dayNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  for (let dow = 0; dow < 7; dow++) {
+    for (let h = 0; h < 24; h++) {
+      const cnt = hourDay[dow+'-'+h] || 0;
+      heatCells += `<div class="heat-cell" data-lvl="${hdLevel(cnt)}" title="${dayNames[dow]} ${h}:00 — ${cnt} msgs"></div>`;
+    }
+  }
+
+  // ── Model usage ──
+  const modelCounts = {};
+  msgs.forEach(e => { if(e.model) modelCounts[e.model] = (modelCounts[e.model]||0)+1; });
+  const topModels = Object.entries(modelCounts).sort((a,b) => b[1]-a[1]).slice(0,5);
+  const modelMax = Math.max(1, topModels[0]?.[1] || 1);
+  let modelBars = '';
+  topModels.forEach(([id,cnt]) => {
+    const name = allModelsFlat().find(m => m.id === id)?.name || id.split('/').pop();
+    const pct = Math.round(cnt/totalMessages*100);
+    modelBars += `<div class="bar-row"><span class="bar-label" title="${id}">${esc(name)}</span><div class="bar-track"><div class="bar-fill" style="width:${Math.round(cnt/modelMax*100)}%"></div></div><span class="bar-pct">${pct}%</span></div>`;
+  });
+
+  // ── Category breakdown (donut) ──
+  const catCounts = {};
+  msgs.forEach(e => { const c = e.category || 'other'; catCounts[c] = (catCounts[c]||0)+1; });
+  const catColors = { formula:'#4CAF6A', chart:'#5B9BD5', format:'#CC785C', data:'#9C6ADE', vba:'#E05555', analysis:'#F5A623', other:'#999' };
+  const catEntries = Object.entries(catCounts).sort((a,b) => b[1]-a[1]);
+  const catTotal = Math.max(1, catEntries.reduce((s,e) => s+e[1], 0));
+  let gradient = '', angle = 0;
+  const gradParts = [];
+  catEntries.forEach(([cat,cnt]) => {
+    const deg = cnt/catTotal*360;
+    gradParts.push(`${catColors[cat]||'#999'} ${angle}deg ${angle+deg}deg`);
+    angle += deg;
+  });
+  const donutStyle = gradParts.length ? `conic-gradient(${gradParts.join(',')})` : 'var(--surf)';
+  let legendHtml = '';
+  catEntries.forEach(([cat,cnt]) => {
+    legendHtml += `<div class="donut-legend-item"><div class="donut-dot" style="background:${catColors[cat]||'#999'}"></div>${cat} (${cnt} — ${Math.round(cnt/catTotal*100)}%)</div>`;
+  });
+
+  // ── Error rate ──
+  const totalExecs = execs.length;
+  const successExecs = execs.filter(e => e.execOk).length;
+  const failExecs = totalExecs - successExecs;
+  const successRate = totalExecs > 0 ? Math.round(successExecs/totalExecs*100) : 100;
+  const now7 = new Date(); now7.setDate(now7.getDate()-7);
+  const prev7 = new Date(); prev7.setDate(prev7.getDate()-14);
+  const recent7 = execs.filter(e => new Date(e.ts) >= now7);
+  const prev7e = execs.filter(e => { const d=new Date(e.ts); return d >= prev7 && d < now7; });
+  const r7rate = recent7.length > 0 ? recent7.filter(e=>e.execOk).length/recent7.length : 1;
+  const p7rate = prev7e.length > 0 ? prev7e.filter(e=>e.execOk).length/prev7e.length : 1;
+  const trendDir = r7rate >= p7rate ? 'up' : 'down';
+  const trendLabel = r7rate >= p7rate ? 'Improving' : 'Declining';
+
+  // ── Trained skills ──
+  const pinCount = pinnedMemory.length;
+  const factCount = coreMemory.length;
+  const prefsPreview = userPreferences ? userPreferences.slice(0,120) + (userPreferences.length > 120 ? '…' : '') : 'None set';
+
+  // ── Cost table ──
+  const modelCosts = {};
+  msgs.forEach(e => {
+    if (!e.model) return;
+    if (!modelCosts[e.model]) modelCosts[e.model] = { msgs:0, tokens:0, cost:0 };
+    modelCosts[e.model].msgs++;
+    modelCosts[e.model].tokens += (e.inTok||0) + (e.outTok||0);
+    modelCosts[e.model].cost += e.cost||0;
+  });
+  const costRows = Object.entries(modelCosts).sort((a,b) => b[1].cost - a[1].cost);
+  let costTableHtml = '<table class="cost-table"><tr><th>Model</th><th>Msgs</th><th>Tokens</th><th>Cost</th></tr>';
+  costRows.forEach(([id,d]) => {
+    const name = allModelsFlat().find(m => m.id === id)?.name || id.split('/').pop();
+    costTableHtml += `<tr><td>${esc(name)}</td><td>${d.msgs}</td><td>${fmtTok(d.tokens)}</td><td>$${d.cost.toFixed(4)}</td></tr>`;
+  });
+  costTableHtml += '</table>';
+  const dailyAvg = activeDays > 0 ? totalCost / activeDays : 0;
+  const projMonthly = dailyAvg * 30;
+
+  return `
+    <div class="usage-section"><div class="usage-section-title">Overview</div>
+      <div class="usage-stats">
+        <div class="stat-card"><div class="stat-val">${totalMessages.toLocaleString()}</div><div class="stat-label">Messages</div></div>
+        <div class="stat-card"><div class="stat-val">${fmtTok(totalTokens)}</div><div class="stat-label">Tokens</div></div>
+        <div class="stat-card"><div class="stat-val">$${totalCost.toFixed(2)}</div><div class="stat-label">Est. Cost</div></div>
+        <div class="stat-card"><div class="stat-val">${activeDays}</div><div class="stat-label">Active Days</div></div>
+      </div>
+    </div>
+    <div class="usage-section"><div class="usage-section-title">Activity</div>
+      ${monthsHtml}
+      <div class="cal-wrap">
+        <div class="cal-days">${['','M','','W','','F',''].map(d=>'<div class="cal-row-label">'+d+'</div>').join('')}</div>
+        <div class="cal-grid">${calCells}</div>
+      </div>
+      <div class="streak-row"><span>Current streak: <strong>${curStreak} day${curStreak!==1?'s':''}</strong></span><span>Longest: <strong>${maxStreak} day${maxStreak!==1?'s':''}</strong></span></div>
+    </div>
+    <div class="usage-section"><div class="usage-section-title">Peak Hours</div>
+      <div style="display:flex;gap:2px">
+        <div class="heat-day-labels">${dayNames.map(d=>'<div>'+d.slice(0,2)+'</div>').join('')}</div>
+        <div style="flex:1"><div class="heat-grid">${heatCells}</div><div class="heat-labels"><span>12am</span><span>6am</span><span>12pm</span><span>6pm</span><span>11pm</span></div></div>
+      </div>
+    </div>
+    <div class="usage-section"><div class="usage-section-title">Models</div>${modelBars || '<div style="font-size:12px;color:var(--text3)">No data yet</div>'}</div>
+    <div class="usage-section"><div class="usage-section-title">Task Categories</div>
+      <div class="donut-wrap"><div class="donut" style="background:${donutStyle}"></div><div class="donut-legend">${legendHtml || 'No data yet'}</div></div>
+    </div>
+    <div class="usage-section"><div class="usage-section-title">Code Execution</div>
+      <div class="error-row">
+        <div class="error-big ${successRate >= 80 ? 'trend-up' : 'trend-down'}">${successRate}%</div>
+        <div class="error-detail">Success rate (${successExecs}/${totalExecs} executions)<br>Failures: ${failExecs}<br><span class="trend-${trendDir}">${trendDir === 'up' ? '↑' : '↓'} ${trendLabel} vs last week</span></div>
+      </div>
+    </div>
+    <div class="usage-section"><div class="usage-section-title">Trained Skills</div>
+      <div style="font-size:12px;color:var(--text2);line-height:1.6">
+        Pinned memories: <strong>${pinCount}</strong><br>
+        Auto-extracted facts: <strong>${factCount}</strong><br>
+        Preferences: <em>${esc(prefsPreview)}</em>
+      </div>
+    </div>
+    <div class="usage-section"><div class="usage-section-title">Cost Breakdown</div>
+      ${costTableHtml}
+      <div style="font-size:11px;color:var(--text3);margin-top:6px">Daily avg: $${dailyAvg.toFixed(4)} · Projected monthly: $${projMonthly.toFixed(2)}</div>
+    </div>
+    <div class="usage-section"><button class="sdanger" onclick="if(confirm('Clear all usage data?')){usageLog=[];localStorage.removeItem('usage_log');renderSettingsTab();}">Reset usage data</button></div>
+  `;
+}
 function bindSettingsEvents() {}
 
 function openChangelog() {
@@ -968,8 +1245,10 @@ function addActualCost(usage, modelId) {
   if (!model || (!model.in && !model.out)) return;
   const inTok  = usage?.prompt_tokens     || 0;
   const outTok = usage?.completion_tokens || 0;
-  sessionCost += (inTok * model.in + outTok * model.out) / 1_000_000;
+  const cost = (inTok * model.in + outTok * model.out) / 1_000_000;
+  sessionCost += cost;
   updateSessionCostDisplay();
+  logUsage({ type:'message', model:modelId||selectedModel, provider:activeProvider, inTok, outTok, cost, chatId, category: _lastCategory || 'other' });
 }
 function checkCostBefore(text) {
   const lim = getCostLimit();
@@ -1311,6 +1590,27 @@ async function clearAllHistory() {
   chatId=null;history=[];renderEmpty();closeSettings();await loadChats();
 }
 async function refreshChatList(){try{const r=await fetch('/api/chats');renderChatList(await r.json());}catch{}}
+let _searchDebounce = null;
+function searchChats(q) {
+  clearTimeout(_searchDebounce);
+  if (!q.trim()) { refreshChatList(); return; }
+  _searchDebounce = setTimeout(async () => {
+    try {
+      const r = await fetch('/api/chats/search?q=' + encodeURIComponent(q.trim()));
+      const results = await r.json();
+      const el = document.getElementById('chatList');
+      if (!results.length) { el.innerHTML = '<div class="no-chats">No results</div>'; return; }
+      el.innerHTML = results.map(c => {
+        const d = c.updatedAt ? new Date(c.updatedAt).toLocaleDateString(undefined,{month:'short',day:'numeric'}) : '';
+        return '<div class="chat-item' + (c.id===chatId?' active':'') + '" onclick="chatClick(event,\'' + c.id + '\')">' +
+          '<div class="chat-title">' + esc(c.title || 'Untitled') + '</div>' +
+          (c.matchPreview ? '<div class="chat-match">…' + esc(c.matchPreview.slice(0,80)) + '…</div>' : '') +
+          '<div class="chat-meta">' + d + '</div>' +
+        '</div>';
+      }).join('');
+    } catch {}
+  }, 300);
+}
 async function generateTitle(userMsg,aiReply) {
   try{const k=localStorage.getItem('apiKey');const r=await fetch('/api/title',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({userMsg,aiReply,apiKey:k||undefined})});const d=await r.json();return d.title||null;}catch{return null;}
 }
@@ -1679,8 +1979,13 @@ async function execCode(code) {
       const rv=await fn(ctx,wb,Excel,applyColumnFilter,clearFilters,sortByColumn,searchWorkbooks,searchWorkbooksByContent,readExternalWorkbook,writeExternalWorkbook,openInExcel,createTable,setNumberFormat,createPivotTable,dedupeRows,fillDown,trimCells);
       if(rv!==undefined&&rv!==null)ret=String(rv);
     });
-    await readWorkbook();return{ok:true,err:null,result:ret};
-  }catch(e){return{ok:false,err:e.message,result:null};}
+    await readWorkbook();
+    logUsage({ type:'code_exec', model:selectedModel, provider:activeProvider, execOk:true, chatId, category:_lastCategory });
+    return{ok:true,err:null,result:ret};
+  }catch(e){
+    logUsage({ type:'code_exec', model:selectedModel, provider:activeProvider, execOk:false, chatId, category:_lastCategory });
+    return{ok:false,err:e.message,result:null};
+  }
 }
 
 // ── Undo: snapshot every sheet's used-range formulas + number formats before a
@@ -1727,6 +2032,7 @@ async function restoreSnapshot(snap){
       await ctx.sync();
     });
     await readWorkbook();
+    logUsage({ type:'undo', model:selectedModel, provider:activeProvider, chatId });
     return true;
   }catch(e){showToast('Undo failed: '+e.message);return false;}
 }
@@ -1777,6 +2083,23 @@ const SLASH_CMDS = {
   '/memory':   { desc: 'Show all permanent memory (pinned + auto-extracted facts)',    fn: () => slashShowMemory()   },
   '/help':     { desc: 'List all available slash commands',                            fn: () => slashHelp()         },
   '/status':   { desc: 'Show current settings and active toggles',                     fn: () => slashStatus()       },
+  '/undo':     { desc: 'Undo last AI action',                                          fn: () => slashUndo()         },
+  '/redo':     { desc: 'Re-send your last message',                                    fn: () => slashRedo()         },
+  '/export':   {
+    desc: 'Export current chat',
+    sub: {
+      'md':   { desc: 'Export as Markdown file',  fn: () => slashExport('md')   },
+      'json': { desc: 'Export as JSON file',       fn: () => slashExport('json') },
+    }
+  },
+  '/usage':    { desc: 'Show quick usage summary',                                     fn: () => slashUsage()        },
+  '/search':   { desc: 'Search chat history — /search <query>',                        fn: () => addSysMsg('Usage: /search <query>') },
+  '/model':    { desc: 'Quick-switch model — /model <name>',                           fn: () => addSysMsg('Usage: /model <partial name>') },
+  '/provider': { desc: 'Quick-switch provider — /provider <name>',                     fn: () => addSysMsg('Usage: /provider <name>') },
+  '/pin':      { desc: 'Pin a memory — /pin <text>',                                   fn: () => addSysMsg('Usage: /pin <text to remember>') },
+  '/forget':   { desc: 'Remove pinned memory — /forget <number>',                      fn: () => addSysMsg('Usage: /forget <index>') },
+  '/version':  { desc: 'Show version and recent changes',                               fn: () => slashVersion()      },
+  '/find':     { desc: 'Search current conversation (Ctrl+F)',                          fn: () => openConvSearch()     },
   '/reset': {
     desc: 'Reset counters or state',
     sub: {
@@ -1845,6 +2168,89 @@ function slashStatus() {
     '\nauto-facts:  ' + coreMemory.length + ' item(s)'
   );
 }
+function slashUndo() {
+  const btns = document.querySelectorAll('.undo-btn:not(.done):not(:disabled)');
+  if (btns.length) { btns[btns.length-1].click(); }
+  else addSysMsg('Nothing to undo.');
+}
+function slashRedo() {
+  const last = history.slice().reverse().find(m => m.role === 'user' && !m.internal);
+  if (last) { document.getElementById('msgInput').value = last.content; sendMessage(); }
+  else addSysMsg('No previous message to re-send.');
+}
+function slashExport(fmt) {
+  if (!history.length) { addSysMsg('No messages to export.'); return; }
+  let content, filename, mime;
+  if (fmt === 'json') {
+    content = JSON.stringify(history, null, 2);
+    filename = 'chat-export.json'; mime = 'application/json';
+  } else {
+    content = history.map(m => `**${m.role === 'user' ? 'You' : 'AI'}** (${m.time || ''})\n${m.content || ''}\n`).join('\n---\n\n');
+    filename = 'chat-export.md'; mime = 'text/markdown';
+  }
+  const blob = new Blob([content], { type: mime });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+  a.download = filename; a.click(); URL.revokeObjectURL(a.href);
+  addSysMsg('Exported as ' + filename);
+}
+function slashUsage() {
+  const msgs = usageLog.filter(e => e.type === 'message');
+  const todayStr = new Date().toISOString().slice(0,10);
+  const todayMsgs = msgs.filter(e => e.ts?.startsWith(todayStr));
+  const todayTok = todayMsgs.reduce((s,e) => s + (e.inTok||0) + (e.outTok||0), 0);
+  const todayCost = todayMsgs.reduce((s,e) => s + (e.cost||0), 0);
+  addSysMsg(
+    'Today: ' + todayMsgs.length + ' messages, ' + todayTok.toLocaleString() + ' tokens, $' + todayCost.toFixed(4) +
+    '\nAll time: ' + msgs.length + ' messages, $' + msgs.reduce((s,e) => s+(e.cost||0), 0).toFixed(4)
+  );
+}
+async function slashSearchHistory(q) {
+  try {
+    const r = await fetch('/api/chats/search?q=' + encodeURIComponent(q));
+    const results = await r.json();
+    if (!results.length) { addSysMsg('No results for "' + q + '"'); return; }
+    const lines = ['Search results for "' + q + '":'];
+    results.slice(0,8).forEach((c,i) => {
+      lines.push('  ' + (i+1) + '. ' + (c.title||'Untitled') + (c.matchPreview ? '\n     …' + c.matchPreview.slice(0,80) + '…' : ''));
+    });
+    if (results.length > 8) lines.push('  …and ' + (results.length-8) + ' more');
+    addSysMsg(lines.join('\n'));
+  } catch { addSysMsg('Search failed — is the server running?'); }
+}
+function slashSwitchModel(q) {
+  const ql = q.toLowerCase();
+  const match = allModelsFlat().find(m => m.name.toLowerCase().includes(ql) || m.id.toLowerCase().includes(ql));
+  if (match) {
+    selectedModel = match.id; localStorage.setItem('selModel', match.id);
+    addSysMsg('Switched to ' + match.name);
+  } else addSysMsg('No model matching "' + q + '"');
+}
+function slashSwitchProvider(q) {
+  const ql = q.toLowerCase();
+  const match = PROVIDERS.find(p => p.name.toLowerCase().includes(ql) || p.id.toLowerCase().includes(ql));
+  if (match) { setActiveProvider(match.id); addSysMsg('Switched to ' + match.name); }
+  else addSysMsg('No provider matching "' + q + '"');
+}
+function slashPin(text) {
+  pinnedMemory.push({ text, ts: new Date().toISOString() });
+  localStorage.setItem('pinnedMemory', JSON.stringify(pinnedMemory));
+  renderMemoryStrip();
+  addSysMsg('Pinned: ' + text);
+}
+function slashForget(arg) {
+  const idx = parseInt(arg) - 1;
+  if (isNaN(idx) || idx < 0 || idx >= pinnedMemory.length) { addSysMsg('Invalid index. You have ' + pinnedMemory.length + ' pinned item(s).'); return; }
+  const removed = pinnedMemory.splice(idx, 1);
+  localStorage.setItem('pinnedMemory', JSON.stringify(pinnedMemory));
+  renderMemoryStrip();
+  addSysMsg('Removed: ' + removed[0]?.text);
+}
+function slashVersion() {
+  const recent = CHANGELOG.slice(0,3);
+  const lines = ['Excel AI Assistant ' + APP_VERSION];
+  recent.forEach(c => lines.push('  ' + c.ver + ' (' + c.date + '): ' + c.summary.slice(0,80) + '…'));
+  addSysMsg(lines.join('\n'));
+}
 // ── Sound & haptics ───────────────────────────────────────────────────────────
 let _audioCtx = null;
 function getACtx() {
@@ -1876,6 +2282,73 @@ function playSound(type) {
   } catch {}
 }
 function haptic(p = [10]) { try { navigator.vibrate?.(p); } catch {} }
+
+// ── In-conversation search ────────────────────────────────────────────────────
+function openConvSearch() {
+  convSearchOpen = true;
+  document.getElementById('convSearch').classList.add('open');
+  document.getElementById('convSearchInput').focus();
+}
+function closeConvSearch() {
+  convSearchOpen = false;
+  document.getElementById('convSearch').classList.remove('open');
+  document.getElementById('convSearchInput').value = '';
+  clearConvHighlights();
+  convSearchIdx = 0; convSearchTotal = 0;
+}
+function clearConvHighlights() {
+  document.querySelectorAll('mark.search-hl').forEach(m => {
+    const parent = m.parentNode;
+    parent.replaceChild(document.createTextNode(m.textContent), m);
+    parent.normalize();
+  });
+}
+function doConvSearch(q) {
+  clearConvHighlights();
+  if (!q.trim()) { document.getElementById('convSearchCount').textContent = ''; convSearchTotal = 0; convSearchIdx = 0; return; }
+  const msgEls = document.querySelectorAll('#messages .msg-body');
+  let total = 0;
+  const re = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
+  msgEls.forEach(el => {
+    const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+    const nodes = [];
+    while (walker.nextNode()) nodes.push(walker.currentNode);
+    nodes.forEach(node => {
+      const txt = node.textContent;
+      if (!re.test(txt)) return;
+      re.lastIndex = 0;
+      const frag = document.createDocumentFragment();
+      let lastIdx = 0, match;
+      while ((match = re.exec(txt)) !== null) {
+        if (match.index > lastIdx) frag.appendChild(document.createTextNode(txt.slice(lastIdx, match.index)));
+        const mark = document.createElement('mark');
+        mark.className = 'search-hl';
+        mark.textContent = match[0];
+        mark.dataset.idx = total++;
+        frag.appendChild(mark);
+        lastIdx = re.lastIndex;
+      }
+      if (lastIdx < txt.length) frag.appendChild(document.createTextNode(txt.slice(lastIdx)));
+      node.parentNode.replaceChild(frag, node);
+    });
+  });
+  convSearchTotal = total;
+  convSearchIdx = total > 0 ? 0 : -1;
+  updateConvSearchHighlight();
+}
+function updateConvSearchHighlight() {
+  document.querySelectorAll('mark.search-hl.current').forEach(m => m.classList.remove('current'));
+  if (convSearchTotal > 0 && convSearchIdx >= 0) {
+    const cur = document.querySelector(`mark.search-hl[data-idx="${convSearchIdx}"]`);
+    if (cur) { cur.classList.add('current'); cur.scrollIntoView({ block: 'center', behavior: 'smooth' }); }
+  }
+  document.getElementById('convSearchCount').textContent = convSearchTotal > 0 ? (convSearchIdx+1) + ' of ' + convSearchTotal : 'No results';
+}
+function convSearchNav(dir) {
+  if (convSearchTotal <= 0) return;
+  convSearchIdx = (convSearchIdx + dir + convSearchTotal) % convSearchTotal;
+  updateConvSearchHighlight();
+}
 
 // ── Toast notifications ────────────────────────────────────────────────────────
 let _toastTimer = null;
@@ -1955,24 +2428,32 @@ function executeSlashCmd(text) {
   const argRaw = parts.slice(1).join(' ');
   const arg = argRaw.startsWith('/') ? argRaw.slice(1) : argRaw;
 
-  if (!SLASH_CMDS[base]) return false; // not a known command
+  if (!SLASH_CMDS[base]) {
+    // Check arg-based commands: /search <q>, /model <n>, /pin <t>, /forget <n>, /provider <n>
+    return false;
+  }
 
   const def = SLASH_CMDS[base];
   if (arg && def.sub) {
-    // Execute subcommand
-    if (def.sub[arg]) { def.sub[arg].fn(); return true; }
-    // Unknown subcommand — show available ones
+    if (def.sub[arg]) { def.sub[arg].fn(); logUsage({ type:'slash_cmd', category:base+' '+arg }); return true; }
     const avail = Object.keys(def.sub).map(s => base + ' ' + s).join('\n  ');
     addSysMsg('Unknown subcommand "' + arg + '" for ' + base + '\nAvailable:\n  ' + avail);
     return true;
   }
   if (def.sub && !arg) {
-    // Show subcommands for this command
     const avail = Object.entries(def.sub).map(([s,d]) => '  ' + base + ' ' + s + '  —  ' + d.desc).join('\n');
     addSysMsg(base + ' subcommands:\n' + avail);
     return true;
   }
-  if (def.fn) { def.fn(); return true; }
+  // Commands that accept a freeform argument
+  if (arg && def.fn) {
+    if (base === '/search') { slashSearchHistory(arg); logUsage({ type:'slash_cmd', category:'/search' }); return true; }
+    if (base === '/model') { slashSwitchModel(arg); logUsage({ type:'slash_cmd', category:'/model' }); return true; }
+    if (base === '/provider') { slashSwitchProvider(arg); logUsage({ type:'slash_cmd', category:'/provider' }); return true; }
+    if (base === '/pin') { slashPin(arg); logUsage({ type:'slash_cmd', category:'/pin' }); return true; }
+    if (base === '/forget') { slashForget(arg); logUsage({ type:'slash_cmd', category:'/forget' }); return true; }
+  }
+  if (def.fn) { def.fn(); logUsage({ type:'slash_cmd', category:base }); return true; }
   return false;
 }
 
@@ -1987,6 +2468,10 @@ function handleKey(e){
   }
   if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMessage();}
 }
+document.addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && e.key === 'f') { e.preventDefault(); convSearchOpen ? closeConvSearch() : openConvSearch(); }
+  if (e.key === 'Escape' && convSearchOpen) closeConvSearch();
+});
 function autoResize(el){el.style.height='auto';el.style.height=Math.min(el.scrollHeight,120)+'px';}
 function useSugg(btn){document.getElementById('msgInput').value=btn.textContent;sendMessage();}
 function showAttachBadge(name,busy){
@@ -2088,6 +2573,7 @@ async function sendMessage() {
 
   if(attached){text+=(text?'\n\n':'')+'[Attached: '+attached.name+']\n'+attached.content.slice(0,8000);clearAttach();}
 
+  _lastCategory = classifyIntent(text);
   const allowed=await checkCostBefore(text);
   if(!allowed)return;
 
