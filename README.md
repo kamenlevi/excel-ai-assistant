@@ -334,21 +334,34 @@ Plus: every workbook write is **snapshot + Undo**. Even if you confirm something
 
 ---
 
-## Optional: cloud chat sync (Supabase)
+## Optional: cloud chat sync (Supabase) + one-click sign-in
 
 Skip this section if you only use one machine.
 
-1. Create a free Supabase project at https://supabase.com.
-2. Enable email auth (or any provider you like).
-3. Copy the **Project URL** and **anon key** from `Project Settings → API`.
-4. Add them to `.env`:
-   ```env
-   SUPABASE_URL=https://xxxxxxxxxxxx.supabase.co
-   SUPABASE_ANON_KEY=eyJhbGciOi...
-   ```
-5. Restart the server. Sign in from the task pane's **Account** tab. Chats now sync.
+The add-in supports **Google + Microsoft OAuth** (one-click sign-in) and email/password as a fallback. Once Supabase is set up, sign-in works for **every user who installs the add-in** — they don't each need their own Supabase project.
 
-> The anon key is **safe to expose in client code** — that's what it's designed for. Supabase enforces row-level security so each signed-in user only sees their own chats.
+### Quick path (for self-host / solo use)
+
+Add to `.env`:
+```env
+SUPABASE_URL=https://xxxxxxxxxxxx.supabase.co
+SUPABASE_ANON_KEY=eyJhbGciOi...
+```
+Restart the server. Email/password sign-up works immediately.
+
+### Full path (for shipping to users — OAuth + zero-config)
+
+Open **[docs/SETUP_AUTH.md](docs/SETUP_AUTH.md)** — step-by-step walkthrough that covers:
+1. Creating the Supabase project
+2. Pasting URL + anon key into `SUPABASE_CONFIG` (top of `public/index.html`)
+3. Enabling Google OAuth in Supabase + Google Cloud Console
+4. Enabling Microsoft OAuth (personal + work/school accounts) in Supabase + Azure Portal
+5. Setting redirect URIs
+6. Testing the full flow
+
+Total time: ~20 minutes. After that, every install gets one-click sign-in.
+
+> The Supabase **anon key is public by design** — that's why it's called anon. It's safe to commit to git and ship to every user's browser. Row-level security (RLS) on your database is what protects user data.
 
 ---
 
