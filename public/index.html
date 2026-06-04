@@ -299,16 +299,20 @@ html,body{height:100%;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;
 .model-opt-del:hover{color:var(--err)}
 
 /* ── Settings overlay ── */
-.settings-overlay{position:fixed;inset:0;z-index:500;background:var(--bg);display:none;flex-direction:column}
-.settings-overlay.open{display:flex}
+.settings-overlay{position:fixed;inset:0;z-index:500;background:var(--bg);display:flex;flex-direction:column;opacity:0;transform:translateY(12px);pointer-events:none;transition:opacity .25s var(--ease),transform .25s var(--ease);visibility:hidden}
+.settings-overlay.open{opacity:1;transform:translateY(0);pointer-events:all;visibility:visible}
 .settings-hdr{height:44px;display:flex;align-items:center;gap:8px;padding:0 10px;border-bottom:1px solid var(--border);flex-shrink:0}
+.settings-hdr .btn-icon{transition:transform .15s var(--ease)}
+.settings-hdr .btn-icon:hover{transform:scale(1.1)}
+.settings-hdr .btn-icon:active{transform:scale(0.95)}
 .settings-hdr .stitle{font-size:15px;font-weight:600;color:var(--text)}
 .settings-body{display:flex;flex:1;overflow:hidden}
 .settings-nav{width:90px;border-right:1px solid var(--border);display:flex;flex-direction:column;padding:8px 4px;gap:2px;overflow-y:auto;flex-shrink:0}
 .snav-item{background:none;border:none;text-align:left;padding:7px 8px;font-size:11px;color:var(--text2);cursor:pointer;border-radius:var(--r2);transition:all .12s;line-height:1.3;font-family:inherit}
 .snav-item:hover{background:var(--surf);color:var(--text)}
 .snav-item.active{background:var(--surf2);color:var(--text);font-weight:600}
-.sbody{padding:16px;display:flex;flex-direction:column;gap:18px;overflow-y:auto;flex:1}
+.sbody{padding:16px;display:flex;flex-direction:column;gap:18px;overflow-y:auto;overflow-x:hidden;flex:1;min-width:0;animation:settingsFadeIn .2s var(--ease)}
+@keyframes settingsFadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
 .sgrp{display:flex;flex-direction:column;gap:8px}
 .slabel{font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px}
 .theme-row{display:grid;grid-template-columns:1fr 1fr;gap:6px}
@@ -336,8 +340,8 @@ html,body{height:100%;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;
 .stat-card{background:var(--surf);border-radius:var(--r2);padding:10px;text-align:center}
 .stat-val{font-size:20px;font-weight:700;color:var(--text)}
 .stat-label{font-size:10px;color:var(--text3);margin-top:2px}
-.cal-grid{display:grid;grid-template-columns:repeat(53,1fr);gap:1px}
-.cal-cell{width:100%;aspect-ratio:1;border-radius:1px;background:var(--surf)}
+.cal-grid{display:grid;grid-template-columns:repeat(26,1fr);gap:2px}
+.cal-cell{width:100%;aspect-ratio:1;border-radius:2px;background:var(--surf);min-width:5px}
 .cal-cell[data-lvl="1"]{background:rgba(var(--accent-rgb),.25)}
 .cal-cell[data-lvl="2"]{background:rgba(var(--accent-rgb),.5)}
 .cal-cell[data-lvl="3"]{background:rgba(var(--accent-rgb),.75)}
@@ -433,7 +437,9 @@ mark.search-hl.current{background:rgba(var(--accent-rgb),.6)}
 .auth-err{font-size:12px;color:var(--err);text-align:center;min-height:16px}
 .auth-link{font-size:12px;color:var(--accent);cursor:pointer;text-align:center;background:none;border:none;padding:0;font-family:inherit}
 .auth-link:hover{text-decoration:underline}
-.auth-avatar{width:28px;height:28px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px;font-weight:700;flex-shrink:0;cursor:pointer;border:none}
+.auth-avatar{width:28px;height:28px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px;font-weight:700;flex-shrink:0;cursor:pointer;border:none;transition:transform .15s var(--spring),box-shadow .15s}
+.auth-avatar:hover{transform:scale(1.1);box-shadow:0 2px 8px rgba(var(--accent-rgb),.3)}
+.auth-avatar:active{transform:scale(0.93)}
 /* ── 2FA verification modal ── */
 .tfa-modal{position:fixed;inset:0;z-index:800;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.5);visibility:hidden;opacity:0;transition:opacity .2s,visibility .2s}
 .tfa-modal.open{visibility:visible;opacity:1}
@@ -480,13 +486,13 @@ mark.search-hl.current{background:rgba(var(--accent-rgb),.6)}
     <div class="memory-strip" id="memoryStrip"></div>
     <div style="position:relative;flex:1;display:flex;flex-direction:column;overflow:hidden">
     <div class="conv-search" id="convSearch">
-      <input id="convSearchInput" placeholder="Find in conversation…" oninput="doConvSearch(this.value)">
+      <input id="convSearchInput" placeholder="Find in conversation…" oninput="doConvSearch(this.value)" onkeydown="convSearchKey(event)">
       <span class="conv-search-count" id="convSearchCount"></span>
       <button onclick="convSearchNav(-1)" title="Previous">↑</button>
       <button onclick="convSearchNav(1)" title="Next">↓</button>
       <button onclick="closeConvSearch()" title="Close">✕</button>
     </div>
-    <div class="messages" id="messages" style="flex:1">
+    <div class="messages" id="messages">
       <div class="empty-state" id="emptyState">
         <div class="empty-icon">✦</div>
         <div class="empty-title">Excel AI Assistant</div>
@@ -718,8 +724,9 @@ function classifyIntent(text) {
 // ── Security state ────────────────────────────────────────────────────────────
 let sessionDangerConfirmed = new Set(); // 'high', 'critical' confirmed this session
 let sessionPasswordVerified = false;    // password entered once this session
-const APP_VERSION = 'v5.14.0';
+const APP_VERSION = 'v5.14.1';
 const CHANGELOG = [
+  { ver: 'v5.14.1', date: '2026-06-04', summary: 'UX polish: smooth animations for settings overlay (fade+slide), account button (spring scale), and tab content (fade-in). Slash popup capped at 10 items; Enter now executes the selected popup item instead of sending raw partial text. Ctrl+F search supports arrow keys and Enter/Shift+Enter for navigation. Sign-out button shows loading state. Settings always accessible (account icon opens settings even when not signed in). Calendar grid shows 26 weeks with larger cells. Fixed horizontal scroll in settings content area.' },
   { ver: 'v5.14.0', date: '2026-06-04', summary: 'Usage dashboard: GitHub-style activity calendar, time-of-day heatmap, model usage bars, task category donut chart, code execution success rate, cost breakdown table, streak tracking. 12 new slash commands: /undo, /redo, /export (md/json), /usage, /search, /model, /provider, /pin, /forget, /version, /find. Sidebar search: filter chat history by title or message content with live previews. In-conversation search (Ctrl+F): highlights matches with up/down navigation. Full analytics tracking engine logs every interaction (messages, code executions, undos, slash commands) with auto-classified task categories.' },
   { ver: 'v5.13.0', date: '2026-06-04', summary: 'Major settings redesign: full-overlay settings panel (Claude-style) replaces the old drawer. 7 subcategories: Profile, General, Providers, Capabilities, Preferences, Privacy & Security, History. Universal provider system — pick from 10 providers (OpenRouter, Groq, OpenAI, Anthropic, Google AI, Mistral, Together, Ollama, MLX, Custom) with per-provider API key fields. Server refactored to route by provider config (3 format branches: openai-compat, ollama, anthropic). Header redesigned: logo shrunk, sync status is now an informative box with hover tooltip (sheet name, rows, cols, last sync time), settings button removed — account icon opens settings. Cost limit bug fixed (prompt/session modes no longer cross-contaminate). Input placeholder simplified.' },
   { ver: 'v5.12.0', date: '2026-06-04', summary: 'One-click sign-in: Google + Microsoft OAuth (personal + work/school accounts) added to the auth modal alongside the existing email/password flow. Supabase config is now baked into the client (SUPABASE_CONFIG constant at the top of index.html, public anon key — safe by design) so end users no longer need their own Supabase project. Server-side env vars still override if set, for self-hosters. New docs/SETUP_AUTH.md walks through creating the Supabase project, enabling OAuth providers in Google Cloud + Azure, and redirect-URL configuration. OAuth uses a popup → /auth/callback → postMessage → setSession() flow that works inside the Excel task pane.' },
@@ -978,7 +985,14 @@ function renderProfileTab() {
     return `<div class="sgrp"><div class="slabel">Account</div><div style="font-size:13px;color:var(--text2);margin-bottom:8px">Sign in to sync chats across devices.</div><button class="add-model-btn" onclick="closeSettings();openAuthModal()">Sign in</button></div>`;
   }
   const initials = (currentUser.email || '?').slice(0, 2).toUpperCase();
-  return `<div class="sgrp"><div class="slabel">Account</div><div style="display:flex;align-items:center;gap:10px;margin-bottom:8px"><div style="width:36px;height:36px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700">${esc(initials)}</div><div><div style="font-size:13px;font-weight:600;color:var(--text)">${esc(currentUser.email)}</div><div style="font-size:11px;color:var(--text3)">Signed in</div></div></div><button class="sdanger" onclick="supabaseClient?.auth.signOut()">Sign out</button></div>`;
+  return `<div class="sgrp"><div class="slabel">Account</div><div style="display:flex;align-items:center;gap:10px;margin-bottom:8px"><div style="width:36px;height:36px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700">${esc(initials)}</div><div><div style="font-size:13px;font-weight:600;color:var(--text)">${esc(currentUser.email)}</div><div style="font-size:11px;color:var(--text3)">Signed in</div></div></div><button class="sdanger" id="signOutBtn" onclick="doSignOut(this)">Sign out</button></div>`;
+}
+async function doSignOut(btn) {
+  btn.textContent = 'Signing out…'; btn.disabled = true; btn.style.opacity = '0.6';
+  try { await supabaseClient?.auth.signOut(); }
+  catch { showToast('Sign out failed'); btn.textContent = 'Sign out'; btn.disabled = false; btn.style.opacity = ''; return; }
+  currentUser = null; showAccountBtn(null); closeSettings();
+  showToast('Signed out');
 }
 function renderGeneralTab() {
   const th = localStorage.getItem('theme') || 'light';
@@ -1049,23 +1063,25 @@ function renderUsageTab() {
   msgs.forEach(e => { const d = e.ts?.slice(0,10); if(d) dayCounts[d] = (dayCounts[d]||0)+1; });
   function calLevel(n) { return n === 0 ? 0 : n <= 3 ? 1 : n <= 10 ? 2 : n <= 25 ? 3 : 4; }
   let calCells = '';
+  const CAL_WEEKS = 26;
+  const CAL_DAYS = CAL_WEEKS * 7;
   const startDate = new Date(today);
-  startDate.setDate(startDate.getDate() - 363);
+  startDate.setDate(startDate.getDate() - (CAL_DAYS - 1));
   startDate.setDate(startDate.getDate() - startDate.getDay());
   const monthLabels = [];
   let lastMonth = -1;
-  for (let i = 0; i < 371; i++) {
+  const totalSlots = CAL_WEEKS * 7;
+  for (let i = 0; i < totalSlots; i++) {
     const d = new Date(startDate);
     d.setDate(d.getDate() + i);
     if (d > today) { calCells += '<div class="cal-cell" style="visibility:hidden"></div>'; continue; }
     const ds = d.toISOString().slice(0,10);
     const cnt = dayCounts[ds] || 0;
-    const dow = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d.getDay()];
     calCells += `<div class="cal-cell" data-lvl="${calLevel(cnt)}" title="${ds}: ${cnt} messages"></div>`;
     if (i % 7 === 0 && d.getMonth() !== lastMonth) { lastMonth = d.getMonth(); monthLabels.push({ col: Math.floor(i/7), label: d.toLocaleString('default',{month:'short'}) }); }
   }
   let monthsHtml = '<div class="cal-months">';
-  for (let w = 0; w < 53; w++) {
+  for (let w = 0; w < CAL_WEEKS; w++) {
     const ml = monthLabels.find(m => m.col === w);
     monthsHtml += `<span>${ml ? ml.label : ''}</span>`;
   }
@@ -2344,6 +2360,12 @@ function updateConvSearchHighlight() {
   }
   document.getElementById('convSearchCount').textContent = convSearchTotal > 0 ? (convSearchIdx+1) + ' of ' + convSearchTotal : 'No results';
 }
+function convSearchKey(e) {
+  if (e.key === 'Enter') { e.preventDefault(); convSearchNav(e.shiftKey ? -1 : 1); }
+  if (e.key === 'ArrowDown') { e.preventDefault(); convSearchNav(1); }
+  if (e.key === 'ArrowUp') { e.preventDefault(); convSearchNav(-1); }
+  if (e.key === 'Escape') { e.preventDefault(); closeConvSearch(); }
+}
 function convSearchNav(dir) {
   if (convSearchTotal <= 0) return;
   convSearchIdx = (convSearchIdx + dir + convSearchTotal) % convSearchTotal;
@@ -2393,7 +2415,7 @@ function updateSlashPopup(val) {
   }
 
   if (!items.length) { closeSlashPopup(); return; }
-  slashPopupItems = items;
+  slashPopupItems = items.slice(0, 10);
   slashPopupSel = 0;
   renderSlashPopup();
 }
@@ -2465,6 +2487,17 @@ function handleKey(e){
     if (e.key === 'ArrowUp')   { e.preventDefault(); slashPopupSel = (slashPopupSel-1+slashPopupItems.length) % slashPopupItems.length; renderSlashPopup(); return; }
     if (e.key === 'Tab' || e.key === 'ArrowRight') { e.preventDefault(); pickSlashItem(slashPopupSel); return; }
     if (e.key === 'Escape')    { e.preventDefault(); closeSlashPopup(); return; }
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      const item = slashPopupItems[slashPopupSel];
+      if (item) {
+        const inp = document.getElementById('msgInput');
+        inp.value = item.complete;
+        closeSlashPopup();
+        if (!item.complete.endsWith(' ')) sendMessage();
+      }
+      return;
+    }
   }
   if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMessage();}
 }
@@ -2838,8 +2871,7 @@ function showAccountBtn(user) {
 }
 
 function handleAccountClick() {
-  if (currentUser) openSettings('profile');
-  else openAuthModal();
+  openSettings('profile');
 }
 
 function openAuthModal() {
