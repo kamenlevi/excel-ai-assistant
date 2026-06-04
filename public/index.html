@@ -244,7 +244,7 @@ html,body{height:100%;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;
 #plusBtn{position:relative}
 
 /* ── Model picker ── */
-.modal{position:fixed;inset:0;z-index:400;visibility:hidden;pointer-events:none}
+.modal{position:fixed;inset:0;z-index:600;visibility:hidden;pointer-events:none}
 .modal.open{visibility:visible;pointer-events:all}
 .modal-bd{position:absolute;inset:0;background:rgba(0,0,0,.3);opacity:0;transition:opacity .2s var(--ease)}
 .modal.open .modal-bd{opacity:1}
@@ -476,9 +476,9 @@ mark.search-hl.current{background:rgba(var(--accent-rgb),.6)}
       <button class="btn-icon" onclick="openSidebar()" title="Chat history">☰</button>
       <div class="logo-icon">AI</div>
       <button class="model-btn" id="modelBtn" onclick="openModelPicker()">Loading…</button>
-      <div class="sync-box busy" id="syncBox">
+      <div class="sync-box" id="syncBox">
         <span class="sync-icon" id="syncIcon">⟳</span>
-        <div class="sync-tip" id="syncTip">Reading workbook…</div>
+        <div class="sync-tip" id="syncTip">Waiting for Excel…</div>
       </div>
       <button class="auth-avatar" id="accountBtn" onclick="handleAccountClick()" title="Account">?</button>
     </header>
@@ -827,13 +827,16 @@ function getProviderConfig() {
 
 // ── Boot ──────────────────────────────────────────────────────────────────────
 Office.onReady(async info => {
-  if (info.host !== Office.HostType.Excel) return;
+  if (info.host !== Office.HostType.Excel) {
+    setSyncStatus('err', 'Not in Excel');
+    return;
+  }
   loadSettings();
   customModels = JSON.parse(localStorage.getItem('customModels') || '[]');
-  await Promise.all([loadChats(), detectLocal()]);
+  try { await Promise.all([loadChats(), detectLocal()]); } catch {}
   renderModelBtn();
   renderMemoryStrip();
-  await readWorkbook();
+  try { await readWorkbook(); } catch { setSyncStatus('err', 'Sync failed'); }
   registerListeners();
   if (!chatId) newChat(false);
   document.addEventListener('click', e => {
