@@ -626,14 +626,38 @@ async function* readLines(stream) {
 }
 
 // Yields {token, usage?} chunks; usage appears once at end for OpenAI-compatible providers
-async function* streamAI(messages, maxTokens, model, useOllama, useGroq, apiKey, groqKey) {
-  const effectiveModel = model || DEFAULT_MODEL;
-  const orKey = apiKey  || OPENROUTER_KEY;
-  const gKey  = groqKey || GROQ_KEY;
+// Resolve provider config from client request + server env fallbacks
+function resolveProvider(req) {
+  const pc = req.body?.providerConfig;
+  if (pc && pc.provider && pc.provider !== 'openrouter') {
+    // New-style request with explicit provider
+    const key = pc.apiKey || ({
+      openrouter: OPENROUTER_KEY, groq: GROQ_KEY,
+      openai: process.env.OPENAI_KEY, anthropic: process.env.ANTHROPIC_KEY,
+      google: process.env.GOOGLE_AI_KEY, mistral: process.env.MISTRAL_KEY,
+      together: process.env.TOGETHER_KEY,
+    })[pc.provider] || '';
+    return { provider: pc.provider, endpoint: pc.endpoint, apiKey: key, format: pc.format || 'openai' };
+  }
+  // Backward compat: old-style boolean flags
+  const { useOllama, useGroq, apiKey, groqKey } = req.body || {};
+  if (useOllama) return { provider: 'ollama', endpoint: '', apiKey: '', format: 'ollama' };
+  if (useGroq || USE_GROQ) return { provider: 'groq', endpoint: 'https://api.groq.com/openai/v1/chat/completions', apiKey: groqKey || GROQ_KEY, format: 'openai' };
+  const orKey = (pc?.apiKey) || apiKey || OPENROUTER_KEY;
+  if (USE_OPENROUTER || orKey) return { provider: 'openrouter', endpoint: 'https://openrouter.ai/api/v1/chat/completions', apiKey: orKey, format: 'openai' };
+  if (USE_MLX) return { provider: 'mlx', endpoint: `http://${OLLAMA_HOST}:${MLX_PORT}/v1/chat/completions`, apiKey: '', format: 'openai' };
+  return { provider: 'ollama', endpoint: '', apiKey: '', format: 'ollama' };
+}
 
-  if (useOllama) {
+async function* streamAI(messages, maxTokens, model, providerCfg) {
+  const effectiveModel = model || DEFAULT_MODEL;
+  const { provider, endpoint, apiKey: pKey, format } = providerCfg;
+
+  // ── Ollama native format ──
+  if (format === 'ollama') {
+    const ollamaUrl = endpoint || `http://${OLLAMA_HOST}:${OLLAMA_PORT}/api/chat`;
     const msgsToSend = injectNoThink(messages, effectiveModel);
-    const res = await fetch(`http://localhost:${OLLAMA_PORT}/api/chat`, {
+    const res = await fetch(ollamaUrl, {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, timeout: 120000,
       body: JSON.stringify({ model: effectiveModel, messages: msgsToSend, stream: true,
         options: { num_ctx: 8192, num_predict: maxTokens, temperature: 0.15, top_p: 0.9, repeat_penalty: 1.1 } })
@@ -649,52 +673,47 @@ async function* streamAI(messages, maxTokens, model, useOllama, useGroq, apiKey,
     return;
   }
 
-  let url, headers, reqBody;
-
-  if (useGroq || USE_GROQ) {
-    const groqModel = (useGroq && model) ? model : 'llama-3.3-70b-versatile';
-    url = 'https://api.groq.com/openai/v1/chat/completions';
-    headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${gKey}` };
-    reqBody = { model: groqModel, messages, max_tokens: maxTokens, temperature: 0.15, top_p: 0.9,
-      stream: true, stream_options: { include_usage: true } };
-  } else if (USE_OPENROUTER || orKey) {
-    url = 'https://openrouter.ai/api/v1/chat/completions';
-    headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${orKey}`,
-      'HTTP-Referer': 'https://localhost:3000', 'X-Title': 'Excel AI Assistant' };
-    reqBody = { model: effectiveModel, messages, max_tokens: maxTokens, temperature: 0.15, top_p: 0.9,
-      stream: true, stream_options: { include_usage: true } };
-  } else if (USE_MLX) {
-    const msgsToSend = injectNoThink(messages, effectiveModel);
-    url = `http://${OLLAMA_HOST}:${MLX_PORT}/v1/chat/completions`;
-    headers = { 'Content-Type': 'application/json' };
-    reqBody = { model: effectiveModel, messages: msgsToSend, max_tokens: maxTokens, temperature: 0.15, top_p: 0.9, stream: true };
-  } else {
-    // Fallback: Ollama on MacBook
-    const fallbackModel = 'qwen3:32b';
-    const fallbackMsgs  = injectNoThink(messages, fallbackModel);
-    const res = await fetch(`http://${OLLAMA_HOST}:${OLLAMA_PORT}/api/chat`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, timeout: 120000,
-      body: JSON.stringify({ model: fallbackModel, messages: fallbackMsgs, stream: true,
-        options: { num_ctx: 8192, num_predict: maxTokens, temperature: 0.15, top_p: 0.9, repeat_penalty: 1.1 } })
+  // ── Anthropic Messages API ──
+  if (format === 'anthropic') {
+    const url = endpoint || 'https://api.anthropic.com/v1/messages';
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': pKey, 'anthropic-version': '2023-06-01' },
+      body: JSON.stringify({ model: effectiveModel, messages, max_tokens: maxTokens, stream: true })
     });
+    if (!res.ok) {
+      let body = ''; try { body = await res.text(); } catch {}
+      let msg = `Anthropic error ${res.status}`;
+      try { const j = JSON.parse(body); msg = j.error?.message || msg; } catch { if (body) msg = body.slice(0, 300); }
+      throw new Error(msg);
+    }
+    let pendingUsage = null;
     for await (const line of readLines(res.body)) {
-      if (!line.trim()) continue;
+      if (!line.startsWith('data: ')) continue;
+      const raw = line.slice(6).trim();
       try {
-        const d = JSON.parse(line);
-        if (d.message?.content) yield { token: d.message.content };
-        if (d.done) return;
+        const d = JSON.parse(raw);
+        if (d.type === 'content_block_delta' && d.delta?.text) yield { token: d.delta.text };
+        if (d.type === 'message_delta' && d.usage) pendingUsage = d.usage;
+        if (d.type === 'message_stop') { if (pendingUsage) yield { token: '', usage: pendingUsage }; return; }
       } catch {}
     }
+    if (pendingUsage) yield { token: '', usage: pendingUsage };
     return;
   }
 
+  // ── OpenAI-compatible format (OpenRouter, Groq, OpenAI, Mistral, Together, MLX, Google AI, custom) ──
+  let url = endpoint;
+  const headers = { 'Content-Type': 'application/json' };
+  if (pKey) headers['Authorization'] = `Bearer ${pKey}`;
+  if (provider === 'openrouter') { headers['HTTP-Referer'] = 'https://localhost:3000'; headers['X-Title'] = 'Excel AI Assistant'; }
+  const msgsToSend = (provider === 'mlx' || provider === 'ollama') ? injectNoThink(messages, effectiveModel) : messages;
+  const reqBody = { model: effectiveModel, messages: msgsToSend, max_tokens: maxTokens, temperature: 0.15, top_p: 0.9,
+    stream: true, stream_options: { include_usage: true } };
+
   const res = await fetch(url, { method: 'POST', headers, body: JSON.stringify(reqBody) });
   if (!res.ok) {
-    // Provider returned an error (bad key, rate limit, invalid model, …). The body
-    // is a JSON error, not an SSE stream — surface it instead of silently yielding
-    // nothing (which would show the user an empty response).
-    let body = '';
-    try { body = await res.text(); } catch {}
+    let body = ''; try { body = await res.text(); } catch {}
     let msg = `Provider error ${res.status}`;
     try { const j = JSON.parse(body); msg = j.error?.message || (typeof j.error === 'string' ? j.error : null) || msg; }
     catch { if (body) msg = body.slice(0, 300); }
@@ -715,104 +734,59 @@ async function* streamAI(messages, maxTokens, model, useOllama, useGroq, apiKey,
   if (pendingUsage) yield { token: '', usage: pendingUsage };
 }
 
-async function callAI(messages, maxTokens = 4096, model = null, useOllama = false, useGroq = false, apiKey = null, groqKey = null) {
+async function callAI(messages, maxTokens = 4096, model = null, useOllama = false, useGroq = false, apiKey = null, groqKey = null, providerCfg = null) {
+  // If no explicit providerCfg, build one from legacy flags
+  if (!providerCfg) {
+    if (useOllama) providerCfg = { provider: 'ollama', endpoint: '', apiKey: '', format: 'ollama' };
+    else if (useGroq || USE_GROQ) providerCfg = { provider: 'groq', endpoint: 'https://api.groq.com/openai/v1/chat/completions', apiKey: groqKey || GROQ_KEY, format: 'openai' };
+    else if (USE_OPENROUTER || apiKey || OPENROUTER_KEY) providerCfg = { provider: 'openrouter', endpoint: 'https://openrouter.ai/api/v1/chat/completions', apiKey: apiKey || OPENROUTER_KEY, format: 'openai' };
+    else if (USE_MLX) providerCfg = { provider: 'mlx', endpoint: `http://${OLLAMA_HOST}:${MLX_PORT}/v1/chat/completions`, apiKey: '', format: 'openai' };
+    else providerCfg = { provider: 'ollama', endpoint: '', apiKey: '', format: 'ollama' };
+  }
   const effectiveModel = model || DEFAULT_MODEL;
-  const orKey  = apiKey  || OPENROUTER_KEY;
-  const gKey   = groqKey || GROQ_KEY;
+  const { provider, endpoint, apiKey: pKey, format } = providerCfg;
 
-  if (useOllama) {
+  // ── Ollama native format ──
+  if (format === 'ollama') {
+    const ollamaUrl = endpoint || `http://${OLLAMA_HOST}:${OLLAMA_PORT}/api/chat`;
     const msgsToSend = injectNoThink(messages, effectiveModel);
-    const res = await fetch(`http://localhost:${OLLAMA_PORT}/api/chat`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      timeout: 120000,
-      body: JSON.stringify({
-        model: effectiveModel, messages: msgsToSend, stream: false,
-        options: { num_ctx: 8192, num_predict: maxTokens, temperature: 0.15, top_p: 0.9, repeat_penalty: 1.1 }
-      })
+    const res = await fetch(ollamaUrl, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, timeout: 120000,
+      body: JSON.stringify({ model: effectiveModel, messages: msgsToSend, stream: false,
+        options: { num_ctx: 8192, num_predict: maxTokens, temperature: 0.15, top_p: 0.9, repeat_penalty: 1.1 } })
     });
     const data = await res.json();
     if (!data.message) throw new Error(data.error || 'Ollama returned no message — is the model loaded?');
     return { text: data.message.content, usage: null };
   }
 
-  if (useGroq || USE_GROQ) {
-    const groqModel = (useGroq && model) ? model : 'llama-3.3-70b-versatile';
-    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+  // ── Anthropic Messages API ──
+  if (format === 'anthropic') {
+    const url = endpoint || 'https://api.anthropic.com/v1/messages';
+    const res = await fetch(url, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${gKey}`
-      },
-      body: JSON.stringify({
-        model: groqModel,
-        messages,
-        max_tokens: maxTokens,
-        temperature: 0.15,
-        top_p: 0.9
-      })
+      headers: { 'Content-Type': 'application/json', 'x-api-key': pKey, 'anthropic-version': '2023-06-01' },
+      body: JSON.stringify({ model: effectiveModel, messages, max_tokens: maxTokens })
     });
     const data = await res.json();
-    if (data.error) throw new Error(data.error.message);
-    return { text: data.choices[0].message.content, usage: data.usage || null };
+    if (data.error) throw new Error(data.error.message || JSON.stringify(data.error));
+    const text = (data.content || []).filter(b => b.type === 'text').map(b => b.text).join('');
+    return { text, usage: data.usage || null };
   }
 
-  if (USE_OPENROUTER || orKey) {
-    const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${orKey}`,
-        'HTTP-Referer': 'https://localhost:3000',
-        'X-Title': 'Excel AI Assistant'
-      },
-      body: JSON.stringify({
-        model: effectiveModel,
-        messages,
-        max_tokens: maxTokens,
-        temperature: 0.15,
-        top_p: 0.9
-      })
-    });
-    const data = await res.json();
-    if (data.error) throw new Error(JSON.stringify(data.error));
-    return { text: data.choices[0].message.content, usage: data.usage || null };
-  }
-
-  if (USE_MLX) {
-    const msgsToSend = injectNoThink(messages, effectiveModel);
-    const res = await fetch(`http://${OLLAMA_HOST}:${MLX_PORT}/v1/chat/completions`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      timeout: 120000,
-      body: JSON.stringify({
-        model: effectiveModel,
-        messages: msgsToSend,
-        max_tokens: maxTokens,
-        temperature: 0.15,
-        top_p: 0.9
-      })
-    });
-    const data = await res.json();
-    if (!data.choices?.[0]?.message) throw new Error(data.error?.message || 'MLX returned no response');
-    return { text: data.choices[0].message.content, usage: data.usage || null };
-  }
-
-  // Fallback: Ollama on MacBook
-  const fallbackModel = 'qwen3:32b';
-  const fallbackMsgs  = injectNoThink(messages, fallbackModel);
-  const res = await fetch(`http://${OLLAMA_HOST}:${OLLAMA_PORT}/api/chat`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    timeout: 120000,
-    body: JSON.stringify({
-      model: fallbackModel, messages: fallbackMsgs, stream: false,
-      options: { num_ctx: 8192, num_predict: maxTokens, temperature: 0.15, top_p: 0.9, repeat_penalty: 1.1 }
-    })
+  // ── OpenAI-compatible ──
+  const url = endpoint;
+  const headers = { 'Content-Type': 'application/json' };
+  if (pKey) headers['Authorization'] = `Bearer ${pKey}`;
+  if (provider === 'openrouter') { headers['HTTP-Referer'] = 'https://localhost:3000'; headers['X-Title'] = 'Excel AI Assistant'; }
+  const msgsToSend = (provider === 'mlx') ? injectNoThink(messages, effectiveModel) : messages;
+  const res = await fetch(url, {
+    method: 'POST', headers,
+    body: JSON.stringify({ model: effectiveModel, messages: msgsToSend, max_tokens: maxTokens, temperature: 0.15, top_p: 0.9 })
   });
   const data = await res.json();
-  if (!data.message) throw new Error(data.error || 'Ollama returned no message — is the model loaded?');
-  return { text: data.message.content, usage: null };
+  if (data.error) throw new Error(data.error.message || (typeof data.error === 'string' ? data.error : JSON.stringify(data.error)));
+  return { text: data.choices[0].message.content, usage: data.usage || null };
 }
 
 // ── Parse code from response ─────────────────────────────────────────────────
@@ -1539,6 +1513,7 @@ function sanitizeMessages(msgs) {
 // ── Main chat route ──────────────────────────────────────────────────────────
 app.post('/api/chat', async (req, res) => {
   const { messages, workbookData, activeSheet, summary, model, useOllama, useGroq, apiKey, groqKey, options } = req.body;
+  const pCfg = resolveProvider(req);
 
   const preferences   = options?.preferences   || '';
   const deepThink     = options?.deepThink     || false;
@@ -1691,7 +1666,7 @@ app.post('/api/chat', async (req, res) => {
   ];
 
   try {
-    let { text: responseText, usage } = await callAI(allMessages, maxTokens, effectiveModel, useOllama || false, useGroq || false, apiKey || null, groqKey || null);
+    let { text: responseText, usage } = await callAI(allMessages, maxTokens, effectiveModel, useOllama || false, useGroq || false, apiKey || null, groqKey || null, pCfg);
     responseText = responseText.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
 
     if (!responseText.includes('VBA_MACRO::') && modelForgotCode(responseText, rawUserMessage)) {
@@ -1725,6 +1700,7 @@ app.post('/api/chat', async (req, res) => {
 // ── Streaming chat route ─────────────────────────────────────────────────────
 app.post('/api/chat/stream', async (req, res) => {
   const { messages, workbookData, activeSheet, summary, model, useOllama, useGroq, apiKey, groqKey, options } = req.body;
+  const pCfg = resolveProvider(req);
 
   const preferences  = options?.preferences  || '';
   const deepThink    = options?.deepThink    || false;
@@ -1881,7 +1857,7 @@ app.post('/api/chat/stream', async (req, res) => {
 
   let finalUsage = null;
   try {
-    for await (const { token, usage: u } of streamAI(allMessages, maxTokens, effectiveModel, useOllama || false, useGroq || false, apiKey || null, groqKey || null)) {
+    for await (const { token, usage: u } of streamAI(allMessages, maxTokens, effectiveModel, pCfg)) {
       if (res.writableEnded) break;
       if (u) finalUsage = u;
       if (token) feedToken(token);

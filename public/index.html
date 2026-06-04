@@ -83,15 +83,20 @@ html,body{height:100%;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;
 .header{height:44px;display:flex;align-items:center;gap:8px;padding:0 10px;border-bottom:1px solid var(--border);background:var(--bg);flex-shrink:0}
 .btn-icon{background:none;border:none;color:var(--text2);cursor:pointer;padding:5px;border-radius:var(--r2);font-size:16px;line-height:1;transition:background .1s,color .1s;display:flex;align-items:center;justify-content:center}
 .btn-icon:hover{background:var(--surf);color:var(--text)}
-.logo{display:flex;align-items:center;gap:6px;flex-shrink:0}
-.logo-icon{width:20px;height:20px;background:var(--accent);border-radius:5px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:700}
-.logo span{font-size:13px;font-weight:600;color:var(--text)}
+.logo-icon{width:22px;height:22px;background:var(--accent);border-radius:5px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:700;flex-shrink:0}
 .model-btn{flex:1;background:var(--surf);border:1px solid var(--border);border-radius:var(--r2);padding:5px 9px;font-size:12px;color:var(--text);cursor:pointer;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:border-color .15s;min-width:0}
 .model-btn:hover{border-color:var(--accent)}
-.sync-dot{width:7px;height:7px;border-radius:50%;background:var(--ok);flex-shrink:0;transition:background .3s}
-.sync-dot.busy{background:var(--accent);animation:pulse 1s infinite}
-.sync-dot.err{background:var(--err)}
+.sync-box{width:22px;height:22px;background:var(--surf);border:1px solid var(--border);border-radius:var(--r2);display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:default;position:relative;transition:border-color .3s,background .3s}
+.sync-box.ok{border-color:var(--ok);background:rgba(76,175,106,.08)}
+.sync-box.ok .sync-icon{color:var(--ok)}
+.sync-box.busy .sync-icon{color:var(--accent);animation:spin .8s linear infinite}
+.sync-box.err{border-color:var(--err);background:rgba(217,79,79,.08)}
+.sync-box.err .sync-icon{color:var(--err)}
+.sync-icon{font-size:13px;line-height:1;font-weight:700}
+.sync-tip{display:none;position:absolute;top:calc(100% + 6px);right:0;background:var(--bg);border:1px solid var(--border);border-radius:var(--r2);box-shadow:var(--shadow2);padding:8px 10px;font-size:11px;color:var(--text2);white-space:nowrap;z-index:100;line-height:1.6}
+.sync-box:hover .sync-tip{display:block}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+@keyframes spin{to{transform:rotate(360deg)}}
 
 /* ── Messages ── */
 .messages{flex:1;overflow-y:auto;padding:16px 12px;display:flex;flex-direction:column;gap:14px}
@@ -293,19 +298,16 @@ html,body{height:100%;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;
 .model-opt:hover .model-opt-del{opacity:1}
 .model-opt-del:hover{color:var(--err)}
 
-/* ── Settings ── */
-.settings{position:fixed;inset:0;z-index:400;visibility:hidden;pointer-events:none}
-.settings.open{visibility:visible;pointer-events:all}
-.settings-bd{position:absolute;inset:0;background:rgba(0,0,0,.3);opacity:0;transition:opacity .25s var(--ease)}
-.settings.open .settings-bd{opacity:1}
-.settings-draw{position:absolute;right:0;top:0;bottom:0;width:285px;background:var(--bg);border-left:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;transform:translateX(100%);transition:transform .35s var(--spring);will-change:transform}
-.settings.open .settings-draw{transform:translateX(0)}
-.shead{padding:13px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
-.stitle{font-size:15px;font-weight:600;color:var(--text)}
-.stabs{display:flex;border-bottom:1px solid var(--border);flex-shrink:0;padding:0 14px}
-.stab{background:none;border:none;padding:9px 12px;font-size:13px;font-weight:500;color:var(--text2);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .15s}
-.stab:hover{color:var(--text)}
-.stab.active{color:var(--accent);border-bottom-color:var(--accent)}
+/* ── Settings overlay ── */
+.settings-overlay{position:fixed;inset:0;z-index:500;background:var(--bg);display:none;flex-direction:column}
+.settings-overlay.open{display:flex}
+.settings-hdr{height:44px;display:flex;align-items:center;gap:8px;padding:0 10px;border-bottom:1px solid var(--border);flex-shrink:0}
+.settings-hdr .stitle{font-size:15px;font-weight:600;color:var(--text)}
+.settings-body{display:flex;flex:1;overflow:hidden}
+.settings-nav{width:90px;border-right:1px solid var(--border);display:flex;flex-direction:column;padding:8px 4px;gap:2px;overflow-y:auto;flex-shrink:0}
+.snav-item{background:none;border:none;text-align:left;padding:7px 8px;font-size:11px;color:var(--text2);cursor:pointer;border-radius:var(--r2);transition:all .12s;line-height:1.3;font-family:inherit}
+.snav-item:hover{background:var(--surf);color:var(--text)}
+.snav-item.active{background:var(--surf2);color:var(--text);font-weight:600}
 .sbody{padding:16px;display:flex;flex-direction:column;gap:18px;overflow-y:auto;flex:1}
 .sgrp{display:flex;flex-direction:column;gap:8px}
 .slabel{font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px}
@@ -405,11 +407,13 @@ html,body{height:100%;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;
   <div class="main">
     <header class="header">
       <button class="btn-icon" onclick="openSidebar()" title="Chat history">☰</button>
-      <div class="logo"><div class="logo-icon">AI</div><span>Excel AI</span></div>
+      <div class="logo-icon">AI</div>
       <button class="model-btn" id="modelBtn" onclick="openModelPicker()">Loading…</button>
-      <span class="sync-dot busy" id="syncDot" title="Syncing…"></span>
-      <button class="auth-avatar" id="accountBtn" onclick="openAuthModal()" title="Account" style="display:none">?</button>
-      <button class="btn-icon" onclick="openSettings()" title="Settings">⚙</button>
+      <div class="sync-box busy" id="syncBox">
+        <span class="sync-icon" id="syncIcon">⟳</span>
+        <div class="sync-tip" id="syncTip">Reading workbook…</div>
+      </div>
+      <button class="auth-avatar" id="accountBtn" onclick="handleAccountClick()" title="Account">?</button>
     </header>
 
     <div class="memory-strip" id="memoryStrip"></div>
@@ -434,7 +438,7 @@ html,body{height:100%;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;
           <span id="attachBadge" style="display:flex;align-items:center;gap:4px"></span>
         </div>
         <div class="input-row">
-          <textarea id="msgInput" placeholder="Ask anything… (type / for commands)" rows="1"
+          <textarea id="msgInput" placeholder="Ask anything…" rows="1"
             onkeydown="handleKey(event)" oninput="autoResize(this);updateSlashPopup(this.value)"></textarea>
           <div class="input-btns">
             <button class="act-btn" onclick="document.getElementById('fileInput').click()" title="Attach file">📎</button>
@@ -517,90 +521,15 @@ html,body{height:100%;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;
   </div>
 </div>
 
-<!-- Settings -->
-<div class="settings" id="settingsPanel">
-  <div class="settings-bd" onclick="closeSettings()"></div>
-  <div class="settings-draw">
-    <div class="shead"><span class="stitle">Settings</span><button class="btn-icon" onclick="closeSettings()">✕</button></div>
-    <div class="stabs">
-      <button class="stab active" id="stab-general" onclick="switchSettingsTab('general')">General</button>
-      <button class="stab" id="stab-prefs" onclick="switchSettingsTab('prefs')">Preferences</button>
-    </div>
-
-    <!-- General tab -->
-    <div class="sbody" id="sbody-general">
-      <div class="sgrp">
-        <div class="slabel">Theme</div>
-        <div class="theme-row">
-          <button class="theme-opt" id="tLight" onclick="setTheme('light')">☀ Light</button>
-          <button class="theme-opt" id="tDark"  onclick="setTheme('dark')">☾ Dark</button>
-        </div>
-      </div>
-      <div class="sgrp">
-        <div class="slabel">API Keys</div>
-        <div style="display:flex;flex-direction:column;gap:8px">
-          <div>
-            <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:4px">OpenRouter</div>
-            <input class="sinput" type="password" id="apiKeyInp" placeholder="sk-or-v1-…" oninput="saveKey('or')">
-            <span class="sinote">openrouter.ai — access all models</span>
-          </div>
-          <div>
-            <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:4px">Groq</div>
-            <input class="sinput" type="password" id="groqKeyInp" placeholder="gsk_…" oninput="saveKey('groq')">
-            <span class="sinote">groq.com — ultra-fast inference</span>
-          </div>
-        </div>
-        <span class="sinote">Keys stored locally on your device only.</span>
-      </div>
-      <div class="sgrp">
-        <div class="slabel">Behaviour</div>
-        <div class="srow"><span class="srow-label">Auto-sync workbook</span><div class="toggle on" id="autoSyncTog" onclick="togSet('autoSync','autoSyncTog')"></div></div>
-        <div class="srow" style="margin-top:8px"><span class="srow-label">Show generated code</span><div class="toggle on" id="showCodeTog" onclick="togSet('showCode','showCodeTog')"></div></div>
-      </div>
-      <div class="sgrp">
-        <div class="slabel">History</div>
-        <button class="sdanger" onclick="clearAllHistory()">Delete all chat history</button>
-      </div>
-      <div class="sgrp">
-        <div class="slabel">Security</div>
-        <div style="font-size:12px;color:var(--text2);margin-bottom:6px">Password required for critical operations (file deletion, shell commands). Leave blank to disable.</div>
-        <input class="sinput" type="password" id="secCurPwd" placeholder="Current password (leave blank if not set)" style="margin-bottom:6px">
-        <input class="sinput" type="password" id="secNewPwd" placeholder="New password (leave blank to disable)">
-        <button class="add-model-btn" onclick="saveSecPwd()" style="margin-top:6px">Save password</button>
-        <span class="sinote" id="secPwdNote">Not set — critical operations need only confirmation.</span>
-      </div>
-      <div class="sfooter" style="cursor:pointer" onclick="openChangelog()" title="Click to see version history">Excel AI Assistant · <strong id="versionLabel">v5.12.0</strong></div>
-    </div>
-
-    <!-- Preferences tab -->
-    <div class="sbody" id="sbody-prefs" style="display:none">
-      <div class="sgrp">
-        <div class="slabel">Your Preferences</div>
-        <textarea class="stextarea" id="prefsInp" placeholder="e.g. Always respond in English. Prefer concise answers. Avoid using helper columns. Use named ranges when possible." oninput="savePrefs()"></textarea>
-        <span class="sinote">The AI follows these on every message.</span>
-      </div>
-      <div class="sgrp">
-        <div class="slabel">Cost Limit</div>
-        <div class="srow" style="margin-bottom:6px">
-          <span class="srow-label" style="font-size:12px">Limit per</span>
-          <div class="seg-ctrl">
-            <button class="seg-btn active" id="seg-prompt" onclick="setCostLimitType('prompt')">Prompt</button>
-            <button class="seg-btn" id="seg-session" onclick="setCostLimitType('session')">Session</button>
-          </div>
-        </div>
-        <div class="cost-row">
-          <input type="range" class="cost-slider" id="costSlider" min="0" max="10" step="1" value="0" oninput="updateCostSlider(this.value)">
-          <span class="cost-val" id="costSliderVal">Off</span>
-        </div>
-        <span class="sinote" id="costNote">No limit — all prompts allowed.</span>
-        <span class="sinote" id="sessionCostNote" style="margin-top:4px"></span>
-      </div>
-      <div class="sgrp">
-        <div class="slabel">Session Cost</div>
-        <div style="font-size:13px;color:var(--text)">This session: <strong id="sessionCostDisplay">$0.000</strong></div>
-        <button class="sdanger" style="margin-top:6px" onclick="resetSessionCost()">Reset session cost</button>
-      </div>
-    </div>
+<!-- Settings overlay -->
+<div class="settings-overlay" id="settingsOverlay">
+  <div class="settings-hdr">
+    <button class="btn-icon" onclick="closeSettings()">←</button>
+    <span class="stitle">Settings</span>
+  </div>
+  <div class="settings-body">
+    <nav class="settings-nav" id="settingsNav"></nav>
+    <div class="sbody" id="settingsContent"></div>
   </div>
 </div>
 
@@ -686,15 +615,19 @@ let modelUsage   = JSON.parse(localStorage.getItem('modelUsage')   || '{}');
 let activeModelFilter = null, modelSortMode = null, filterPopupOpen = false;
 let lastRecommendation = null, recReasonOpen = false;
 let userPreferences = localStorage.getItem('userPreferences') || '';
-let costLimitType = localStorage.getItem('costLimitType') || 'prompt';
-let costLimitIdx  = parseInt(localStorage.getItem('costLimitIdx') || '0');
+let costLimitType   = localStorage.getItem('costLimitType') || 'prompt';
+let promptLimitIdx  = parseInt(localStorage.getItem('promptLimitIdx')  || localStorage.getItem('costLimitIdx') || '0');
+let sessionLimitIdx = parseInt(localStorage.getItem('sessionLimitIdx') || localStorage.getItem('costLimitIdx') || '0');
+function activeLimitIdx() { return costLimitType === 'prompt' ? promptLimitIdx : sessionLimitIdx; }
+function setActiveLimitIdx(v) { if (costLimitType === 'prompt') { promptLimitIdx = v; localStorage.setItem('promptLimitIdx', v); } else { sessionLimitIdx = v; localStorage.setItem('sessionLimitIdx', v); } }
 let sessionCost = 0;
 let pendingSendResolve = null;
 // ── Security state ────────────────────────────────────────────────────────────
 let sessionDangerConfirmed = new Set(); // 'high', 'critical' confirmed this session
 let sessionPasswordVerified = false;    // password entered once this session
-const APP_VERSION = 'v5.12.0';
+const APP_VERSION = 'v5.13.0';
 const CHANGELOG = [
+  { ver: 'v5.13.0', date: '2026-06-04', summary: 'Major settings redesign: full-overlay settings panel (Claude-style) replaces the old drawer. 7 subcategories: Profile, General, Providers, Capabilities, Preferences, Privacy & Security, History. Universal provider system — pick from 10 providers (OpenRouter, Groq, OpenAI, Anthropic, Google AI, Mistral, Together, Ollama, MLX, Custom) with per-provider API key fields. Server refactored to route by provider config (3 format branches: openai-compat, ollama, anthropic). Header redesigned: logo shrunk, sync status is now an informative box with hover tooltip (sheet name, rows, cols, last sync time), settings button removed — account icon opens settings. Cost limit bug fixed (prompt/session modes no longer cross-contaminate). Input placeholder simplified.' },
   { ver: 'v5.12.0', date: '2026-06-04', summary: 'One-click sign-in: Google + Microsoft OAuth (personal + work/school accounts) added to the auth modal alongside the existing email/password flow. Supabase config is now baked into the client (SUPABASE_CONFIG constant at the top of index.html, public anon key — safe by design) so end users no longer need their own Supabase project. Server-side env vars still override if set, for self-hosters. New docs/SETUP_AUTH.md walks through creating the Supabase project, enabling OAuth providers in Google Cloud + Azure, and redirect-URL configuration. OAuth uses a popup → /auth/callback → postMessage → setSession() flow that works inside the Excel task pane.' },
   { ver: 'v5.11.5', date: '2026-06-03', summary: 'Docs + cleanup: README rewritten end-to-end — clear install steps, two SSL-cert paths (office-addin-dev-certs vs. self-signed openssl), both API-key paths (in-app vs. .env) documented side by side, full feature list, slash-command table, danger-system explainer, troubleshooting + FAQ. Removed a hardcoded personal LAN IP from server.js — Ollama host now defaults to 127.0.0.1 and is overridable via OLLAMA_HOST env var. .env.example expanded with inline documentation for every variable.' },
   { ver: 'v5.11.4', date: '2026-06-03', summary: 'Security & stability audit fixes: fixed FileReader race condition where rapid file attachments would overwrite in-progress reads (losing attachments); replaced localStorage with sessionStorage for security password to prevent persistent credential storage; fixed event handler leaks on dangerPwdInp keydown (handlers were stacking on re-use); fixed timer leak where ensureStreamEl created new timerInterval without clearing old one; added guard on slash popup state transitions to prevent stale array operations; fixed clipboard copy timeout leaks by tracking and clearing timeouts on element removal.' },
@@ -750,6 +683,44 @@ const GROQ_MODELS = [
   {id:'mixtral-8x7b-32768',      name:'Mixtral 8x7B',  provider:'Groq', in:0.24, out:0.24, tags:['groq']},
 ];
 
+// ── Provider system ──────────────────────────────────────────────────────────
+const PROVIDERS = [
+  { id: 'openrouter', name: 'OpenRouter',  endpoint: 'https://openrouter.ai/api/v1/chat/completions', format: 'openai', keyPlaceholder: 'sk-or-v1-…', description: 'openrouter.ai — hundreds of models behind one key' },
+  { id: 'groq',       name: 'Groq',        endpoint: 'https://api.groq.com/openai/v1/chat/completions', format: 'openai', keyPlaceholder: 'gsk_…', description: 'groq.com — ultra-fast inference' },
+  { id: 'openai',     name: 'OpenAI',      endpoint: 'https://api.openai.com/v1/chat/completions', format: 'openai', keyPlaceholder: 'sk-…', description: 'platform.openai.com — GPT-4o, o1, etc.' },
+  { id: 'anthropic',  name: 'Anthropic',   endpoint: 'https://api.anthropic.com/v1/messages', format: 'anthropic', keyPlaceholder: 'sk-ant-…', description: 'anthropic.com — Claude models' },
+  { id: 'google',     name: 'Google AI',   endpoint: 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions', format: 'openai', keyPlaceholder: 'AIza…', description: 'ai.google.dev — Gemini models' },
+  { id: 'mistral',    name: 'Mistral',     endpoint: 'https://api.mistral.ai/v1/chat/completions', format: 'openai', keyPlaceholder: '', description: 'mistral.ai' },
+  { id: 'together',   name: 'Together',    endpoint: 'https://api.together.xyz/v1/chat/completions', format: 'openai', keyPlaceholder: '', description: 'together.ai — open-source models' },
+  { id: 'ollama',     name: 'Ollama',      endpoint: '', format: 'ollama', keyPlaceholder: '', description: 'Local — no key needed' },
+  { id: 'mlx',        name: 'MLX',         endpoint: '', format: 'openai', keyPlaceholder: '', description: 'Local Mac — no key needed' },
+  { id: 'custom',     name: 'Custom',      endpoint: '', format: 'openai', keyPlaceholder: '', description: 'Any OpenAI-compatible endpoint' },
+];
+let providerKeys = JSON.parse(localStorage.getItem('providerKeys') || '{}');
+let activeProvider = localStorage.getItem('activeProvider') || 'openrouter';
+
+function migrateProviderKeys() {
+  const oldOr = localStorage.getItem('apiKey');
+  const oldGroq = localStorage.getItem('groqKey');
+  if (oldOr && !providerKeys.openrouter) { providerKeys.openrouter = oldOr; localStorage.setItem('providerKeys', JSON.stringify(providerKeys)); }
+  if (oldGroq && !providerKeys.groq) { providerKeys.groq = oldGroq; localStorage.setItem('providerKeys', JSON.stringify(providerKeys)); }
+}
+function saveProviderKey(id, val) {
+  val = val.trim();
+  if (val) providerKeys[id] = val; else delete providerKeys[id];
+  localStorage.setItem('providerKeys', JSON.stringify(providerKeys));
+  if (id === 'openrouter') { if (val) localStorage.setItem('apiKey', val); else localStorage.removeItem('apiKey'); }
+  if (id === 'groq') { if (val) localStorage.setItem('groqKey', val); else localStorage.removeItem('groqKey'); }
+}
+function setActiveProvider(id) {
+  activeProvider = id;
+  localStorage.setItem('activeProvider', id);
+}
+function getProviderConfig() {
+  const p = PROVIDERS.find(x => x.id === activeProvider) || PROVIDERS[0];
+  return { provider: p.id, endpoint: p.id === 'custom' ? (providerKeys._customEndpoint || '') : p.endpoint, apiKey: providerKeys[p.id] || '', format: p.format };
+}
+
 // ── Boot ──────────────────────────────────────────────────────────────────────
 Office.onReady(async info => {
   if (info.host !== Office.HostType.Excel) return;
@@ -773,19 +744,7 @@ function loadSettings() {
   setTheme(th, false);
   autoSync = localStorage.getItem('autoSync') !== 'false';
   showCode = localStorage.getItem('showCode') !== 'false';
-  document.getElementById('autoSyncTog').className = 'toggle' + (autoSync?' on':'');
-  document.getElementById('showCodeTog').className = 'toggle' + (showCode?' on':'');
-  const k = localStorage.getItem('apiKey');   if (k)  document.getElementById('apiKeyInp').value  = k;
-  const gk= localStorage.getItem('groqKey');  if (gk) document.getElementById('groqKeyInp').value = gk;
-  document.getElementById('prefsInp').value = userPreferences;
-  document.getElementById('seg-prompt').className  = 'seg-btn' + (costLimitType==='prompt'?' active':'');
-  document.getElementById('seg-session').className = 'seg-btn' + (costLimitType==='session'?' active':'');
-  document.getElementById('costSlider').value = costLimitIdx;
-  updateCostSlider(costLimitIdx, false);
-  const sp = sessionStorage.getItem('securityPassword');
-  if (sp) {
-    document.getElementById('secPwdNote').textContent = 'Password set — required for critical operations.';
-  }
+  migrateProviderKeys();
 }
 function saveSecPwd() {
   const cur    = document.getElementById('secCurPwd')?.value || '';
@@ -837,11 +796,13 @@ function setCostLimitType(t) {
   localStorage.setItem('costLimitType', t);
   document.getElementById('seg-prompt').className  = 'seg-btn' + (t==='prompt'?' active':'');
   document.getElementById('seg-session').className = 'seg-btn' + (t==='session'?' active':'');
-  updateCostSlider(costLimitIdx, false);
+  const idx = activeLimitIdx();
+  document.getElementById('costSlider').value = idx;
+  updateCostSlider(idx, false);
 }
 function updateCostSlider(val, save=true) {
-  costLimitIdx = parseInt(val);
-  if (save) localStorage.setItem('costLimitIdx', costLimitIdx);
+  const v = parseInt(val);
+  setActiveLimitIdx(v);
   const lim = getCostLimit();
   document.getElementById('costSliderVal').textContent = lim === 0 ? 'Off' : '$' + lim.toFixed(lim < 0.01 ? 3 : 2);
   document.getElementById('costNote').textContent = lim === 0
@@ -850,7 +811,8 @@ function updateCostSlider(val, save=true) {
 }
 function getCostLimit() {
   const arr = costLimitType === 'prompt' ? PROMPT_LIMITS : SESSION_LIMITS;
-  return arr[Math.min(costLimitIdx, arr.length - 1)] || 0;
+  const idx = activeLimitIdx();
+  return arr[Math.min(idx, arr.length - 1)] || 0;
 }
 function resetSessionCost() {
   sessionCost = 0;
@@ -867,14 +829,113 @@ function updateSessionCostDisplay() {
     } else { note.textContent = ''; }
   }
 }
-function switchSettingsTab(tab) {
-  document.getElementById('sbody-general').style.display = tab === 'general' ? '' : 'none';
-  document.getElementById('sbody-prefs').style.display   = tab === 'prefs'   ? '' : 'none';
-  document.getElementById('stab-general').className = 'stab' + (tab==='general'?' active':'');
-  document.getElementById('stab-prefs').className   = 'stab' + (tab==='prefs'?' active':'');
+const SETTINGS_TABS = [
+  { id: 'profile',      label: 'Profile' },
+  { id: 'general',      label: 'General' },
+  { id: 'providers',    label: 'Providers' },
+  { id: 'capabilities', label: 'Capabilities' },
+  { id: 'preferences',  label: 'Preferences' },
+  { id: 'privacy',      label: 'Privacy' },
+  { id: 'history',      label: 'History' },
+];
+let activeSettingsTab = 'profile';
+
+function openSettings(tab) {
+  activeSettingsTab = tab || 'profile';
+  const overlay = document.getElementById('settingsOverlay');
+  overlay.classList.add('open');
+  document.querySelector('.main').style.display = 'none';
+  renderSettingsNav();
+  renderSettingsTab();
 }
-function openSettings()  { document.getElementById('settingsPanel').classList.add('open'); }
-function closeSettings() { document.getElementById('settingsPanel').classList.remove('open'); }
+function closeSettings() {
+  document.getElementById('settingsOverlay').classList.remove('open');
+  document.querySelector('.main').style.display = '';
+}
+function switchSettingsTab(tab) {
+  activeSettingsTab = tab;
+  renderSettingsNav();
+  renderSettingsTab();
+}
+function renderSettingsNav() {
+  const nav = document.getElementById('settingsNav');
+  nav.innerHTML = SETTINGS_TABS.map(t =>
+    `<button class="snav-item${t.id === activeSettingsTab ? ' active' : ''}" onclick="switchSettingsTab('${t.id}')">${t.label}</button>`
+  ).join('');
+}
+function renderSettingsTab() {
+  const el = document.getElementById('settingsContent');
+  const fn = {
+    profile: renderProfileTab,
+    general: renderGeneralTab,
+    providers: renderProvidersTab,
+    capabilities: renderCapabilitiesTab,
+    preferences: renderPreferencesTab,
+    privacy: renderPrivacyTab,
+    history: renderHistoryTab,
+  }[activeSettingsTab];
+  el.innerHTML = fn ? fn() : '';
+  bindSettingsEvents();
+}
+function renderProfileTab() {
+  if (!currentUser) {
+    return `<div class="sgrp"><div class="slabel">Account</div><div style="font-size:13px;color:var(--text2);margin-bottom:8px">Sign in to sync chats across devices.</div><button class="add-model-btn" onclick="closeSettings();openAuthModal()">Sign in</button></div>`;
+  }
+  const initials = (currentUser.email || '?').slice(0, 2).toUpperCase();
+  return `<div class="sgrp"><div class="slabel">Account</div><div style="display:flex;align-items:center;gap:10px;margin-bottom:8px"><div style="width:36px;height:36px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700">${esc(initials)}</div><div><div style="font-size:13px;font-weight:600;color:var(--text)">${esc(currentUser.email)}</div><div style="font-size:11px;color:var(--text3)">Signed in</div></div></div><button class="sdanger" onclick="supabaseClient?.auth.signOut()">Sign out</button></div>`;
+}
+function renderGeneralTab() {
+  const th = localStorage.getItem('theme') || 'light';
+  return `<div class="sgrp"><div class="slabel">Theme</div><div class="theme-row"><button class="theme-opt${th==='light'?' active':''}" id="tLight" onclick="setTheme('light');renderSettingsTab()">☀ Light</button><button class="theme-opt${th==='dark'?' active':''}" id="tDark" onclick="setTheme('dark');renderSettingsTab()">☾ Dark</button></div></div>`+
+  `<div class="sgrp"><div class="slabel">Behaviour</div><div class="srow"><span class="srow-label">Auto-sync workbook</span><div class="toggle${autoSync?' on':''}" id="autoSyncTog" onclick="togSet('autoSync','autoSyncTog')"></div></div><div class="srow" style="margin-top:8px"><span class="srow-label">Show generated code</span><div class="toggle${showCode?' on':''}" id="showCodeTog" onclick="togSet('showCode','showCodeTog')"></div></div></div>`+
+  `<div class="sgrp"><div class="sfooter" style="cursor:pointer" onclick="openChangelog()" title="Click to see version history">Excel AI Assistant · <strong id="versionLabel">${APP_VERSION}</strong></div></div>`;
+}
+function renderProvidersTab() {
+  const providers = PROVIDERS || [];
+  let html = '<div class="sgrp"><div class="slabel">Active Provider</div><select class="sinput" id="activeProviderSel" onchange="setActiveProvider(this.value)" style="margin-bottom:8px">';
+  providers.forEach(p => { html += `<option value="${p.id}"${p.id===activeProvider?' selected':''}>${esc(p.name)}</option>`; });
+  html += '</select></div>';
+  html += '<div class="sgrp"><div class="slabel">API Keys</div><div style="display:flex;flex-direction:column;gap:10px">';
+  providers.forEach(p => {
+    if (p.id === 'ollama' || p.id === 'mlx') return;
+    const key = providerKeys[p.id] || '';
+    const masked = key ? '••••' + key.slice(-4) : '';
+    html += `<div><div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:3px">${esc(p.name)}</div><input class="sinput" type="password" placeholder="${esc(p.keyPlaceholder||'API key')}" value="${esc(key)}" data-provider="${p.id}" oninput="saveProviderKey('${p.id}',this.value)"><span class="sinote">${esc(p.description||'')}</span></div>`;
+  });
+  html += '</div></div>';
+  html += '<div class="sgrp"><div class="slabel">Local Models</div><div style="font-size:12px;color:var(--text2)">Ollama and MLX connect automatically on localhost. Set OLLAMA_HOST in .env if running on another machine.</div></div>';
+  html += '<div class="sgrp"><div class="slabel">Custom Endpoint</div><input class="sinput" id="customEndpointInp" placeholder="https://your-server.com/v1/chat/completions" value="'+esc(providerKeys._customEndpoint||'')+'" oninput="saveProviderKey(\'_customEndpoint\',this.value)" style="margin-bottom:4px"><span class="sinote">OpenAI-compatible endpoint for the "Custom" provider</span></div>';
+  html += '<span class="sinote" style="margin-top:6px">Keys are stored locally on your device only.</span>';
+  return html;
+}
+function renderCapabilitiesTab() {
+  const opts = JSON.parse(localStorage.getItem('plusOpts') || '{}');
+  function tog(key, label, desc) {
+    return `<div class="srow" style="padding:6px 0"><div><div style="font-size:13px;color:var(--text)">${label}</div><div style="font-size:11px;color:var(--text3)">${desc}</div></div><div class="toggle${opts[key]?' on':''}" onclick="toggleOpt('${key}');renderSettingsTab()"></div></div>`;
+  }
+  return `<div class="sgrp"><div class="slabel">AI Capabilities</div>`+
+    tog('deep','Deep Think','Refines your prompt + maximum reasoning budget')+
+    tog('dynamic','Dynamic Depth','AI calibrates thinking depth for each prompt')+
+    tog('auto','Auto Model','AI picks the best model per prompt')+
+    tog('plan','Plan First','Brief plan before executing changes')+
+  `</div>`;
+}
+function renderPreferencesTab() {
+  const lim = getCostLimit();
+  return `<div class="sgrp"><div class="slabel">Your Preferences</div><textarea class="stextarea" id="prefsInp" placeholder="e.g. Always respond in English. Prefer concise answers." oninput="savePrefs()">${esc(userPreferences)}</textarea><span class="sinote">The AI follows these on every message.</span></div>`+
+  `<div class="sgrp"><div class="slabel">Cost Limit</div><div class="srow" style="margin-bottom:6px"><span class="srow-label" style="font-size:12px">Limit per</span><div class="seg-ctrl"><button class="seg-btn${costLimitType==='prompt'?' active':''}" id="seg-prompt" onclick="setCostLimitType('prompt');renderSettingsTab()">Prompt</button><button class="seg-btn${costLimitType==='session'?' active':''}" id="seg-session" onclick="setCostLimitType('session');renderSettingsTab()">Session</button></div></div><div class="cost-row"><input type="range" class="cost-slider" id="costSlider" min="0" max="10" step="1" value="${activeLimitIdx()}" oninput="updateCostSlider(this.value)"><span class="cost-val" id="costSliderVal">${lim===0?'Off':'$'+lim.toFixed(lim<0.01?3:2)}</span></div><span class="sinote" id="costNote">${lim===0?'No limit — all prompts allowed.':'Max $'+lim.toFixed(lim<0.01?3:2)+' per '+costLimitType+'.'}</span></div>`+
+  `<div class="sgrp"><div class="slabel">Session Cost</div><div style="font-size:13px;color:var(--text)">This session: <strong id="sessionCostDisplay">$${sessionCost.toFixed(3)}</strong></div><button class="sdanger" style="margin-top:6px" onclick="resetSessionCost()">Reset session cost</button></div>`;
+}
+function renderPrivacyTab() {
+  const hasPwd = !!sessionStorage.getItem('securityPassword');
+  return `<div class="sgrp"><div class="slabel">Security Password</div><div style="font-size:12px;color:var(--text2);margin-bottom:6px">Password required for critical operations (file deletion, shell commands). Leave blank to disable.</div><input class="sinput" type="password" id="secCurPwd" placeholder="Current password (leave blank if not set)" style="margin-bottom:6px"><input class="sinput" type="password" id="secNewPwd" placeholder="New password (leave blank to disable)"><button class="add-model-btn" onclick="saveSecPwd()" style="margin-top:6px">Save password</button><span class="sinote" id="secPwdNote">${hasPwd?'Password set — required for critical operations.':'Not set — critical operations need only confirmation.'}</span></div>`+
+  `<div class="sgrp"><div class="slabel">Danger Confirmations</div><div style="font-size:12px;color:var(--text2)">High-risk and critical operations always require confirmation before execution. This cannot be disabled.</div></div>`;
+}
+function renderHistoryTab() {
+  return `<div class="sgrp"><div class="slabel">Chat History</div><button class="sdanger" onclick="clearAllHistory()">Delete all chat history</button><span class="sinote" style="margin-top:4px">This cannot be undone.</span></div>`;
+}
+function bindSettingsEvents() {}
+
 function openChangelog() {
   const list=document.getElementById('changelogList');
   list.innerHTML=CHANGELOG.map((c,i)=>{
@@ -1446,7 +1507,23 @@ function removeTyping(){clearInterval(timerInterval);timerInterval=null;document
 function updateTok(){}
 
 // ── Sync ──────────────────────────────────────────────────────────────────────
-function setSyncStatus(state,text){const d=document.getElementById('syncDot');d.className='sync-dot'+(state==='busy'?' busy':state==='err'?' err':'');d.title=text;}
+let lastSyncInfo = { sheet: '', rows: 0, cols: 0, sheets: 0, time: null };
+function setSyncStatus(state, text, info) {
+  const box = document.getElementById('syncBox');
+  const icon = document.getElementById('syncIcon');
+  const tip = document.getElementById('syncTip');
+  box.className = 'sync-box ' + state;
+  if (state === 'ok') icon.textContent = '✓';
+  else if (state === 'err') icon.textContent = '✕';
+  else icon.textContent = '⟳';
+  if (info) Object.assign(lastSyncInfo, info, { time: new Date() });
+  if (state === 'ok' && lastSyncInfo.time) {
+    const t = lastSyncInfo.time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    tip.innerHTML = `<strong>${lastSyncInfo.sheet}</strong><br>${lastSyncInfo.rows} rows · ${lastSyncInfo.cols} cols · ${lastSyncInfo.sheets} sheet(s)<br>Last sync: ${t}`;
+  } else {
+    tip.textContent = text;
+  }
+}
 
 async function readWorkbook() {
   setSyncStatus('busy','Reading workbook…');
@@ -1456,7 +1533,7 @@ async function readWorkbook() {
   try{await Excel.run(async ctx=>{
     const wb=ctx.workbook,sheets=wb.worksheets,act=wb.worksheets.getActiveWorksheet();
     sheets.load('items/name');act.load('name');await ctx.sync();
-    activeSheet=act.name;const parts=[];let totalChars=0;let hitLimit=false;
+    activeSheet=act.name;const parts=[];let totalChars=0;let hitLimit=false;let syncRows=0,syncCols=0;
     const ordered=[...sheets.items].sort((a,b)=>a.name===activeSheet?-1:b.name===activeSheet?1:0);
     for(const sh of ordered){
       if(totalChars>=MAX_TOTAL_CHARS){hitLimit=true;break;}
@@ -1466,6 +1543,7 @@ async function readWorkbook() {
       const hLine='Headers: '+hdrs.map((h,i)=>colLetter(i)+'1='+String(h).slice(0,MAX_CELL_LEN)).join(' | ');
       const rows=u.values.slice(1);
       const totalRows=rows.length;
+      if(sh.name===activeSheet){syncRows=totalRows;syncCols=hdrs.length;}
       const budget=MAX_TOTAL_CHARS-totalChars;
       const maxRows=Math.min(MAX_ROWS_PER_SHEET,totalRows);
       const dLines=[];
@@ -1480,7 +1558,7 @@ async function readWorkbook() {
       }catch{}
     }
     if(parts.length<sheets.items.length){const more=sheets.items.length-parts.length;parts.push('[+'+more+' more sheet(s) not shown'+(hitLimit?' — workbook too large':'')+']');}
-    workbookData=parts.join('\n\n---\n\n');setSyncStatus('ok','Synced — '+activeSheet);
+    workbookData=parts.join('\n\n---\n\n');setSyncStatus('ok','Synced',{sheet:activeSheet,rows:syncRows,cols:syncCols,sheets:sheets.items.length});
   });}catch(e){setSyncStatus('err','Sync failed');console.error('readWorkbook error',e);}
 }
 async function registerListeners() {
@@ -2027,10 +2105,14 @@ async function sendMessage() {
   const modelId =isGroq?selectedModel.slice(5):isOllama?selectedModel.slice(7):selectedModel;
   const apiKey  =localStorage.getItem('apiKey')||undefined;
   const groqKey =localStorage.getItem('groqKey')||undefined;
+  const pc = getProviderConfig();
+  if (isGroq) { pc.provider='groq'; pc.format='openai'; pc.apiKey=providerKeys.groq||groqKey||''; pc.endpoint='https://api.groq.com/openai/v1/chat/completions'; }
+  if (isOllama) { pc.provider='ollama'; pc.format='ollama'; pc.endpoint=''; }
 
   const payload={
     messages:history.slice(-15),workbookData,activeSheet,summary,
     model:modelId,useOllama:isOllama,useGroq:isGroq,apiKey,groqKey,
+    providerConfig:pc,
     options:{
       deepThink:opts.deep,dynamicDepth:opts.dynamic,autoModel:opts.auto,plan:opts.plan,
       noThink:slashNoThink==='on',allowThink:slashNoThink==='off',
@@ -2172,7 +2254,7 @@ async function sendMessage() {
               addMsg('assistant','⚠ Error: '+r.err,true);
               try{fetch('/api/feedback/auto',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({tier:'hard',prompt:text,response:finalText||'',code,model:autoSelected||modelId})});}catch{}
               history.push({role:'user',content:'The code failed: "'+r.err+'". Fix it with a corrected CODE_JS block.',internal:true});
-              const rr=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},signal:ctrl.signal,body:JSON.stringify({messages:history.slice(-8),workbookData,activeSheet,summary,model:modelId,useOllama:isOllama,useGroq:isGroq,apiKey,groqKey,options:payload.options})});
+              const rr=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},signal:ctrl.signal,body:JSON.stringify({messages:history.slice(-8),workbookData,activeSheet,summary,model:modelId,useOllama:isOllama,useGroq:isGroq,apiKey,groqKey,providerConfig:pc,options:payload.options})});
               const rd=await rr.json();
               if(rd.error)addMsg('assistant','⚠ Retry failed: '+rd.error,true);
               else if(rd.code){
@@ -2269,11 +2351,14 @@ function showAccountBtn(user) {
   }
 }
 
+function handleAccountClick() {
+  if (currentUser) openSettings('profile');
+  else openAuthModal();
+}
+
 function openAuthModal() {
   if (currentUser) {
-    if (confirm(`Signed in as ${currentUser.email}\n\nSign out?`)) {
-      supabaseClient?.auth.signOut();
-    }
+    openSettings('profile');
     return;
   }
   document.getElementById('authModal').classList.add('open');
