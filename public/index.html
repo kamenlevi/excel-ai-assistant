@@ -904,6 +904,53 @@ function togSet(key, id) {
   if (key==='autoSync') { autoSync=!autoSync; localStorage.setItem('autoSync',autoSync); document.getElementById(id).className='toggle'+(autoSync?' on':''); }
   else { showCode=!showCode; localStorage.setItem('showCode',showCode); document.getElementById(id).className='toggle'+(showCode?' on':''); }
 }
+let _calRange = '1m';
+let _calDayCounts = {};
+function setCalRange(range) {
+  _calRange = range;
+  ['1m','6m','1y'].forEach(r => {
+    const btn = document.getElementById('calR'+r);
+    if (btn) btn.className = 'seg-btn' + (r === range ? ' active' : '');
+  });
+  renderCalGrid();
+}
+function renderCalGrid() {
+  const container = document.getElementById('calContainer');
+  if (!container) return;
+  const weeks = _calRange === '1y' ? 52 : _calRange === '6m' ? 26 : 5;
+  const today = new Date();
+  const startDate = new Date(today);
+  startDate.setDate(startDate.getDate() - (weeks * 7 - 1));
+  startDate.setDate(startDate.getDate() - startDate.getDay());
+  const totalSlots = weeks * 7;
+  const dayNames = ['S','M','T','W','T','F','S'];
+  function calLevel(n) { return n === 0 ? 0 : n <= 3 ? 1 : n <= 10 ? 2 : n <= 25 ? 3 : 4; }
+  let cells = '';
+  const monthLabels = [];
+  let lastMonth = -1;
+  for (let i = 0; i < totalSlots; i++) {
+    const d = new Date(startDate); d.setDate(d.getDate() + i);
+    if (d > today) { cells += '<div class="cal-cell" style="visibility:hidden"></div>'; continue; }
+    const ds = d.toISOString().slice(0,10);
+    const cnt = _calDayCounts[ds] || 0;
+    cells += '<div class="cal-cell" data-lvl="'+calLevel(cnt)+'" title="'+ds+': '+cnt+' messages"></div>';
+    if (i % 7 === 0 && d.getMonth() !== lastMonth) { lastMonth = d.getMonth(); monthLabels.push({ row: Math.floor(i/7), label: d.toLocaleString('default',{month:'short'}) }); }
+  }
+  const wkInterval = weeks <= 5 ? 1 : weeks <= 26 ? 4 : 8;
+  const weekLabels = [];
+  for (let w = 0; w < weeks; w++) {
+    const d = new Date(startDate); d.setDate(d.getDate() + w * 7);
+    const oneJan = new Date(d.getFullYear(),0,1);
+    const wn = Math.ceil(((d - oneJan) / 86400000 + oneJan.getDay() + 1) / 7);
+    weekLabels.push(w % wkInterval === 0 ? 'W'+wn : '');
+  }
+  container.innerHTML =
+    '<div style="display:flex;gap:1px;justify-content:space-around;padding:0 0 2px 0;margin-right:22px">'+dayNames.map(d=>'<div style="flex:1;text-align:center;font-size:8px;color:var(--text3)">'+d+'</div>').join('')+'</div>'+
+    '<div style="display:flex;gap:2px">'+
+      '<div style="flex:1"><div class="cal-grid">'+cells+'</div></div>'+
+      '<div style="display:flex;flex-direction:column;justify-content:space-between;width:20px;font-size:7px;color:var(--text3);flex-shrink:0;text-align:left">'+weekLabels.map(w=>'<div>'+w+'</div>').join('')+'</div>'+
+    '</div>';
+}
 function toggleUsageExpand(btn) {
   const panel = btn.nextElementSibling;
   const arrow = btn.querySelector('.arrow');
@@ -1122,33 +1169,6 @@ function renderUsageTab() {
   const dayCounts = {};
   msgs.forEach(e => { const d = e.ts?.slice(0,10); if(d) dayCounts[d] = (dayCounts[d]||0)+1; });
   function calLevel(n) { return n === 0 ? 0 : n <= 3 ? 1 : n <= 10 ? 2 : n <= 25 ? 3 : 4; }
-  let calCells = '';
-  const CAL_WEEKS = 52;
-  const CAL_DAYS = CAL_WEEKS * 7;
-  const startDate = new Date(today);
-  startDate.setDate(startDate.getDate() - (CAL_DAYS - 1));
-  startDate.setDate(startDate.getDate() - startDate.getDay());
-  const monthLabels = [];
-  let lastMonth = -1;
-  const totalSlots = CAL_WEEKS * 7;
-  for (let i = 0; i < totalSlots; i++) {
-    const d = new Date(startDate);
-    d.setDate(d.getDate() + i);
-    if (d > today) { calCells += '<div class="cal-cell" style="visibility:hidden"></div>'; continue; }
-    const ds = d.toISOString().slice(0,10);
-    const cnt = dayCounts[ds] || 0;
-    calCells += `<div class="cal-cell" data-lvl="${calLevel(cnt)}" title="${ds}: ${cnt} messages"></div>`;
-    if (i % 7 === 0 && d.getMonth() !== lastMonth) { lastMonth = d.getMonth(); monthLabels.push({ col: Math.floor(i/7), label: d.toLocaleString('default',{month:'short'}) }); }
-  }
-  // Week labels (show every 4th week number)
-  const weekLabels = [];
-  for (let w = 0; w < CAL_WEEKS; w++) {
-    const d = new Date(startDate);
-    d.setDate(d.getDate() + w * 7);
-    const oneJan = new Date(d.getFullYear(),0,1);
-    const wn = Math.ceil(((d - oneJan) / 86400000 + oneJan.getDay() + 1) / 7);
-    weekLabels.push(w % 4 === 0 ? 'W'+wn : '');
-  }
 
   // Streaks
   let curStreak = 0, maxStreak = 0, streak = 0;
@@ -1305,12 +1325,8 @@ function renderUsageTab() {
         </div>
       </div>
     </div>
-    <div class="usage-section"><div class="usage-section-title">Activity</div>
-      <div class="cal-days" style="display:flex;gap:1px;justify-content:space-around;padding:0 0 2px 0;margin-left:0;margin-right:22px">${dayNames.map(d=>'<div class="cal-row-label" style="flex:1;text-align:center">'+d.slice(0,1)+'</div>').join('')}</div>
-      <div style="display:flex;gap:2px">
-        <div style="flex:1"><div class="cal-grid">${calCells}</div></div>
-        <div style="display:flex;flex-direction:column;justify-content:space-between;width:20px;font-size:7px;color:var(--text3);flex-shrink:0;text-align:left">${weekLabels.map(w=>'<div>'+w+'</div>').join('')}</div>
-      </div>
+    <div class="usage-section"><div class="usage-section-title" style="display:flex;justify-content:space-between;align-items:center">Activity<div class="seg-ctrl" style="margin:0"><button class="seg-btn active" id="calR1m" onclick="setCalRange('1m')">1M</button><button class="seg-btn" id="calR6m" onclick="setCalRange('6m')">6M</button><button class="seg-btn" id="calR1y" onclick="setCalRange('1y')">1Y</button></div></div>
+      <div id="calContainer"></div>
       <div class="streak-row"><span>Current streak: <strong>${curStreak} day${curStreak!==1?'s':''}</strong></span><span>Longest: <strong>${maxStreak} day${maxStreak!==1?'s':''}</strong></span></div>
     </div>
     <div class="usage-section"><div class="usage-section-title">Peak Hours</div>
@@ -1346,6 +1362,12 @@ function renderUsageTab() {
   `;
 }
 function bindSettingsEvents() {
+  // Render activity calendar if on usage tab
+  if (document.getElementById('calContainer')) {
+    _calDayCounts = {};
+    usageLog.filter(e => e.type === 'message').forEach(e => { const d = e.ts?.slice(0,10); if(d) _calDayCounts[d] = (_calDayCounts[d]||0)+1; });
+    renderCalGrid();
+  }
   // Show update section if running inside Electron
   fetch('/api/app/update-settings').then(r=>r.json()).then(d=>{
     const sec=document.getElementById('updateSection');
