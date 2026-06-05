@@ -34,6 +34,8 @@ try {
 // ── Data dir for chat persistence ─────────────────────────────────────────────
 const DATA_DIR    = process.env.EXCEL_AI_DATA_DIR || path.join(__dirname, 'data');
 const CHATS_FILE  = path.join(DATA_DIR, 'chats.json');
+const TRAINING_FILE = path.join(DATA_DIR, 'training.json');
+const SKILLS_FILE = path.join(DATA_DIR, 'skills.json');
 fs.mkdirSync(DATA_DIR, { recursive: true });
 
 // In-memory cache — avoids blocking readFileSync/writeFileSync on every request
@@ -47,6 +49,34 @@ function writeChats(chats) {
   _chatsCache = chats;
   fs.writeFile(CHATS_FILE, JSON.stringify(chats, null, 2), 'utf8', err => {
     if (err) console.error('[chats] write error:', err.message);
+  });
+}
+
+// Training chats cache
+let _trainingCache = null;
+function readTraining() {
+  if (_trainingCache) return _trainingCache;
+  try { _trainingCache = JSON.parse(fs.readFileSync(TRAINING_FILE, 'utf8')); } catch { _trainingCache = {}; }
+  return _trainingCache;
+}
+function writeTraining(data) {
+  _trainingCache = data;
+  fs.writeFile(TRAINING_FILE, JSON.stringify(data, null, 2), 'utf8', err => {
+    if (err) console.error('[training] write error:', err.message);
+  });
+}
+
+// Skills cache
+let _skillsCache = null;
+function readSkills() {
+  if (_skillsCache) return _skillsCache;
+  try { _skillsCache = JSON.parse(fs.readFileSync(SKILLS_FILE, 'utf8')); } catch { _skillsCache = []; }
+  return _skillsCache;
+}
+function writeSkills(data) {
+  _skillsCache = data;
+  fs.writeFile(SKILLS_FILE, JSON.stringify(data, null, 2), 'utf8', err => {
+    if (err) console.error('[skills] write error:', err.message);
   });
 }
 
@@ -939,6 +969,106 @@ app.delete('/api/chats/:id', (req, res) => {
   res.json({ ok: true });
 });
 
+// ── Training chats ──────────────────────────────────────────────────────────
+app.get('/api/training', (req, res) => {
+  const data = readTraining();
+  const list = Object.values(data)
+    .sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt))
+    .map(({ id, title, updatedAt, messageCount, skillCount }) => ({ id, title, updatedAt, messageCount: messageCount || 0, skillCount: skillCount || 0 }));
+  res.json(list);
+});
+
+app.post('/api/training', (req, res) => {
+  const data = readTraining();
+  const id = crypto.randomUUID();
+  const now = new Date().toISOString();
+  data[id] = { id, title: req.body.title || 'New Training', messages: [], skillCount: 0, messageCount: 0, createdAt: now, updatedAt: now };
+  writeTraining(data);
+  res.json(data[id]);
+});
+
+app.get('/api/training/:id', (req, res) => {
+  const data = readTraining();
+  const chat = data[req.params.id];
+  if (!chat) return res.status(404).json({ error: 'Not found' });
+  res.json(chat);
+});
+
+app.patch('/api/training/:id', (req, res) => {
+  const data = readTraining();
+  const chat = data[req.params.id];
+  if (!chat) return res.status(404).json({ error: 'Not found' });
+  const { title, messages, skillCount } = req.body;
+  if (title !== undefined) chat.title = title;
+  if (messages !== undefined) { chat.messages = messages; chat.messageCount = messages.length; }
+  if (skillCount !== undefined) chat.skillCount = skillCount;
+  chat.updatedAt = new Date().toISOString();
+  writeTraining(data);
+  res.json(chat);
+});
+
+app.delete('/api/training/:id', (req, res) => {
+  const data = readTraining();
+  delete data[req.params.id];
+  writeTraining(data);
+  res.json({ ok: true });
+});
+
+// ── Skills (approved training examples/knowledge) ────────────────────────────
+app.get('/api/skills', (req, res) => {
+  res.json(readSkills());
+});
+
+app.post('/api/skills', (req, res) => {
+  const skills = readSkills();
+  const skill = {
+    id: crypto.randomUUID(),
+    type: req.body.type || 'knowledge',
+    title: req.body.title || '',
+    content: req.body.content || '',
+    examples: req.body.examples || [],
+    tags: req.body.tags || [],
+    trainingChatId: req.body.trainingChatId || null,
+    createdAt: new Date().toISOString()
+  };
+  skills.push(skill);
+  writeSkills(skills);
+  res.json(skill);
+});
+
+app.delete('/api/skills/:id', (req, res) => {
+  let skills = readSkills();
+  skills = skills.filter(s => s.id !== req.params.id);
+  writeSkills(skills);
+  res.json({ ok: true });
+});
+
+app.get('/api/skills/export', (req, res) => {
+  const skills = readSkills();
+  const format = req.query.format || 'jsonl';
+  if (format === 'jsonl') {
+    const lines = [];
+    skills.forEach(s => {
+      if (s.examples && s.examples.length) {
+        s.examples.forEach(ex => {
+          lines.push(JSON.stringify({
+            messages: [
+              { role: 'system', content: 'You are an AI assistant for Microsoft Excel.' },
+              { role: 'user', content: ex.input },
+              { role: 'assistant', content: ex.output }
+            ]
+          }));
+        });
+      }
+    });
+    res.setHeader('Content-Type', 'application/jsonl');
+    res.setHeader('Content-Disposition', 'attachment; filename="training-data.jsonl"');
+    res.send(lines.join('\n'));
+  } else {
+    res.json(skills);
+  }
+});
+
 // ── Full OpenRouter model catalog (cached 1 h) ────────────────────────────────
 let catalogCache = null, catalogCacheAt = 0;
 app.get('/api/models/catalog', async (req, res) => {
@@ -1543,8 +1673,9 @@ app.post('/api/chat', async (req, res) => {
   const planFirst     = options?.plan          || false;
   const forceNoThink  = options?.noThink       || false;
   const forceThink    = options?.allowThink    || false;
-  const pinnedMemory  = options?.pinnedMemory  || []; // user-pinned messages
-  const coreMemory    = options?.coreMemory    || []; // auto-extracted facts
+  const pinnedMemory  = options?.pinnedMemory  || [];
+  const coreMemory    = options?.coreMemory    || [];
+  const systemPromptOverride = options?.systemPromptOverride || null;
 
   let maxTokens = 4096;
   let effectiveModel = model || null;
@@ -1674,17 +1805,25 @@ app.post('/api/chat', async (req, res) => {
       + allMemoryItems.map(m => `• ${m}`).join('\n')
     : '';
 
-  let systemContent = SYSTEM_PROMPT + prefsSection + memorySection;
-  if (planText) systemContent += `\n\nYour plan for this request was:\n${planText}\nFollow this plan exactly.`;
+  const _allSkills = readSkills();
+  const _skillsSection = _allSkills.length
+    ? '\n\nTRAINED SKILLS — the user has taught you the following. Apply them when relevant:\n'
+      + _allSkills.map(s => {
+        let entry = `• [${s.type}] ${s.title}: ${s.content}`;
+        if (s.examples?.length) entry += '\n  Examples:\n' + s.examples.map(ex => `    User: ${ex.input}\n    You: ${ex.output}`).join('\n');
+        return entry;
+      }).join('\n')
+    : '';
+  let systemContent = systemPromptOverride || (SYSTEM_PROMPT + prefsSection + memorySection + _skillsSection);
+  if (!systemPromptOverride) {
+    if (planText) systemContent += `\n\nYour plan for this request was:\n${planText}\nFollow this plan exactly.`;
+  }
   if (forceNoThink && !systemContent.includes('/no_think')) systemContent += '\n/no_think';
-  if (forceThink) systemContent += '__ALLOW_THINK__'; // sentinel: prevents injectNoThink from adding /no_think
+  if (forceThink) systemContent += '__ALLOW_THINK__';
 
-  const allMessages = [
-    { role: 'system', content: systemContent },
-    ...contextMessages,
-    ...summaryMessages,
-    ...recentMessages
-  ];
+  const allMessages = systemPromptOverride
+    ? [{ role: 'system', content: systemContent }, ...recentMessages]
+    : [{ role: 'system', content: systemContent }, ...contextMessages, ...summaryMessages, ...recentMessages];
 
   try {
     let { text: responseText, usage } = await callAI(allMessages, maxTokens, effectiveModel, useOllama || false, useGroq || false, apiKey || null, groqKey || null, pCfg);
@@ -1831,7 +1970,16 @@ app.post('/api/chat/stream', async (req, res) => {
   const memorySection = allMemoryItems.length
     ? '\n\nPERMANENT MEMORY — always remember and follow these throughout the conversation:\n' + allMemoryItems.map(m=>`• ${m}`).join('\n')
     : '';
-  let systemContent = SYSTEM_PROMPT + prefsSection + memorySection;
+  const _allSkills = readSkills();
+  const _skillsSection = _allSkills.length
+    ? '\n\nTRAINED SKILLS — the user has taught you the following. Apply them when relevant:\n'
+      + _allSkills.map(s => {
+        let entry = `• [${s.type}] ${s.title}: ${s.content}`;
+        if (s.examples?.length) entry += '\n  Examples:\n' + s.examples.map(ex => `    User: ${ex.input}\n    You: ${ex.output}`).join('\n');
+        return entry;
+      }).join('\n')
+    : '';
+  let systemContent = SYSTEM_PROMPT + prefsSection + memorySection + _skillsSection;
   if (planText) systemContent += `\n\nYour plan for this request was:\n${planText}\nFollow this plan exactly.`;
   if (forceNoThink && !systemContent.includes('/no_think')) systemContent += '\n/no_think';
   if (forceThink) systemContent += '__ALLOW_THINK__';

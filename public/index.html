@@ -67,6 +67,25 @@ html,body{height:100%;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;
 .sidebar-head{padding:12px;border-bottom:1px solid var(--border);display:flex;gap:8px;align-items:center}
 .new-chat{flex:1;background:var(--accent);color:#fff;border:none;border-radius:var(--r2);padding:7px 10px;font-size:13px;font-weight:600;cursor:pointer;transition:background .15s}
 .new-chat:hover{background:var(--accent2)}
+.new-train{width:34px;height:34px;background:#22c55e;color:#fff;border:none;border-radius:var(--r2);font-size:16px;font-weight:700;cursor:pointer;transition:background .15s;flex-shrink:0;display:flex;align-items:center;justify-content:center}
+.new-train:hover{background:#16a34a}
+.train-mode .new-chat{background:#22c55e}
+.train-mode .new-chat:hover{background:#16a34a}
+.sidebar-mode-toggle{display:flex;gap:0;margin:0 12px 6px;border-radius:var(--r2);overflow:hidden;border:1px solid var(--border)}
+.sidebar-mode-btn{flex:1;padding:5px 0;font-size:11px;font-weight:600;cursor:pointer;background:var(--surf);color:var(--text2);border:none;transition:all .15s;font-family:inherit}
+.sidebar-mode-btn.active{background:var(--accent);color:#fff}
+.sidebar-mode-btn.active.train{background:#22c55e}
+.chat-item.training{border-left:3px solid #22c55e}
+.chat-item.training .chat-title{color:#22c55e}
+.train-badge{display:inline-block;background:#22c55e;color:#fff;font-size:8px;font-weight:700;padding:1px 4px;border-radius:3px;margin-left:4px;vertical-align:middle;text-transform:uppercase}
+.train-header{background:linear-gradient(135deg,#22c55e 0%,#16a34a 100%);color:#fff;padding:10px 12px;border-radius:var(--r2);margin-bottom:12px;font-size:12px;line-height:1.5}
+.train-header strong{font-size:14px}
+.skill-card{background:var(--surf);border:1px solid var(--border);border-radius:var(--r2);padding:8px 10px;margin-bottom:6px;font-size:12px}
+.skill-card .skill-title{font-weight:600;color:var(--text);margin-bottom:2px}
+.skill-card .skill-type{font-size:10px;color:#22c55e;text-transform:uppercase;font-weight:700}
+.skill-card .skill-del{float:right;cursor:pointer;color:var(--text3);font-size:14px}
+.skill-card .skill-del:hover{color:var(--danger)}
+.skill-example{background:var(--code-bg);border-radius:var(--r2);padding:6px 8px;margin-top:4px;font-size:11px;line-height:1.4}
 .sidebar-close{background:none;border:none;color:var(--text2);cursor:pointer;font-size:18px;padding:2px 5px;border-radius:4px;line-height:1}
 .sidebar-close:hover{background:var(--surf2)}
 .chat-list{flex:1;overflow-y:auto;padding:8px;will-change:scroll-position;-webkit-transform:translateZ(0);transform:translateZ(0)}
@@ -559,8 +578,13 @@ mark.search-hl.current{background:rgba(var(--accent-rgb),.6)}
   <div class="sidebar-backdrop" onclick="closeSidebar()"></div>
   <div class="sidebar-drawer">
     <div class="sidebar-head">
-      <button class="new-chat" onclick="newChat()">+ New Chat</button>
+      <button class="new-chat" id="newChatBtn" onclick="sidebarNewChat()">+ New</button>
+      <button class="new-train" onclick="toggleTrainMode()" id="trainModeBtn" title="Training mode">⚡</button>
       <button class="sidebar-close" onclick="closeSidebar()">✕</button>
+    </div>
+    <div class="sidebar-mode-toggle" id="sidebarModeToggle" style="display:none">
+      <button class="sidebar-mode-btn active" id="modeChats" onclick="setSidebarMode('chats')">Chats</button>
+      <button class="sidebar-mode-btn train" id="modeTraining" onclick="setSidebarMode('training')">Training</button>
     </div>
     <input class="sidebar-search" id="sidebarSearch" placeholder="Search chats…" oninput="searchChats(this.value)">
     <div class="chat-list" id="chatList"><div class="no-chats">No chats yet</div></div>
@@ -732,9 +756,10 @@ function classifyIntent(text) {
 // ── Security state ────────────────────────────────────────────────────────────
 let sessionDangerConfirmed = new Set(); // 'high', 'critical' confirmed this session
 let sessionPasswordVerified = false;    // password entered once this session
-const APP_VERSION = 'v6.1.0';
+const APP_VERSION = 'v7.0.0';
 const CHANGELOG = [
-  { ver: 'v6.1.0', date: '2026-06-05', summary: 'UX overhaul: vertical activity calendar and peak hours heatmap. Personality insight message based on usage patterns ("night owl", "early bird", etc). Weekly and monthly summary stats. Enriched settings: profile shows conversation count, favourite model, member-since date. General adds font size, enter-to-send, sound toggles. History shows storage stats and chat export. GPU-accelerated smooth scrolling across all panels. Model button shows selected model immediately on load instead of "Loading...".' },
+  { ver: 'v7.0.0', date: '2026-06-05', summary: 'AI Training System: teach the AI new skills through training chats. Green ⚡ button in sidebar opens training mode — describe what you want the AI to learn, it generates examples you can approve as skills or training data. Skills are injected into every AI response. Export training data as JSONL for local model fine-tuning. Trained Skills counter in Usage tab shows real data.' },
+  { ver: 'v6.1.0', date: '2026-06-05', summary: 'UX overhaul: vertical activity calendar and peak hours heatmap. Personality insight message based on usage patterns ("night owl", "early bird", etc). Weekly and monthly summary stats. Enriched settings: profile shows conversation count, favourite model, member-since date. General adds font size, sound toggle. History shows storage stats and chat export. GPU-accelerated smooth scrolling across all panels. Model button shows selected model immediately on load instead of "Loading...".' },
   { ver: 'v6.0.0', date: '2026-06-05', summary: 'Desktop app: Electron packaging turns the add-in into an installable app. Install once — it auto-generates SSL certs, starts the server, and sideloads the manifest into Excel. System tray icon with server status, Open Excel, Check for Updates, and Reinstall Add-in. Auto-updates via GitHub Releases (Apple-style: auto-patches, prompted major updates). Settings shows update controls when running in Electron. Supports Windows, Linux, and macOS. npm start still works standalone for development.' },
   { ver: 'v5.14.1', date: '2026-06-04', summary: 'UX polish: smooth animations for settings overlay (fade+slide), account button (spring scale), and tab content (fade-in). Slash popup capped at 10 items; Enter now executes the selected popup item instead of sending raw partial text. Ctrl+F search supports arrow keys and Enter/Shift+Enter for navigation. Sign-out button shows loading state. Settings always accessible (account icon opens settings even when not signed in). Calendar grid shows 26 weeks with larger cells. Fixed horizontal scroll in settings content area.' },
   { ver: 'v5.14.0', date: '2026-06-04', summary: 'Usage dashboard: GitHub-style activity calendar, time-of-day heatmap, model usage bars, task category donut chart, code execution success rate, cost breakdown table, streak tracking. 12 new slash commands: /undo, /redo, /export (md/json), /usage, /search, /model, /provider, /pin, /forget, /version, /find. Sidebar search: filter chat history by title or message content with live previews. In-conversation search (Ctrl+F): highlights matches with up/down navigation. Full analytics tracking engine logs every interaction (messages, code executions, undos, slash commands) with auto-classified task categories.' },
@@ -840,7 +865,7 @@ Office.onReady(async info => {
   }
   loadSettings();
   customModels = JSON.parse(localStorage.getItem('customModels') || '[]');
-  try { await Promise.all([loadChats(), detectLocal()]); } catch {}
+  try { await Promise.all([loadChats(), detectLocal(), loadSkills()]); } catch {}
   renderModelBtn();
   applyChatFontSize();
   renderMemoryStrip();
@@ -1364,10 +1389,12 @@ function renderUsageTab() {
     </div>
     <div class="usage-section"><div class="usage-section-title">Trained Skills</div>
       <div style="font-size:12px;color:var(--text2);line-height:1.6">
+        Skills taught: <strong>${trainSkills.length}</strong> (${trainSkills.filter(s=>s.type==='examples').reduce((a,s)=>a+(s.examples?.length||0),0)} examples)<br>
         Pinned memories: <strong>${pinCount}</strong><br>
         Auto-extracted facts: <strong>${factCount}</strong><br>
         Preferences: <em>${esc(prefsPreview)}</em>
       </div>
+      ${trainSkills.length ? '<button class="add-model-btn" style="margin-top:6px;font-size:11px" onclick="openSettings(\'training\')">Manage Skills</button>' : '<div style="font-size:11px;color:var(--text3);margin-top:4px">Use the ⚡ training button in the sidebar to teach the AI new skills.</div>'}
     </div>
     <div class="usage-section"><div class="usage-section-title">Cost Breakdown</div>
       ${costTableHtml}
@@ -1797,6 +1824,276 @@ async function clearAllHistory() {
   chatId=null;history=[];renderEmpty();closeSettings();await loadChats();
 }
 async function refreshChatList(){try{const r=await fetch('/api/chats');renderChatList(await r.json());}catch{}}
+
+// ── Training Mode ────────────────────────────────────────────────────────────
+let trainMode = false;
+let trainChatId = null;
+let trainHistory = [];
+let trainSkills = [];
+
+function toggleTrainMode() {
+  trainMode = !trainMode;
+  const drawer = document.querySelector('.sidebar-drawer');
+  const toggle = document.getElementById('sidebarModeToggle');
+  const btn = document.getElementById('newChatBtn');
+  if (trainMode) {
+    drawer.classList.add('train-mode');
+    toggle.style.display = '';
+    setSidebarMode('training');
+    btn.textContent = '+ Train';
+    btn.onclick = () => newTrainingChat();
+  } else {
+    drawer.classList.remove('train-mode');
+    toggle.style.display = 'none';
+    setSidebarMode('chats');
+    btn.textContent = '+ New';
+    btn.onclick = () => newChat();
+    // Restore normal chat view
+    if (trainChatId) { trainChatId = null; trainHistory = []; }
+    if (chatId) { loadChat(chatId); } else { renderEmpty(); }
+  }
+}
+
+function setSidebarMode(mode) {
+  document.getElementById('modeChats').className = 'sidebar-mode-btn' + (mode === 'chats' ? ' active' : '');
+  document.getElementById('modeTraining').className = 'sidebar-mode-btn train' + (mode === 'training' ? ' active' : '');
+  const btn = document.getElementById('newChatBtn');
+  if (mode === 'training') {
+    btn.textContent = '+ Train';
+    btn.onclick = () => newTrainingChat();
+    loadTrainingChats();
+  } else {
+    btn.textContent = '+ New';
+    btn.onclick = () => newChat();
+    loadChats();
+  }
+}
+
+function sidebarNewChat() {
+  if (trainMode) newTrainingChat();
+  else newChat();
+}
+
+async function loadTrainingChats() {
+  try {
+    const r = await fetch('/api/training');
+    const list = await r.json();
+    const el = document.getElementById('chatList');
+    if (!list.length) { el.innerHTML = '<div class="no-chats">No training chats yet</div>'; return; }
+    el.innerHTML = list.map(c => {
+      const d = new Date(c.updatedAt).toLocaleDateString(undefined,{month:'short',day:'numeric'});
+      return '<div class="chat-item training'+(c.id===trainChatId?' active':'')+'" onclick="loadTrainingChat(\''+c.id+'\')">'+
+        '<div class="chat-title">'+esc(c.title)+'<span class="train-badge">Train</span></div>'+
+        '<div class="chat-meta">'+d+' · '+(c.skillCount||0)+' skills</div>'+
+        '<button class="chat-del" onclick="delTrainingChat(event,\''+c.id+'\')" title="Delete">✕</button>'+
+      '</div>';
+    }).join('');
+  } catch {}
+}
+
+async function newTrainingChat() {
+  if (trainChatId) await saveTrainingChat();
+  try {
+    const r = await fetch('/api/training', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ title: 'New Training' }) });
+    const c = await r.json();
+    trainChatId = c.id;
+    trainHistory = [];
+    renderTrainingView();
+    closeSidebar();
+    await loadTrainingChats();
+  } catch {}
+}
+
+async function loadTrainingChat(id) {
+  try {
+    const r = await fetch('/api/training/' + id);
+    const c = await r.json();
+    trainChatId = c.id;
+    trainHistory = c.messages || [];
+    renderTrainingView();
+    closeSidebar();
+    loadTrainingChats();
+  } catch {}
+}
+
+async function saveTrainingChat(title) {
+  if (!trainChatId) return;
+  const t = title || trainHistory.find(m => m.role === 'user')?.content?.split('\n')[0]?.slice(0, 50) || 'New Training';
+  const sc = trainHistory.filter(m => m.skillSaved).length;
+  try { await fetch('/api/training/' + trainChatId, { method: 'PATCH', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ title: t, messages: trainHistory, skillCount: sc }) }); } catch {}
+}
+
+async function delTrainingChat(e, id) {
+  e.stopPropagation();
+  await fetch('/api/training/' + id, { method: 'DELETE' });
+  if (trainChatId === id) { trainChatId = null; trainHistory = []; renderEmpty(); }
+  await loadTrainingChats();
+}
+
+function renderTrainingView() {
+  const msgs = document.getElementById('msgs');
+  let html = '<div class="train-header"><strong>⚡ Training Mode</strong><br>Teach the AI new skills. Describe what you want it to learn — it will generate examples you can approve, edit, or save as knowledge.</div>';
+  trainHistory.forEach((m, i) => {
+    if (m.role === 'user') {
+      html += '<div class="msg user"><div class="bubble user-bubble">' + esc(m.content) + '</div></div>';
+    } else if (m.role === 'assistant') {
+      html += '<div class="msg ai"><div class="bubble ai-bubble">' + renderMd(m.content) + '</div>';
+      if (!m.skillSaved) {
+        html += '<div style="display:flex;gap:6px;margin-top:4px">';
+        html += '<button class="add-model-btn" style="background:#22c55e;color:#fff;font-size:11px;padding:4px 10px" onclick="approveSkill('+i+')">Save as Skill</button>';
+        html += '<button class="add-model-btn" style="font-size:11px;padding:4px 10px" onclick="approveAsExamples('+i+')">Save as Examples</button>';
+        html += '</div>';
+      } else {
+        html += '<div style="font-size:11px;color:#22c55e;margin-top:4px">✓ Saved as skill</div>';
+      }
+      html += '</div>';
+    }
+  });
+  msgs.innerHTML = html;
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+async function approveSkill(msgIdx) {
+  const m = trainHistory[msgIdx];
+  if (!m) return;
+  const title = trainHistory.slice(0, msgIdx).reverse().find(x => x.role === 'user')?.content?.slice(0, 80) || 'Untitled Skill';
+  try {
+    await fetch('/api/skills', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ type: 'knowledge', title, content: m.content, trainingChatId: trainChatId })
+    });
+    m.skillSaved = true;
+    await saveTrainingChat();
+    renderTrainingView();
+    showToast('Skill saved');
+    await loadSkills();
+  } catch { showToast('Failed to save skill'); }
+}
+
+async function approveAsExamples(msgIdx) {
+  const m = trainHistory[msgIdx];
+  if (!m) return;
+  const title = trainHistory.slice(0, msgIdx).reverse().find(x => x.role === 'user')?.content?.slice(0, 80) || 'Untitled Skill';
+  // Parse examples from the AI response — expects pairs of Input:/Output: or numbered items
+  const examples = [];
+  const blocks = m.content.split(/(?:^|\n)(?:Example \d+|---)/i).filter(Boolean);
+  blocks.forEach(block => {
+    const inputMatch = block.match(/(?:Input|User|Prompt|Q)[:\s]*(.+?)(?:\n|$)/i);
+    const outputMatch = block.match(/(?:Output|Assistant|Response|A)[:\s]*([\s\S]+?)$/i);
+    if (inputMatch && outputMatch) {
+      examples.push({ input: inputMatch[1].trim(), output: outputMatch[1].trim() });
+    }
+  });
+  if (!examples.length) {
+    // Fallback: save the whole thing as one example
+    const userMsg = trainHistory.slice(0, msgIdx).reverse().find(x => x.role === 'user')?.content || '';
+    examples.push({ input: userMsg, output: m.content });
+  }
+  try {
+    await fetch('/api/skills', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ type: 'examples', title, content: title, examples, trainingChatId: trainChatId })
+    });
+    m.skillSaved = true;
+    await saveTrainingChat();
+    renderTrainingView();
+    showToast(examples.length + ' example(s) saved');
+    await loadSkills();
+  } catch { showToast('Failed to save examples'); }
+}
+
+async function loadSkills() {
+  try { trainSkills = await (await fetch('/api/skills')).json(); } catch { trainSkills = []; }
+}
+
+async function deleteSkill(id) {
+  if (!confirm('Remove this skill?')) return;
+  await fetch('/api/skills/' + id, { method: 'DELETE' });
+  await loadSkills();
+  showToast('Skill removed');
+}
+
+async function exportSkillsJSONL() {
+  try {
+    const r = await fetch('/api/skills/export?format=jsonl');
+    const text = await r.text();
+    const blob = new Blob([text], { type: 'application/jsonl' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = 'training-data.jsonl';
+    document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+    showToast('Exported ' + text.split('\n').filter(Boolean).length + ' examples');
+  } catch { showToast('Export failed'); }
+}
+
+async function sendTrainingMessage() {
+  const inp = document.getElementById('msgInput');
+  const text = inp.value.trim();
+  if (!text || loading) return;
+  inp.value = ''; inp.style.height = 'auto';
+  loading = true;
+
+  trainHistory.push({ role: 'user', content: text, time: new Date().toISOString() });
+  renderTrainingView();
+
+  const sb = document.getElementById('sendBtn'); sb.textContent = '…'; sb.disabled = true;
+  const isGroq = selectedModel.startsWith('groq:');
+  const isOllama = selectedModel.startsWith('ollama:');
+  const modelId = isGroq ? selectedModel.slice(5) : isOllama ? selectedModel.slice(7) : selectedModel;
+  const pc = getProviderConfig();
+  if (isGroq) { pc.provider='groq'; pc.format='openai'; pc.apiKey=providerKeys.groq||''; pc.endpoint='https://api.groq.com/openai/v1/chat/completions'; }
+  if (isOllama) { pc.provider='ollama'; pc.format='ollama'; pc.endpoint=''; }
+
+  const trainSystemPrompt = `You are an AI training assistant for an Excel add-in. The user wants to teach you new skills.
+
+Your job is to help the user create training data. Based on what they describe, do ONE of:
+1. If they describe a skill/pattern they want you to learn, generate 3-5 high-quality training examples in this format:
+   Example 1:
+   Input: [what a user would ask]
+   Output: [how you should respond, including CODE_JS blocks if applicable]
+   ---
+   Example 2: ...
+
+2. If they share knowledge/facts/preferences, acknowledge it and summarize what you'll remember as a structured skill.
+
+3. If they ask you to get better at something specific (formulas, formatting, charts, etc.), generate diverse examples covering edge cases.
+
+Always be specific to Excel operations. Include CODE_JS blocks in outputs when the skill involves spreadsheet manipulation.`;
+
+  try {
+    const msgs = [{ role: 'user', content: text }];
+    if (trainHistory.length > 2) {
+      const ctx = trainHistory.slice(-10, -1);
+      msgs.unshift(...ctx);
+    }
+
+    const r = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        messages: msgs,
+        model: modelId,
+        useOllama: isOllama, useGroq: isGroq,
+        apiKey: localStorage.getItem('apiKey') || undefined,
+        groqKey: localStorage.getItem('groqKey') || undefined,
+        providerConfig: pc,
+        options: { pinnedMemory: [], coreMemory: [], preferences: '', noThink: true, systemPromptOverride: trainSystemPrompt }
+      })
+    });
+    const data = await r.json();
+    const reply = (data.reply || data.text || '').replace(/<think>[\s\S]*?<\/think>/g, '').trim();
+    trainHistory.push({ role: 'assistant', content: reply, time: new Date().toISOString() });
+    await saveTrainingChat();
+  } catch (e) {
+    trainHistory.push({ role: 'assistant', content: 'Error: ' + e.message, time: new Date().toISOString() });
+  }
+
+  loading = false;
+  sb.textContent = '↑'; sb.disabled = false; sb.className = 'send';
+  renderTrainingView();
+}
+
 let _searchDebounce = null;
 function searchChats(q) {
   clearTimeout(_searchDebounce);
@@ -2814,6 +3111,7 @@ function stopGen(){ctrl?.abort();loading=false;removeTyping();const b=document.g
 
 // ── Send ──────────────────────────────────────────────────────────────────────
 async function sendMessage() {
+  if (trainMode && trainChatId) { await sendTrainingMessage(); return; }
   const inp=document.getElementById('msgInput');
   let text=inp.value.trim();
   if(!text&&!attached)return;
