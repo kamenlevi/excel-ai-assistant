@@ -359,14 +359,12 @@ html,body{height:100%;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;
 .usage-expand-btn{display:flex;align-items:center;gap:4px;font-size:11px;color:var(--accent);cursor:pointer;margin-top:8px;background:none;border:none;padding:0;font-family:inherit}
 .usage-expand-btn .arrow{display:inline-block;transition:transform .25s ease;font-size:9px}
 .usage-expand-btn .arrow.open{transform:rotate(90deg)}
-.heat-grid{display:grid;grid-template-columns:repeat(7,1fr);grid-auto-flow:column;grid-template-rows:repeat(24,1fr);gap:1px}
-.heat-cell{aspect-ratio:1;border-radius:1px;background:var(--surf);position:relative}
-.heat-cell[data-lvl="1"]{background:rgba(var(--accent-rgb),.2)}
-.heat-cell[data-lvl="2"]{background:rgba(var(--accent-rgb),.4)}
-.heat-cell[data-lvl="3"]{background:rgba(var(--accent-rgb),.65)}
-.heat-cell[data-lvl="4"]{background:var(--accent)}
-.heat-labels{display:flex;flex-direction:column;justify-content:space-between;font-size:8px;color:var(--text3);margin-left:2px;width:24px;flex-shrink:0;text-align:left}
-.heat-day-labels{display:flex;gap:1px;font-size:8px;color:var(--text3);justify-content:space-around;margin-bottom:2px}
+.hour-chart{display:flex;align-items:flex-end;gap:1px;height:80px;padding:0}
+.hour-bar{flex:1;background:var(--accent);border-radius:2px 2px 0 0;min-width:0;transition:height .3s ease;position:relative;opacity:.7}
+.hour-bar:hover{opacity:1}
+.hour-bar[data-v="0"]{background:var(--surf);opacity:1}
+.hour-labels{display:flex;gap:1px;font-size:7px;color:var(--text3);margin-top:2px}
+.hour-labels span{flex:1;text-align:center;min-width:0}
 .bar-row{display:flex;align-items:center;gap:6px;margin-bottom:4px}
 .bar-label{font-size:11px;color:var(--text2);width:70px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex-shrink:0;text-align:right}
 .bar-track{flex:1;height:14px;background:var(--surf);border-radius:3px;overflow:hidden}
@@ -1198,23 +1196,18 @@ function renderUsageTab() {
     else { streak = 0; }
   }
 
-  // ── Time-of-day heatmap (vertical: hours as rows, days as columns) ──
-  const hourDay = {};
+  // ── Time-of-day bar chart ──
   const hourTotals = new Array(24).fill(0);
   const dayTotals = new Array(7).fill(0);
-  msgs.forEach(e => { if (!e.ts) return; const d = new Date(e.ts); const dow = d.getDay(); const h = d.getHours(); const key = dow + '-' + h; hourDay[key] = (hourDay[key]||0)+1; hourTotals[h]++; dayTotals[dow]++; });
-  const maxHD = Math.max(1, ...Object.values(hourDay));
-  function hdLevel(n) { const r = n/maxHD; return r === 0 ? 0 : r <= 0.25 ? 1 : r <= 0.5 ? 2 : r <= 0.75 ? 3 : 4; }
-  let heatCells = '';
-  const dayNames = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
-  const dowOrder = [1,2,3,4,5,6,0];
-  for (let di = 0; di < 7; di++) {
-    const dow = dowOrder[di];
-    for (let h = 0; h < 24; h++) {
-      const cnt = hourDay[dow+'-'+h] || 0;
-      heatCells += `<div class="heat-cell" data-lvl="${hdLevel(cnt)}" title="${dayNames[di]} ${h}:00 — ${cnt} msgs"></div>`;
-    }
+  msgs.forEach(e => { if (!e.ts) return; const d = new Date(e.ts); hourTotals[d.getHours()]++; dayTotals[d.getDay()]++; });
+  const maxHour = Math.max(1, ...hourTotals);
+  let hourBars = '';
+  for (let h = 0; h < 24; h++) {
+    const cnt = hourTotals[h];
+    const pct = Math.round(cnt / maxHour * 100);
+    hourBars += `<div class="hour-bar" style="height:${pct}%" data-v="${cnt}" title="${h}:00 — ${cnt} messages"></div>`;
   }
+  const hourLabelsHtml = Array.from({length:24}, (_,h) => '<span>'+(h%3===0 ? (h===0?'0a':h<12?h+'a':h===12?'12p':(h-12)+'p') : '')+'</span>').join('');
 
   // ── Peak hours personality insight ──
   const topHours = hourTotals.map((c,i) => [i,c]).sort((a,b) => b[1]-a[1]);
@@ -1350,11 +1343,8 @@ function renderUsageTab() {
       <div class="streak-row"><span>Current streak: <strong>${curStreak} day${curStreak!==1?'s':''}</strong></span><span>Longest: <strong>${maxStreak} day${maxStreak!==1?'s':''}</strong></span></div>
     </div>
     <div class="usage-section"><div class="usage-section-title">Peak Hours</div>
-      <div class="heat-day-labels">${dayNames.map(d=>'<div>'+d.slice(0,2)+'</div>').join('')}</div>
-      <div style="display:flex;gap:2px">
-        <div style="flex:1"><div class="heat-grid">${heatCells}</div></div>
-        <div class="heat-labels"><span>0a</span><span>6a</span><span>12p</span><span>6p</span><span>11p</span></div>
-      </div>
+      <div class="hour-chart">${hourBars}</div>
+      <div class="hour-labels">${hourLabelsHtml}</div>
       <div class="usage-insight">${personalityMsg}</div>
     </div>
     <div class="usage-section"><div class="usage-section-title">Models</div>${modelBars || '<div style="font-size:12px;color:var(--text3)">No data yet</div>'}</div>
