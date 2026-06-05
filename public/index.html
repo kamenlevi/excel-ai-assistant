@@ -1233,7 +1233,7 @@ function renderUsageTab() {
     if (h >= 21 || h < 2) return 'Night owl! The spreadsheets come alive after dark.';
     return 'Late-night hacker — you and the servers have the world to yourselves.';
   }
-  const personalityMsg = totalMessages > 0 ? `You're most active around <strong>${fmtHr(peakHour1)}</strong> and <strong>${fmtHr(peakHour2)}</strong>, especially on <strong>${peakDay}s</strong>. ${getPersonality(peakHour1)}` : 'Start using the app to see your patterns here!';
+  const personalityMsg = totalMessages > 0 ? `You're most active around <strong>${fmtHr(peakHour1)}</strong> and <strong>${fmtHr(peakHour2)}</strong>, especially on <strong>${peakDay.slice(0,3)}</strong>. ${getPersonality(peakHour1)}` : 'Start using the app to see your patterns here!';
 
   // ── Weekly / monthly summary ──
   const now = new Date();
