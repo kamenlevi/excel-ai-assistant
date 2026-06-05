@@ -81,6 +81,16 @@ html,body{height:100%;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;
 .skill-card .skill-type{font-size:10px;color:#22c55e;text-transform:uppercase;font-weight:700}
 .skill-card .skill-del{float:right;cursor:pointer;color:var(--text3);font-size:14px}
 .skill-card .skill-del:hover{color:var(--danger)}
+body.train-active .input-box:focus-within{border-color:#22c55e;box-shadow:0 0 0 3px rgba(34,197,94,.18)}
+.train-guide-popup{position:absolute;bottom:calc(100% + 8px);left:0;right:0;background:var(--surf);border:1px solid var(--border);border-radius:var(--r);box-shadow:var(--shadow-lg,0 8px 24px rgba(0,0,0,.15));padding:14px;font-size:12px;color:var(--text);z-index:200;max-height:60vh;overflow-y:auto;line-height:1.6;display:none}
+.train-guide-popup.show{display:block}
+.train-guide-popup h3{font-size:14px;margin:0 0 8px;color:#22c55e}
+.train-guide-popup h4{font-size:12px;margin:12px 0 4px;color:var(--text)}
+.train-guide-popup code{background:var(--code-bg);padding:1px 4px;border-radius:3px;font-size:11px}
+.train-guide-popup .guide-step{display:flex;gap:8px;margin:6px 0}
+.train-guide-popup .guide-num{flex-shrink:0;width:20px;height:20px;border-radius:50%;background:#22c55e;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center}
+.train-guide-popup .guide-actions{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap}
+.train-guide-popup .guide-actions button{font-size:11px;padding:5px 10px}
 .skill-example{background:var(--code-bg);border-radius:var(--r2);padding:6px 8px;margin-top:4px;font-size:11px;line-height:1.4}
 .sidebar-close{background:none;border:none;color:var(--text2);cursor:pointer;font-size:18px;padding:2px 5px;border-radius:4px;line-height:1}
 .sidebar-close:hover{background:var(--surf2)}
@@ -748,8 +758,10 @@ function classifyIntent(text) {
 // ── Security state ────────────────────────────────────────────────────────────
 let sessionDangerConfirmed = new Set(); // 'high', 'critical' confirmed this session
 let sessionPasswordVerified = false;    // password entered once this session
-const APP_VERSION = 'v7.0.0';
+const APP_VERSION = 'v7.0.2';
 const CHANGELOG = [
+  { ver: 'v7.0.2', date: '2026-06-05', summary: 'Training mode polish: streaming responses with live timer and token count (matches normal chats), green focus glow on input field, 📖 fine-tuning guide button with step-by-step instructions for Ollama/Unsloth/MLX/OpenAI, Export JSONL and Generate Modelfile actions, hide attach/options buttons in training mode.' },
+  { ver: 'v7.0.1', date: '2026-06-05', summary: 'Training UX: informative empty state explains Skill vs Examples paths, button tooltips, Export JSONL button in Usage tab, guidance for cloud vs local model workflows.' },
   { ver: 'v7.0.0', date: '2026-06-05', summary: 'AI Training System: teach the AI new skills through training chats. Green ⚡ button in sidebar opens training mode — describe what you want the AI to learn, it generates examples you can approve as skills or training data. Skills are injected into every AI response. Export training data as JSONL for local model fine-tuning. Trained Skills counter in Usage tab shows real data.' },
   { ver: 'v6.1.0', date: '2026-06-05', summary: 'UX overhaul: vertical activity calendar and peak hours heatmap. Personality insight message based on usage patterns ("night owl", "early bird", etc). Weekly and monthly summary stats. Enriched settings: profile shows conversation count, favourite model, member-since date. General adds font size, sound toggle. History shows storage stats and chat export. GPU-accelerated smooth scrolling across all panels. Model button shows selected model immediately on load instead of "Loading...".' },
   { ver: 'v6.0.0', date: '2026-06-05', summary: 'Desktop app: Electron packaging turns the add-in into an installable app. Install once — it auto-generates SSL certs, starts the server, and sideloads the manifest into Excel. System tray icon with server status, Open Excel, Check for Updates, and Reinstall Add-in. Auto-updates via GitHub Releases (Apple-style: auto-patches, prompted major updates). Settings shows update controls when running in Electron. Supports Windows, Linux, and macOS. npm start still works standalone for development.' },
@@ -1386,7 +1398,7 @@ function renderUsageTab() {
         Auto-extracted facts: <strong>${factCount}</strong><br>
         Preferences: <em>${esc(prefsPreview)}</em>
       </div>
-      ${trainSkills.length ? '<button class="add-model-btn" style="margin-top:6px;font-size:11px" onclick="openSettings(\'training\')">Manage Skills</button>' : '<div style="font-size:11px;color:var(--text3);margin-top:4px">Use the ⚡ training button in the sidebar to teach the AI new skills.</div>'}
+      ${trainSkills.length ? `<div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap"><button class="add-model-btn" style="font-size:11px" onclick="openSettings('training')">Manage Skills</button><button class="add-model-btn" style="font-size:11px" onclick="exportSkillsJSONL()">Export JSONL</button></div><div style="font-size:10px;color:var(--text3);margin-top:6px;line-height:1.5"><strong>Cloud models:</strong> Skills are injected into every chat automatically — no extra steps needed.<br><strong>Local models:</strong> Export JSONL → fine-tune with <code>ollama create</code> or your preferred training tool.</div>` : '<div style="font-size:11px;color:var(--text3);margin-top:4px">Use the ⚡ training button in the sidebar to teach the AI new skills.</div>'}
     </div>
     <div class="usage-section"><div class="usage-section-title">Cost Breakdown</div>
       ${costTableHtml}
@@ -1833,6 +1845,17 @@ function applyTrainUI() {
   document.getElementById('logoIcon').textContent = 'TR';
   document.getElementById('logoIcon').style.background = '#22c55e';
   document.getElementById('sendBtn').style.background = '#22c55e';
+  document.body.classList.add('train-active');
+  // Show guide button, hide attach/plus
+  document.querySelector('.act-btn[title="Attach file"]').style.display = 'none';
+  document.getElementById('plusBtn')?.parentElement?.style.setProperty('display', 'none');
+  const ib = document.querySelector('.input-btns');
+  if (ib && !document.getElementById('trainGuideBtn')) {
+    const gb = document.createElement('button');
+    gb.className = 'act-btn'; gb.id = 'trainGuideBtn'; gb.title = 'Fine-tuning guide';
+    gb.textContent = '📖'; gb.onclick = toggleTrainGuide;
+    ib.insertBefore(gb, document.getElementById('sendBtn'));
+  }
 }
 
 function removeTrainUI() {
@@ -1845,6 +1868,11 @@ function removeTrainUI() {
   document.getElementById('logoIcon').textContent = 'AI';
   document.getElementById('logoIcon').style.background = '';
   document.getElementById('sendBtn').style.background = '';
+  document.body.classList.remove('train-active');
+  document.querySelector('.act-btn[title="Attach file"]').style.display = '';
+  document.getElementById('plusBtn')?.parentElement?.style.setProperty('display', '');
+  document.getElementById('trainGuideBtn')?.remove();
+  document.getElementById('trainGuidePopup')?.remove();
 }
 
 async function enterTrainMode() {
@@ -1940,7 +1968,11 @@ function renderTrainingView() {
       '<div class="empty-state" id="emptyState">' +
       '<div class="empty-icon" style="color:#22c55e">⚡</div>' +
       '<div class="empty-title" style="color:#22c55e">Training Mode</div>' +
-      '<div class="empty-sub">Teach the AI new skills. Tell it what to learn and it will generate examples you can save.</div>' +
+      '<div class="empty-sub">Teach the AI new skills by chatting. Describe what you want it to learn, then save its responses.</div>' +
+      '<div style="text-align:left;font-size:11px;color:var(--text2);margin:12px 0 8px;line-height:1.5">' +
+      '<div style="margin-bottom:8px"><strong style="color:#22c55e">💡 Save as Skill</strong> — saves the AI\'s response as a rule or preference. It gets added to every future conversation automatically. Best for cloud models (OpenRouter, Groq).</div>' +
+      '<div><strong style="color:var(--text)">📋 Save as Examples</strong> — saves input/output pairs as training data. Export as JSONL to fine-tune local models (Ollama, MLX). Go to Usage → Trained Skills → Export JSONL.</div>' +
+      '</div>' +
       '<div class="chips">' +
       '<button class="chip" style="border-color:#22c55e;color:#22c55e" onclick="useSugg(this)">Learn how I format financial reports</button>' +
       '<button class="chip" style="border-color:#22c55e;color:#22c55e" onclick="useSugg(this)">Get better at writing VLOOKUP formulas</button>' +
@@ -1956,8 +1988,8 @@ function renderTrainingView() {
       html += '<div class="msg ai"><div class="bubble ai-bubble">' + renderMd(m.content) + '</div>';
       if (!m.skillSaved) {
         html += '<div style="display:flex;gap:6px;margin-top:4px">';
-        html += '<button class="add-model-btn" style="background:#22c55e;color:#fff;font-size:11px;padding:4px 10px" onclick="approveSkill('+i+')">Save as Skill</button>';
-        html += '<button class="add-model-btn" style="font-size:11px;padding:4px 10px" onclick="approveAsExamples('+i+')">Save as Examples</button>';
+        html += '<button class="add-model-btn" style="background:#22c55e;color:#fff;font-size:11px;padding:4px 10px" onclick="approveSkill('+i+')" title="Saves this response as a rule — injected into every future chat (best for cloud models)">💡 Save as Skill</button>';
+        html += '<button class="add-model-btn" style="font-size:11px;padding:4px 10px" onclick="approveAsExamples('+i+')" title="Saves input/output pairs for JSONL export — use to fine-tune local models">📋 Save as Examples</button>';
         html += '</div>';
       } else {
         html += '<div style="font-size:11px;color:#22c55e;margin-top:4px">✓ Saved as skill</div>';
@@ -2020,6 +2052,58 @@ async function approveAsExamples(msgIdx) {
   } catch { showToast('Failed to save examples'); }
 }
 
+function toggleTrainGuide() {
+  let popup = document.getElementById('trainGuidePopup');
+  if (popup) { popup.classList.toggle('show'); return; }
+  popup = document.createElement('div');
+  popup.className = 'train-guide-popup show'; popup.id = 'trainGuidePopup';
+  const exCount = trainSkills.filter(s=>s.type==='examples').reduce((a,s)=>a+(s.examples?.length||0),0);
+  const skillCount = trainSkills.filter(s=>s.type==='knowledge').length;
+  popup.innerHTML = `
+    <h3>📖 Fine-Tuning Guide</h3>
+    <p>You have <strong>${skillCount} skill${skillCount!==1?'s':''}</strong> and <strong>${exCount} training example${exCount!==1?'s':''}</strong> saved.</p>
+    <h4>How skills work</h4>
+    <div class="guide-step"><div class="guide-num">1</div><div>Chat in training mode — describe what you want the AI to learn</div></div>
+    <div class="guide-step"><div class="guide-num">2</div><div><strong>💡 Save as Skill</strong> — the AI's response becomes a permanent rule, injected into every future chat. Works instantly with cloud models (OpenRouter, Groq).</div></div>
+    <div class="guide-step"><div class="guide-num">3</div><div><strong>📋 Save as Examples</strong> — saves input/output pairs as structured training data for fine-tuning local models.</div></div>
+    <h4>Fine-tuning a local model</h4>
+    <div class="guide-step"><div class="guide-num">1</div><div>Save enough examples (20+ recommended for good results)</div></div>
+    <div class="guide-step"><div class="guide-num">2</div><div>Export your training data as JSONL (button below)</div></div>
+    <div class="guide-step"><div class="guide-num">3</div><div>Fine-tune with your preferred tool:</div></div>
+    <div style="margin:4px 0 4px 28px;font-size:11px;line-height:1.7">
+      <strong>Ollama (easiest)</strong><br>
+      <code>ollama create my-excel-ai -f Modelfile</code><br>
+      Where Modelfile contains: <code>FROM llama3.2</code> + <code>SYSTEM "..."</code> with your skills<br><br>
+      <strong>Unsloth (best quality, needs GPU)</strong><br>
+      <code>pip install unsloth</code> → use the exported JSONL with their fine-tuning script<br>
+      Supports LoRA fine-tuning on Llama, Mistral, Gemma, Qwen<br><br>
+      <strong>MLX (Mac Apple Silicon)</strong><br>
+      <code>pip install mlx-lm</code> → <code>mlx_lm.lora --train --data training-data.jsonl</code><br><br>
+      <strong>OpenAI-compatible</strong><br>
+      The JSONL format is compatible with OpenAI, Together AI, and Fireworks fine-tuning APIs.
+    </div>
+    <div class="guide-actions">
+      <button class="add-model-btn" style="background:#22c55e;color:#fff" onclick="exportSkillsJSONL()">📋 Export JSONL (${exCount} examples)</button>
+      <button class="add-model-btn" onclick="createOllamaModelfile()">🦙 Generate Ollama Modelfile</button>
+    </div>`;
+  document.querySelector('.input-box').appendChild(popup);
+  popup.addEventListener('click', e => e.stopPropagation());
+  setTimeout(() => document.addEventListener('click', function h() { popup.classList.remove('show'); document.removeEventListener('click', h); }), 10);
+}
+
+async function createOllamaModelfile() {
+  const skills = trainSkills;
+  let sys = 'You are an AI assistant for Microsoft Excel.';
+  const knowledge = skills.filter(s => s.type === 'knowledge');
+  if (knowledge.length) sys += '\n\nTrained skills:\n' + knowledge.map(s => '- ' + s.title + ': ' + s.content).join('\n');
+  const content = 'FROM llama3.2\nSYSTEM """' + sys.replace(/"/g, '\\"') + '"""\nPARAMETER temperature 0.7\n';
+  const blob = new Blob([content], { type: 'text/plain' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = 'Modelfile';
+  document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+  showToast('Modelfile downloaded — run: ollama create my-excel-ai -f Modelfile');
+}
+
 async function loadSkills() {
   try { trainSkills = await (await fetch('/api/skills')).json(); } catch { trainSkills = []; }
 }
@@ -2053,7 +2137,19 @@ async function sendTrainingMessage() {
   trainHistory.push({ role: 'user', content: text, time: new Date().toISOString() });
   renderTrainingView();
 
-  const sb = document.getElementById('sendBtn'); sb.textContent = '…'; sb.disabled = true;
+  const sb = document.getElementById('sendBtn'); sb.textContent = '■'; sb.disabled = false;
+  const box = document.getElementById('messages');
+  const t0 = Date.now();
+
+  // Add typing indicator with live timer
+  const streamEl = document.createElement('div'); streamEl.className = 'msg assistant'; streamEl.id = 'typing';
+  streamEl.innerHTML = '<div class="msg-head"><span class="msg-role assistant" style="color:#22c55e">Training AI</span><span class="live-timer">0.0s</span></div>' +
+    '<div class="typing"><div class="tdot"></div><div class="tdot"></div><div class="tdot"></div></div>';
+  box.appendChild(streamEl); box.scrollTop = box.scrollHeight;
+  const timerEl = streamEl.querySelector('.live-timer');
+  if (timerInterval) clearInterval(timerInterval);
+  timerInterval = setInterval(() => { timerEl.textContent = ((Date.now() - t0) / 1000).toFixed(1) + 's'; }, 100);
+
   const isGroq = selectedModel.startsWith('groq:');
   const isOllama = selectedModel.startsWith('ollama:');
   const modelId = isGroq ? selectedModel.slice(5) : isOllama ? selectedModel.slice(7) : selectedModel;
@@ -2077,6 +2173,10 @@ Your job is to help the user create training data. Based on what they describe, 
 
 Always be specific to Excel operations. Include CODE_JS blocks in outputs when the skill involves spreadsheet manipulation.`;
 
+  let answerText = '';
+  let streamBody = null;
+  let tok = null;
+
   try {
     const msgs = [{ role: 'user', content: text }];
     if (trainHistory.length > 2) {
@@ -2084,7 +2184,7 @@ Always be specific to Excel operations. Include CODE_JS blocks in outputs when t
       msgs.unshift(...ctx);
     }
 
-    const r = await fetch('/api/chat', {
+    const resp = await fetch('/api/chat/stream', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -2097,11 +2197,58 @@ Always be specific to Excel operations. Include CODE_JS blocks in outputs when t
         options: { pinnedMemory: [], coreMemory: [], preferences: '', noThink: true, systemPromptOverride: trainSystemPrompt }
       })
     });
-    const data = await r.json();
-    const reply = (data.reply || data.text || '').replace(/<think>[\s\S]*?<\/think>/g, '').trim();
-    trainHistory.push({ role: 'assistant', content: reply, time: new Date().toISOString() });
+
+    const reader = resp.body.getReader(), decoder = new TextDecoder();
+    let buf = '';
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += decoder.decode(value, { stream: true });
+      const lines = buf.split('\n'); buf = lines.pop();
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        let ev; try { ev = JSON.parse(line.slice(6)); } catch { continue; }
+
+        if (ev.type === 'token') {
+          if (!streamBody) {
+            streamEl.querySelector('.typing')?.remove();
+            streamBody = document.createElement('div'); streamBody.className = 'msg-body';
+            streamEl.appendChild(streamBody);
+          }
+          answerText += ev.token;
+          streamBody.textContent = answerText;
+          box.scrollTop = box.scrollHeight;
+        } else if (ev.type === 'done') {
+          clearInterval(timerInterval); timerInterval = null;
+          const ms = Date.now() - t0;
+          tok = ev.usage?.completion_tokens ?? null;
+          const cleaned = ev.cleaned ?? answerText;
+          answerText = cleaned;
+
+          if (!streamBody) {
+            streamEl.querySelector('.typing')?.remove();
+            streamBody = document.createElement('div'); streamBody.className = 'msg-body';
+            streamEl.appendChild(streamBody);
+          }
+          streamBody.innerHTML = renderMd(cleaned);
+
+          const parts = [];
+          if (ms) parts.push((ms / 1000).toFixed(1) + 's');
+          if (tok) parts.push(tok.toLocaleString() + ' tok');
+          parts.push(new Date().toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }));
+          streamEl.querySelector('.msg-head').innerHTML =
+            '<span class="msg-role assistant" style="color:#22c55e">Training AI</span>' +
+            '<span class="msg-meta">' + parts.join(' · ') + '</span>';
+          streamEl.removeAttribute('id');
+        }
+      }
+    }
+
+    trainHistory.push({ role: 'assistant', content: answerText, time: new Date().toISOString(), tok });
     await saveTrainingChat();
   } catch (e) {
+    clearInterval(timerInterval); timerInterval = null;
+    streamEl?.remove();
     trainHistory.push({ role: 'assistant', content: 'Error: ' + e.message, time: new Date().toISOString() });
   }
 
