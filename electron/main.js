@@ -60,6 +60,16 @@ app.on('window-all-closed', (e) => e.preventDefault());
 // Mark quitting so the close handler lets the window actually close
 app.on('before-quit', () => { app.isQuitting = true; });
 
+// Allow self-signed cert for localhost
+app.on('certificate-error', (event, webContents, url, error, certificate, callback) => {
+  if (new URL(url).hostname === 'localhost') {
+    event.preventDefault();
+    callback(true);
+  } else {
+    callback(false);
+  }
+});
+
 app.whenReady().then(async () => {
   const userDataPath = app.getPath('userData');
   const certsDir = path.join(userDataPath, 'certs');

@@ -4,7 +4,7 @@ const https   = require('https');
 const path    = require('path');
 const fs      = require('fs');
 const fetch   = require('node-fetch');
-const { v4: uuidv4 } = require('uuid');
+const crypto = require('crypto');
 const { execFile } = require('child_process');
 const ExcelJS = require('exceljs');
 const os = require('os');
@@ -904,7 +904,7 @@ app.get('/api/chats/search', (req, res) => {
 
 app.post('/api/chats', (req, res) => {
   const chats = readChats();
-  const id = uuidv4();
+  const id = crypto.randomUUID();
   const now = new Date().toISOString();
   chats[id] = { id, title: req.body.title || 'New Chat', messages: req.body.messages || [], summary: null, totalTokens: 0, messageCount: 0, createdAt: now, updatedAt: now };
   writeChats(chats);

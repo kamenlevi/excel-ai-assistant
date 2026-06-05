@@ -52,6 +52,7 @@
 }
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;font-size:14px;color:var(--text);background:var(--bg);overflow:hidden}
+*{-webkit-overflow-scrolling:touch;scroll-behavior:smooth}
 
 .app{display:flex;height:100vh;position:relative}
 .main{flex:1;display:flex;flex-direction:column;min-width:0;overflow:hidden}
@@ -68,7 +69,7 @@ html,body{height:100%;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;
 .new-chat:hover{background:var(--accent2)}
 .sidebar-close{background:none;border:none;color:var(--text2);cursor:pointer;font-size:18px;padding:2px 5px;border-radius:4px;line-height:1}
 .sidebar-close:hover{background:var(--surf2)}
-.chat-list{flex:1;overflow-y:auto;padding:8px}
+.chat-list{flex:1;overflow-y:auto;padding:8px;will-change:scroll-position;-webkit-transform:translateZ(0);transform:translateZ(0)}
 .chat-item{padding:8px 10px;border-radius:var(--r2);cursor:pointer;position:relative;transition:background .1s;margin-bottom:2px}
 .chat-item:hover{background:var(--surf2)}
 .chat-item.active{background:var(--surf2)}
@@ -99,7 +100,7 @@ html,body{height:100%;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;
 @keyframes spin{to{transform:rotate(360deg)}}
 
 /* ── Messages ── */
-.messages{flex:1;overflow-y:auto;padding:16px 12px;display:flex;flex-direction:column;gap:14px}
+.messages{flex:1;overflow-y:auto;padding:16px 12px;display:flex;flex-direction:column;gap:14px;will-change:scroll-position;-webkit-transform:translateZ(0);transform:translateZ(0)}
 .empty-state{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:20px;text-align:center}
 .empty-icon{width:44px;height:44px;background:var(--accent);border-radius:11px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:22px}
 .empty-title{font-size:15px;font-weight:600;color:var(--text)}
@@ -311,7 +312,7 @@ html,body{height:100%;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;
 .snav-item{background:none;border:none;text-align:left;padding:7px 8px;font-size:11px;color:var(--text2);cursor:pointer;border-radius:var(--r2);transition:all .12s;line-height:1.3;font-family:inherit}
 .snav-item:hover{background:var(--surf);color:var(--text)}
 .snav-item.active{background:var(--surf2);color:var(--text);font-weight:600}
-.sbody{padding:16px;display:flex;flex-direction:column;gap:18px;overflow-y:auto;overflow-x:hidden;flex:1;min-width:0;animation:settingsFadeIn .2s var(--ease)}
+.sbody{padding:16px;display:flex;flex-direction:column;gap:18px;overflow-y:auto;overflow-x:hidden;flex:1;min-width:0;animation:settingsFadeIn .2s var(--ease);will-change:scroll-position;-webkit-transform:translateZ(0);transform:translateZ(0)}
 @keyframes settingsFadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
 .sgrp{display:flex;flex-direction:column;gap:8px}
 .slabel{font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px}
@@ -340,27 +341,29 @@ html,body{height:100%;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;
 .stat-card{background:var(--surf);border-radius:var(--r2);padding:10px;text-align:center}
 .stat-val{font-size:20px;font-weight:700;color:var(--text)}
 .stat-label{font-size:10px;color:var(--text3);margin-top:2px}
-.cal-grid{display:grid;grid-template-columns:repeat(26,1fr);gap:2px}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
 .cal-cell{width:100%;aspect-ratio:1;border-radius:2px;background:var(--surf);min-width:5px}
 .cal-cell[data-lvl="1"]{background:rgba(var(--accent-rgb),.25)}
 .cal-cell[data-lvl="2"]{background:rgba(var(--accent-rgb),.5)}
 .cal-cell[data-lvl="3"]{background:rgba(var(--accent-rgb),.75)}
 .cal-cell[data-lvl="4"]{background:var(--accent)}
-.cal-row-label{font-size:8px;color:var(--text3);width:14px;text-align:right;flex-shrink:0}
-.cal-wrap{display:flex;gap:2px}
-.cal-days{display:flex;flex-direction:column;gap:1px;justify-content:space-between;padding:1px 0}
-.cal-months{display:flex;gap:0;font-size:8px;color:var(--text3);margin-bottom:2px;padding-left:16px}
-.cal-months span{flex:1;min-width:0}
+.cal-row-label{font-size:8px;color:var(--text3);height:auto;text-align:center;flex-shrink:0}
+.cal-wrap{display:flex;flex-direction:column;gap:2px}
+.cal-days{display:flex;gap:2px;justify-content:space-around;padding:0 0 2px 0}
+.cal-months{display:flex;flex-direction:column;gap:0;font-size:8px;color:var(--text3);margin-right:2px;justify-content:space-between;width:24px;flex-shrink:0}
+.cal-months span{min-width:0}
 .streak-row{display:flex;gap:12px;margin-top:6px;font-size:11px;color:var(--text2)}
 .streak-row strong{color:var(--text)}
-.heat-grid{display:grid;grid-template-columns:repeat(24,1fr);gap:1px}
+.usage-insight{font-size:12px;color:var(--text2);line-height:1.5;margin-top:8px;padding:8px 10px;background:var(--surf);border-radius:var(--r2);font-style:italic}
+.usage-insight strong{color:var(--text);font-style:normal}
+.heat-grid{display:grid;grid-template-columns:repeat(7,1fr);grid-auto-flow:column;grid-template-rows:repeat(24,1fr);gap:1px}
 .heat-cell{aspect-ratio:1;border-radius:1px;background:var(--surf);position:relative}
 .heat-cell[data-lvl="1"]{background:rgba(var(--accent-rgb),.2)}
 .heat-cell[data-lvl="2"]{background:rgba(var(--accent-rgb),.4)}
 .heat-cell[data-lvl="3"]{background:rgba(var(--accent-rgb),.65)}
 .heat-cell[data-lvl="4"]{background:var(--accent)}
-.heat-labels{display:flex;justify-content:space-between;font-size:8px;color:var(--text3);margin-top:2px;padding:0 2px}
-.heat-day-labels{display:flex;flex-direction:column;gap:1px;font-size:8px;color:var(--text3);justify-content:space-between;width:18px;flex-shrink:0;text-align:right;padding-right:2px}
+.heat-labels{display:flex;flex-direction:column;justify-content:space-between;font-size:8px;color:var(--text3);margin-left:2px;width:24px;flex-shrink:0;text-align:left}
+.heat-day-labels{display:flex;gap:1px;font-size:8px;color:var(--text3);justify-content:space-around;margin-bottom:2px}
 .bar-row{display:flex;align-items:center;gap:6px;margin-bottom:4px}
 .bar-label{font-size:11px;color:var(--text2);width:70px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex-shrink:0;text-align:right}
 .bar-track{flex:1;height:14px;background:var(--surf);border-radius:3px;overflow:hidden}
@@ -475,7 +478,8 @@ mark.search-hl.current{background:rgba(var(--accent-rgb),.6)}
     <header class="header">
       <button class="btn-icon" onclick="openSidebar()" title="Chat history">☰</button>
       <div class="logo-icon">AI</div>
-      <button class="model-btn" id="modelBtn" onclick="openModelPicker()">Loading…</button>
+      <button class="model-btn" id="modelBtn" onclick="openModelPicker()"></button>
+      <script>document.getElementById('modelBtn').textContent=(function(){try{var id=localStorage.getItem('selModel')||'meta-llama/llama-3.3-70b-instruct';return(id.split('/').pop()||id)+' ▾'}catch(e){return'Model ▾'}})();</script>
       <div class="sync-box ok" id="syncBox">
         <span class="sync-icon" id="syncIcon">✓</span>
         <div class="sync-tip" id="syncTip">Ready</div>
@@ -727,8 +731,9 @@ function classifyIntent(text) {
 // ── Security state ────────────────────────────────────────────────────────────
 let sessionDangerConfirmed = new Set(); // 'high', 'critical' confirmed this session
 let sessionPasswordVerified = false;    // password entered once this session
-const APP_VERSION = 'v6.0.0';
+const APP_VERSION = 'v6.1.0';
 const CHANGELOG = [
+  { ver: 'v6.1.0', date: '2026-06-05', summary: 'UX overhaul: vertical activity calendar and peak hours heatmap. Personality insight message based on usage patterns ("night owl", "early bird", etc). Weekly and monthly summary stats. Enriched settings: profile shows conversation count, favourite model, member-since date. General adds font size, enter-to-send, sound toggles. History shows storage stats and chat export. GPU-accelerated smooth scrolling across all panels. Model button shows selected model immediately on load instead of "Loading...".' },
   { ver: 'v6.0.0', date: '2026-06-05', summary: 'Desktop app: Electron packaging turns the add-in into an installable app. Install once — it auto-generates SSL certs, starts the server, and sideloads the manifest into Excel. System tray icon with server status, Open Excel, Check for Updates, and Reinstall Add-in. Auto-updates via GitHub Releases (Apple-style: auto-patches, prompted major updates). Settings shows update controls when running in Electron. Supports Windows, Linux, and macOS. npm start still works standalone for development.' },
   { ver: 'v5.14.1', date: '2026-06-04', summary: 'UX polish: smooth animations for settings overlay (fade+slide), account button (spring scale), and tab content (fade-in). Slash popup capped at 10 items; Enter now executes the selected popup item instead of sending raw partial text. Ctrl+F search supports arrow keys and Enter/Shift+Enter for navigation. Sign-out button shows loading state. Settings always accessible (account icon opens settings even when not signed in). Calendar grid shows 26 weeks with larger cells. Fixed horizontal scroll in settings content area.' },
   { ver: 'v5.14.0', date: '2026-06-04', summary: 'Usage dashboard: GitHub-style activity calendar, time-of-day heatmap, model usage bars, task category donut chart, code execution success rate, cost breakdown table, streak tracking. 12 new slash commands: /undo, /redo, /export (md/json), /usage, /search, /model, /provider, /pin, /forget, /version, /find. Sidebar search: filter chat history by title or message content with live previews. In-conversation search (Ctrl+F): highlights matches with up/down navigation. Full analytics tracking engine logs every interaction (messages, code executions, undos, slash commands) with auto-classified task categories.' },
@@ -836,6 +841,7 @@ Office.onReady(async info => {
   customModels = JSON.parse(localStorage.getItem('customModels') || '[]');
   try { await Promise.all([loadChats(), detectLocal()]); } catch {}
   renderModelBtn();
+  applyChatFontSize();
   renderMemoryStrip();
   try { await readWorkbook(); } catch { setSyncStatus('err', 'Sync failed'); }
   registerListeners();
@@ -894,6 +900,33 @@ function saveKey(provider) {
 function togSet(key, id) {
   if (key==='autoSync') { autoSync=!autoSync; localStorage.setItem('autoSync',autoSync); document.getElementById(id).className='toggle'+(autoSync?' on':''); }
   else { showCode=!showCode; localStorage.setItem('showCode',showCode); document.getElementById(id).className='toggle'+(showCode?' on':''); }
+}
+function applyChatFontSize() {
+  const sz = localStorage.getItem('chatFontSize') || 'default';
+  const el = document.getElementById('msgs');
+  if (!el) return;
+  el.style.fontSize = sz === 'small' ? '12px' : sz === 'large' ? '16px' : '';
+}
+function toggleEnterSend() {
+  const cur = localStorage.getItem('enterToSend') !== 'false';
+  localStorage.setItem('enterToSend', cur ? 'false' : 'true');
+  document.getElementById('enterSendTog').className = 'toggle' + (cur ? '' : ' on');
+}
+function toggleSound() {
+  const cur = localStorage.getItem('soundEnabled') !== 'false';
+  localStorage.setItem('soundEnabled', cur ? 'false' : 'true');
+  document.getElementById('soundTog').className = 'toggle' + (cur ? '' : ' on');
+}
+function exportAllChats() {
+  try {
+    const data = JSON.stringify(chats || {}, null, 2);
+    const blob = new Blob([data], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'excel-ai-chats-' + new Date().toISOString().slice(0,10) + '.json';
+    document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+    showToast('Chats exported');
+  } catch { showToast('Export failed'); }
 }
 function savePrefs() {
   userPreferences = document.getElementById('prefsInp').value;
@@ -988,11 +1021,16 @@ function renderSettingsTab() {
   bindSettingsEvents();
 }
 function renderProfileTab() {
+  const totalChats = Object.keys(chats || {}).length;
+  const totalMsgs = usageLog.filter(e => e.type === 'message').length;
+  const memberSince = usageLog.length > 0 ? usageLog[usageLog.length-1].ts?.slice(0,10) || 'Unknown' : 'Today';
+  const favModel = (function(){ const mc={}; usageLog.filter(e=>e.type==='message'&&e.model).forEach(e=>{mc[e.model]=(mc[e.model]||0)+1}); const top=Object.entries(mc).sort((a,b)=>b[1]-a[1])[0]; return top ? (allModelsFlat().find(m=>m.id===top[0])?.name || top[0].split('/').pop()) : 'None yet'; })();
+  const statsHtml = `<div class="sgrp"><div class="slabel">Your Stats</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px"><div style="background:var(--surf);border-radius:var(--r2);padding:8px;text-align:center"><div style="font-size:18px;font-weight:700;color:var(--text)">${totalChats}</div><div style="color:var(--text3);font-size:10px">Conversations</div></div><div style="background:var(--surf);border-radius:var(--r2);padding:8px;text-align:center"><div style="font-size:18px;font-weight:700;color:var(--text)">${totalMsgs}</div><div style="color:var(--text3);font-size:10px">Messages Sent</div></div></div><div style="font-size:12px;color:var(--text2);margin-top:8px;line-height:1.6">Favourite model: <strong style="color:var(--text)">${esc(favModel)}</strong><br>Member since: <strong style="color:var(--text)">${esc(memberSince)}</strong></div></div>`;
   if (!currentUser) {
-    return `<div class="sgrp"><div class="slabel">Account</div><div style="font-size:13px;color:var(--text2);margin-bottom:8px">Sign in to sync chats across devices.</div><button class="add-model-btn" onclick="closeSettings();openAuthModal()">Sign in</button></div>`;
+    return `<div class="sgrp"><div class="slabel">Account</div><div style="display:flex;align-items:center;gap:10px;margin-bottom:8px"><div style="width:36px;height:36px;border-radius:50%;background:var(--border);color:var(--text3);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700">?</div><div><div style="font-size:13px;font-weight:600;color:var(--text)">Guest</div><div style="font-size:11px;color:var(--text3)">Not signed in</div></div></div><div style="font-size:12px;color:var(--text2);margin-bottom:8px">Sign in to sync chats across devices and back up your data.</div><button class="add-model-btn" onclick="closeSettings();openAuthModal()">Sign in</button></div>` + statsHtml;
   }
   const initials = (currentUser.email || '?').slice(0, 2).toUpperCase();
-  return `<div class="sgrp"><div class="slabel">Account</div><div style="display:flex;align-items:center;gap:10px;margin-bottom:8px"><div style="width:36px;height:36px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700">${esc(initials)}</div><div><div style="font-size:13px;font-weight:600;color:var(--text)">${esc(currentUser.email)}</div><div style="font-size:11px;color:var(--text3)">Signed in</div></div></div><button class="sdanger" id="signOutBtn" onclick="doSignOut(this)">Sign out</button></div>`;
+  return `<div class="sgrp"><div class="slabel">Account</div><div style="display:flex;align-items:center;gap:10px;margin-bottom:8px"><div style="width:36px;height:36px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700">${esc(initials)}</div><div><div style="font-size:13px;font-weight:600;color:var(--text)">${esc(currentUser.email)}</div><div style="font-size:11px;color:var(--text3)">Signed in</div></div></div><button class="sdanger" id="signOutBtn" onclick="doSignOut(this)">Sign out</button></div>` + statsHtml;
 }
 async function doSignOut(btn) {
   btn.textContent = 'Signing out…'; btn.disabled = true; btn.style.opacity = '0.6';
@@ -1003,8 +1041,12 @@ async function doSignOut(btn) {
 }
 function renderGeneralTab() {
   const th = localStorage.getItem('theme') || 'light';
+  const fontSize = localStorage.getItem('chatFontSize') || 'default';
+  const enterSend = localStorage.getItem('enterToSend') !== 'false';
+  const soundOn = localStorage.getItem('soundEnabled') !== 'false';
   return `<div class="sgrp"><div class="slabel">Theme</div><div class="theme-row"><button class="theme-opt${th==='light'?' active':''}" id="tLight" onclick="setTheme('light');renderSettingsTab()">☀ Light</button><button class="theme-opt${th==='dark'?' active':''}" id="tDark" onclick="setTheme('dark');renderSettingsTab()">☾ Dark</button></div></div>`+
-  `<div class="sgrp"><div class="slabel">Behaviour</div><div class="srow"><span class="srow-label">Auto-sync workbook</span><div class="toggle${autoSync?' on':''}" id="autoSyncTog" onclick="togSet('autoSync','autoSyncTog')"></div></div><div class="srow" style="margin-top:8px"><span class="srow-label">Show generated code</span><div class="toggle${showCode?' on':''}" id="showCodeTog" onclick="togSet('showCode','showCodeTog')"></div></div></div>`+
+  `<div class="sgrp"><div class="slabel">Chat Font Size</div><div class="theme-row"><button class="theme-opt${fontSize==='small'?' active':''}" onclick="localStorage.setItem('chatFontSize','small');applyChatFontSize();renderSettingsTab()">Small</button><button class="theme-opt${fontSize==='default'?' active':''}" onclick="localStorage.setItem('chatFontSize','default');applyChatFontSize();renderSettingsTab()">Default</button><button class="theme-opt${fontSize==='large'?' active':''}" onclick="localStorage.setItem('chatFontSize','large');applyChatFontSize();renderSettingsTab()">Large</button></div></div>`+
+  `<div class="sgrp"><div class="slabel">Behaviour</div><div class="srow"><span class="srow-label">Auto-sync workbook</span><div class="toggle${autoSync?' on':''}" id="autoSyncTog" onclick="togSet('autoSync','autoSyncTog')"></div></div><div class="srow" style="margin-top:8px"><span class="srow-label">Show generated code</span><div class="toggle${showCode?' on':''}" id="showCodeTog" onclick="togSet('showCode','showCodeTog')"></div></div><div class="srow" style="margin-top:8px"><span class="srow-label">Enter to send</span><div class="toggle${enterSend?' on':''}" id="enterSendTog" onclick="toggleEnterSend()"></div></div><div class="srow" style="margin-top:8px"><span class="srow-label">Sound effects</span><div class="toggle${soundOn?' on':''}" id="soundTog" onclick="toggleSound()"></div></div></div>`+
   `<div class="sgrp" id="updateSection" style="display:none"><div class="slabel">App Updates</div><div class="srow"><span class="srow-label">Auto-update patches</span><div class="toggle" id="autoUpdateTog" onclick="toggleAutoUpdate()"></div></div><div style="margin-top:8px"><button class="add-model-btn" id="checkUpdateBtn" onclick="checkForUpdate()">Check for Updates</button><span class="sinote" id="updateStatusNote" style="margin-top:4px"></span></div></div>`+
   `<div class="sgrp"><div class="sfooter" style="cursor:pointer" onclick="openChangelog()" title="Click to see version history">Excel AI Assistant · <strong id="versionLabel">${APP_VERSION}</strong></div></div>`;
 }
@@ -1050,7 +1092,12 @@ function renderPrivacyTab() {
   `<div class="sgrp"><div class="slabel">Danger Confirmations</div><div style="font-size:12px;color:var(--text2)">High-risk and critical operations always require confirmation before execution. This cannot be disabled.</div></div>`;
 }
 function renderHistoryTab() {
-  return `<div class="sgrp"><div class="slabel">Chat History</div><button class="sdanger" onclick="clearAllHistory()">Delete all chat history</button><span class="sinote" style="margin-top:4px">This cannot be undone.</span></div>`;
+  const chatCount = Object.keys(chats || {}).length;
+  const totalMsgs = Object.values(chats || {}).reduce((s,c) => s + (c.messages?.length || 0), 0);
+  const storageUsed = (function(){ try { let total=0; for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);total+=k.length+(localStorage.getItem(k)||'').length} return (total*2/1024).toFixed(0); } catch{return '?'} })();
+  return `<div class="sgrp"><div class="slabel">Storage</div><div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;font-size:12px"><div style="background:var(--surf);border-radius:var(--r2);padding:8px;text-align:center"><div style="font-size:16px;font-weight:700;color:var(--text)">${chatCount}</div><div style="color:var(--text3);font-size:10px">Chats</div></div><div style="background:var(--surf);border-radius:var(--r2);padding:8px;text-align:center"><div style="font-size:16px;font-weight:700;color:var(--text)">${totalMsgs}</div><div style="color:var(--text3);font-size:10px">Messages</div></div><div style="background:var(--surf);border-radius:var(--r2);padding:8px;text-align:center"><div style="font-size:16px;font-weight:700;color:var(--text)">${storageUsed}KB</div><div style="color:var(--text3);font-size:10px">Local Storage</div></div></div></div>`+
+  `<div class="sgrp"><div class="slabel">Export</div><button class="add-model-btn" onclick="exportAllChats()" style="margin-bottom:6px">Export all chats (JSON)</button><span class="sinote">Download a backup of all your conversations.</span></div>`+
+  `<div class="sgrp"><div class="slabel">Danger Zone</div><button class="sdanger" onclick="if(confirm('Clear all usage analytics data?')){usageLog=[];localStorage.removeItem('usage_log');showToast('Usage data cleared');}">Clear usage data</button><button class="sdanger" style="margin-top:6px" onclick="clearAllHistory()">Delete all chat history</button><span class="sinote" style="margin-top:4px">These actions cannot be undone.</span></div>`;
 }
 function renderUsageTab() {
   const log = usageLog;
@@ -1105,19 +1152,53 @@ function renderUsageTab() {
     else { streak = 0; }
   }
 
-  // ── Time-of-day heatmap ──
+  // ── Time-of-day heatmap (vertical: hours as rows, days as columns) ──
   const hourDay = {};
-  msgs.forEach(e => { if (!e.ts) return; const d = new Date(e.ts); const key = d.getDay() + '-' + d.getHours(); hourDay[key] = (hourDay[key]||0)+1; });
+  const hourTotals = new Array(24).fill(0);
+  const dayTotals = new Array(7).fill(0);
+  msgs.forEach(e => { if (!e.ts) return; const d = new Date(e.ts); const dow = d.getDay(); const h = d.getHours(); const key = dow + '-' + h; hourDay[key] = (hourDay[key]||0)+1; hourTotals[h]++; dayTotals[dow]++; });
   const maxHD = Math.max(1, ...Object.values(hourDay));
   function hdLevel(n) { const r = n/maxHD; return r === 0 ? 0 : r <= 0.25 ? 1 : r <= 0.5 ? 2 : r <= 0.75 ? 3 : 4; }
   let heatCells = '';
   const dayNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  // Vertical: iterate hours first (rows), then days (columns) — but grid-auto-flow:column means we iterate by column (day), then row (hour)
   for (let dow = 0; dow < 7; dow++) {
     for (let h = 0; h < 24; h++) {
       const cnt = hourDay[dow+'-'+h] || 0;
       heatCells += `<div class="heat-cell" data-lvl="${hdLevel(cnt)}" title="${dayNames[dow]} ${h}:00 — ${cnt} msgs"></div>`;
     }
   }
+
+  // ── Peak hours personality insight ──
+  const topHours = hourTotals.map((c,i) => [i,c]).sort((a,b) => b[1]-a[1]);
+  const peakHour1 = topHours[0]?.[0] ?? 0;
+  const peakHour2 = topHours[1]?.[0] ?? 0;
+  const topDays = dayTotals.map((c,i) => [i,c]).sort((a,b) => b[1]-a[1]);
+  const peakDay = dayNames[topDays[0]?.[0] ?? 0];
+  function fmtHr(h) { return h === 0 ? '12am' : h < 12 ? h+'am' : h === 12 ? '12pm' : (h-12)+'pm'; }
+  function getPersonality(h) {
+    if (h >= 5 && h < 9) return 'Early bird! You like getting things done before the world wakes up.';
+    if (h >= 9 && h < 12) return 'Morning person — you hit your stride with the first coffee.';
+    if (h >= 12 && h < 14) return 'Lunchtime power user — working through the midday break!';
+    if (h >= 14 && h < 17) return 'Afternoon warrior — peak productivity hours.';
+    if (h >= 17 && h < 21) return 'Evening session — burning the post-work candle.';
+    if (h >= 21 || h < 2) return 'Night owl! The spreadsheets come alive after dark.';
+    return 'Late-night hacker — you and the servers have the world to yourselves.';
+  }
+  const personalityMsg = totalMessages > 0 ? `You're most active around <strong>${fmtHr(peakHour1)}</strong> and <strong>${fmtHr(peakHour2)}</strong>, especially on <strong>${peakDay}s</strong>. ${getPersonality(peakHour1)}` : 'Start using the app to see your patterns here!';
+
+  // ── Weekly / monthly summary ──
+  const now = new Date();
+  const weekAgo = new Date(now); weekAgo.setDate(weekAgo.getDate() - 7);
+  const monthAgo = new Date(now); monthAgo.setDate(monthAgo.getDate() - 30);
+  const weekMsgs = msgs.filter(e => new Date(e.ts) >= weekAgo);
+  const monthMsgs = msgs.filter(e => new Date(e.ts) >= monthAgo);
+  const weekCost = weekMsgs.reduce((s,e) => s + (e.cost||0), 0);
+  const monthCost = monthMsgs.reduce((s,e) => s + (e.cost||0), 0);
+  const weekTok = weekMsgs.reduce((s,e) => s + (e.inTok||0) + (e.outTok||0), 0);
+  const monthTok = monthMsgs.reduce((s,e) => s + (e.inTok||0) + (e.outTok||0), 0);
+  const weekDays = new Set(weekMsgs.map(e => e.ts?.slice(0,10)).filter(Boolean)).size;
+  const monthDays = new Set(monthMsgs.map(e => e.ts?.slice(0,10)).filter(Boolean)).size;
 
   // ── Model usage ──
   const modelCounts = {};
@@ -1197,19 +1278,36 @@ function renderUsageTab() {
         <div class="stat-card"><div class="stat-val">${activeDays}</div><div class="stat-label">Active Days</div></div>
       </div>
     </div>
+    <div class="usage-section"><div class="usage-section-title">This Week</div>
+      <div class="usage-stats">
+        <div class="stat-card"><div class="stat-val">${weekMsgs.length}</div><div class="stat-label">Messages</div></div>
+        <div class="stat-card"><div class="stat-val">${fmtTok(weekTok)}</div><div class="stat-label">Tokens</div></div>
+        <div class="stat-card"><div class="stat-val">$${weekCost.toFixed(2)}</div><div class="stat-label">Cost</div></div>
+        <div class="stat-card"><div class="stat-val">${weekDays}/7</div><div class="stat-label">Active Days</div></div>
+      </div>
+    </div>
+    <div class="usage-section"><div class="usage-section-title">This Month</div>
+      <div class="usage-stats">
+        <div class="stat-card"><div class="stat-val">${monthMsgs.length}</div><div class="stat-label">Messages</div></div>
+        <div class="stat-card"><div class="stat-val">${fmtTok(monthTok)}</div><div class="stat-label">Tokens</div></div>
+        <div class="stat-card"><div class="stat-val">$${monthCost.toFixed(2)}</div><div class="stat-label">Cost</div></div>
+        <div class="stat-card"><div class="stat-val">${monthDays}/30</div><div class="stat-label">Active Days</div></div>
+      </div>
+    </div>
     <div class="usage-section"><div class="usage-section-title">Activity</div>
-      ${monthsHtml}
       <div class="cal-wrap">
-        <div class="cal-days">${['','M','','W','','F',''].map(d=>'<div class="cal-row-label">'+d+'</div>').join('')}</div>
+        <div class="cal-days">${dayNames.map(d=>'<div class="cal-row-label">'+d.slice(0,2)+'</div>').join('')}</div>
         <div class="cal-grid">${calCells}</div>
       </div>
       <div class="streak-row"><span>Current streak: <strong>${curStreak} day${curStreak!==1?'s':''}</strong></span><span>Longest: <strong>${maxStreak} day${maxStreak!==1?'s':''}</strong></span></div>
     </div>
     <div class="usage-section"><div class="usage-section-title">Peak Hours</div>
+      <div class="heat-day-labels">${dayNames.map(d=>'<div>'+d.slice(0,2)+'</div>').join('')}</div>
       <div style="display:flex;gap:2px">
-        <div class="heat-day-labels">${dayNames.map(d=>'<div>'+d.slice(0,2)+'</div>').join('')}</div>
-        <div style="flex:1"><div class="heat-grid">${heatCells}</div><div class="heat-labels"><span>12am</span><span>6am</span><span>12pm</span><span>6pm</span><span>11pm</span></div></div>
+        <div style="flex:1"><div class="heat-grid">${heatCells}</div></div>
+        <div class="heat-labels"><span>12a</span><span>6a</span><span>12p</span><span>6p</span><span>11p</span></div>
       </div>
+      <div class="usage-insight">${personalityMsg}</div>
     </div>
     <div class="usage-section"><div class="usage-section-title">Models</div>${modelBars || '<div style="font-size:12px;color:var(--text3)">No data yet</div>'}</div>
     <div class="usage-section"><div class="usage-section-title">Task Categories</div>

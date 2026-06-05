@@ -1,6 +1,6 @@
 {
   "name": "excel-ai-assistant",
-  "version": "6.0.0",
+  "version": "6.1.0",
   "description": "AI assistant for Excel — desktop app with auto-setup",
   "author": {
     "name": "Kamen Levi",
@@ -25,8 +25,7 @@
     "express": "^4.18.2",
     "https": "^1.0.0",
     "node-fetch": "^2.7.0",
-    "selfsigned": "^2.4.1",
-    "uuid": "^14.0.0"
+    "selfsigned": "^2.4.1"
   },
   "devDependencies": {
     "electron": "^33.3.1",
