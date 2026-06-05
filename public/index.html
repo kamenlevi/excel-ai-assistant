@@ -943,7 +943,7 @@ function renderCalGrid() {
   let cells = '';
   for (let i = 0; i < totalDays; i++) {
     const d = new Date(gridStart); d.setDate(d.getDate() + i);
-    if (d < rangeStart || d > today) { cells += '<div class="cal-cell" style="visibility:hidden"></div>'; continue; }
+    if (d < rangeStart || d > rangeEnd) { cells += '<div class="cal-cell" style="visibility:hidden"></div>'; continue; }
     const ds = d.toISOString().slice(0,10);
     const cnt = _calDayCounts[ds] || 0;
     cells += '<div class="cal-cell" data-lvl="'+calLevel(cnt)+'" title="'+ds+': '+cnt+' messages"></div>';
