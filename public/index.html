@@ -1222,7 +1222,7 @@ function renderUsageTab() {
   const peakHour2 = topHours[1]?.[0] ?? 0;
   const topDays = dayTotals.map((c,i) => [i,c]).sort((a,b) => b[1]-a[1]);
   const peakDayIdx = topDays[0]?.[0] ?? 1;
-  const peakDay = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][peakDayIdx];
+  const peakDay = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][peakDayIdx];
   function fmtHr(h) { return h === 0 ? '0am' : h < 12 ? h+'am' : h === 12 ? '12pm' : (h-12)+'pm'; }
   function getPersonality(h) {
     if (h >= 5 && h < 9) return 'Early bird! You like getting things done before the world wakes up.';
