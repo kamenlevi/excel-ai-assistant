@@ -356,6 +356,11 @@ html,body{height:100%;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;
 .streak-row strong{color:var(--text)}
 .usage-insight{font-size:12px;color:var(--text2);line-height:1.5;margin-top:8px;padding:8px 10px;background:var(--surf);border-radius:var(--r2);font-style:italic}
 .usage-insight strong{color:var(--text);font-style:normal}
+.usage-expand{overflow:hidden;max-height:0;transition:max-height .35s cubic-bezier(.4,0,.2,1),opacity .25s ease;opacity:0}
+.usage-expand.open{max-height:300px;opacity:1}
+.usage-expand-btn{display:flex;align-items:center;gap:4px;font-size:11px;color:var(--accent);cursor:pointer;margin-top:8px;background:none;border:none;padding:0;font-family:inherit}
+.usage-expand-btn .arrow{display:inline-block;transition:transform .25s ease;font-size:9px}
+.usage-expand-btn .arrow.open{transform:rotate(90deg)}
 .heat-grid{display:grid;grid-template-columns:repeat(7,1fr);grid-auto-flow:column;grid-template-rows:repeat(24,1fr);gap:1px}
 .heat-cell{aspect-ratio:1;border-radius:1px;background:var(--surf);position:relative}
 .heat-cell[data-lvl="1"]{background:rgba(var(--accent-rgb),.2)}
@@ -901,16 +906,17 @@ function togSet(key, id) {
   if (key==='autoSync') { autoSync=!autoSync; localStorage.setItem('autoSync',autoSync); document.getElementById(id).className='toggle'+(autoSync?' on':''); }
   else { showCode=!showCode; localStorage.setItem('showCode',showCode); document.getElementById(id).className='toggle'+(showCode?' on':''); }
 }
+function toggleUsageExpand(btn) {
+  const panel = btn.nextElementSibling;
+  const arrow = btn.querySelector('.arrow');
+  panel.classList.toggle('open');
+  arrow.classList.toggle('open');
+}
 function applyChatFontSize() {
   const sz = localStorage.getItem('chatFontSize') || 'default';
   const el = document.getElementById('msgs');
   if (!el) return;
   el.style.fontSize = sz === 'small' ? '12px' : sz === 'large' ? '16px' : '';
-}
-function toggleEnterSend() {
-  const cur = localStorage.getItem('enterToSend') !== 'false';
-  localStorage.setItem('enterToSend', cur ? 'false' : 'true');
-  document.getElementById('enterSendTog').className = 'toggle' + (cur ? '' : ' on');
 }
 function toggleSound() {
   const cur = localStorage.getItem('soundEnabled') !== 'false';
@@ -1021,10 +1027,11 @@ function renderSettingsTab() {
   bindSettingsEvents();
 }
 function renderProfileTab() {
-  const totalChats = Object.keys(chats || {}).length;
+  const chatEls = document.querySelectorAll('.chat-item');
+  const totalChats = chatEls ? chatEls.length : 0;
   const totalMsgs = usageLog.filter(e => e.type === 'message').length;
   const memberSince = usageLog.length > 0 ? usageLog[usageLog.length-1].ts?.slice(0,10) || 'Unknown' : 'Today';
-  const favModel = (function(){ const mc={}; usageLog.filter(e=>e.type==='message'&&e.model).forEach(e=>{mc[e.model]=(mc[e.model]||0)+1}); const top=Object.entries(mc).sort((a,b)=>b[1]-a[1])[0]; return top ? (allModelsFlat().find(m=>m.id===top[0])?.name || top[0].split('/').pop()) : 'None yet'; })();
+  const favModel = (function(){ try { const mc={}; usageLog.filter(e=>e.type==='message'&&e.model).forEach(e=>{mc[e.model]=(mc[e.model]||0)+1}); const top=Object.entries(mc).sort((a,b)=>b[1]-a[1])[0]; return top ? (allModelsFlat().find(m=>m.id===top[0])?.name || top[0].split('/').pop()) : 'None yet'; } catch { return 'None yet'; } })();
   const statsHtml = `<div class="sgrp"><div class="slabel">Your Stats</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px"><div style="background:var(--surf);border-radius:var(--r2);padding:8px;text-align:center"><div style="font-size:18px;font-weight:700;color:var(--text)">${totalChats}</div><div style="color:var(--text3);font-size:10px">Conversations</div></div><div style="background:var(--surf);border-radius:var(--r2);padding:8px;text-align:center"><div style="font-size:18px;font-weight:700;color:var(--text)">${totalMsgs}</div><div style="color:var(--text3);font-size:10px">Messages Sent</div></div></div><div style="font-size:12px;color:var(--text2);margin-top:8px;line-height:1.6">Favourite model: <strong style="color:var(--text)">${esc(favModel)}</strong><br>Member since: <strong style="color:var(--text)">${esc(memberSince)}</strong></div></div>`;
   if (!currentUser) {
     return `<div class="sgrp"><div class="slabel">Account</div><div style="display:flex;align-items:center;gap:10px;margin-bottom:8px"><div style="width:36px;height:36px;border-radius:50%;background:var(--border);color:var(--text3);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700">?</div><div><div style="font-size:13px;font-weight:600;color:var(--text)">Guest</div><div style="font-size:11px;color:var(--text3)">Not signed in</div></div></div><div style="font-size:12px;color:var(--text2);margin-bottom:8px">Sign in to sync chats across devices and back up your data.</div><button class="add-model-btn" onclick="closeSettings();openAuthModal()">Sign in</button></div>` + statsHtml;
@@ -1042,11 +1049,10 @@ async function doSignOut(btn) {
 function renderGeneralTab() {
   const th = localStorage.getItem('theme') || 'light';
   const fontSize = localStorage.getItem('chatFontSize') || 'default';
-  const enterSend = localStorage.getItem('enterToSend') !== 'false';
   const soundOn = localStorage.getItem('soundEnabled') !== 'false';
   return `<div class="sgrp"><div class="slabel">Theme</div><div class="theme-row"><button class="theme-opt${th==='light'?' active':''}" id="tLight" onclick="setTheme('light');renderSettingsTab()">☀ Light</button><button class="theme-opt${th==='dark'?' active':''}" id="tDark" onclick="setTheme('dark');renderSettingsTab()">☾ Dark</button></div></div>`+
   `<div class="sgrp"><div class="slabel">Chat Font Size</div><div class="theme-row"><button class="theme-opt${fontSize==='small'?' active':''}" onclick="localStorage.setItem('chatFontSize','small');applyChatFontSize();renderSettingsTab()">Small</button><button class="theme-opt${fontSize==='default'?' active':''}" onclick="localStorage.setItem('chatFontSize','default');applyChatFontSize();renderSettingsTab()">Default</button><button class="theme-opt${fontSize==='large'?' active':''}" onclick="localStorage.setItem('chatFontSize','large');applyChatFontSize();renderSettingsTab()">Large</button></div></div>`+
-  `<div class="sgrp"><div class="slabel">Behaviour</div><div class="srow"><span class="srow-label">Auto-sync workbook</span><div class="toggle${autoSync?' on':''}" id="autoSyncTog" onclick="togSet('autoSync','autoSyncTog')"></div></div><div class="srow" style="margin-top:8px"><span class="srow-label">Show generated code</span><div class="toggle${showCode?' on':''}" id="showCodeTog" onclick="togSet('showCode','showCodeTog')"></div></div><div class="srow" style="margin-top:8px"><span class="srow-label">Enter to send</span><div class="toggle${enterSend?' on':''}" id="enterSendTog" onclick="toggleEnterSend()"></div></div><div class="srow" style="margin-top:8px"><span class="srow-label">Sound effects</span><div class="toggle${soundOn?' on':''}" id="soundTog" onclick="toggleSound()"></div></div></div>`+
+  `<div class="sgrp"><div class="slabel">Behaviour</div><div class="srow"><span class="srow-label">Auto-sync workbook</span><div class="toggle${autoSync?' on':''}" id="autoSyncTog" onclick="togSet('autoSync','autoSyncTog')"></div></div><div class="srow" style="margin-top:8px"><span class="srow-label">Show generated code</span><div class="toggle${showCode?' on':''}" id="showCodeTog" onclick="togSet('showCode','showCodeTog')"></div></div><div class="srow" style="margin-top:8px"><span class="srow-label">Sound effects</span><div class="toggle${soundOn?' on':''}" id="soundTog" onclick="toggleSound()"></div></div></div>`+
   `<div class="sgrp" id="updateSection" style="display:none"><div class="slabel">App Updates</div><div class="srow"><span class="srow-label">Auto-update patches</span><div class="toggle" id="autoUpdateTog" onclick="toggleAutoUpdate()"></div></div><div style="margin-top:8px"><button class="add-model-btn" id="checkUpdateBtn" onclick="checkForUpdate()">Check for Updates</button><span class="sinote" id="updateStatusNote" style="margin-top:4px"></span></div></div>`+
   `<div class="sgrp"><div class="sfooter" style="cursor:pointer" onclick="openChangelog()" title="Click to see version history">Excel AI Assistant · <strong id="versionLabel">${APP_VERSION}</strong></div></div>`;
 }
@@ -1092,8 +1098,9 @@ function renderPrivacyTab() {
   `<div class="sgrp"><div class="slabel">Danger Confirmations</div><div style="font-size:12px;color:var(--text2)">High-risk and critical operations always require confirmation before execution. This cannot be disabled.</div></div>`;
 }
 function renderHistoryTab() {
-  const chatCount = Object.keys(chats || {}).length;
-  const totalMsgs = Object.values(chats || {}).reduce((s,c) => s + (c.messages?.length || 0), 0);
+  const chatEls = document.querySelectorAll('.chat-item');
+  const chatCount = chatEls ? chatEls.length : 0;
+  const totalMsgs = usageLog.filter(e => e.type === 'message').length;
   const storageUsed = (function(){ try { let total=0; for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);total+=k.length+(localStorage.getItem(k)||'').length} return (total*2/1024).toFixed(0); } catch{return '?'} })();
   return `<div class="sgrp"><div class="slabel">Storage</div><div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;font-size:12px"><div style="background:var(--surf);border-radius:var(--r2);padding:8px;text-align:center"><div style="font-size:16px;font-weight:700;color:var(--text)">${chatCount}</div><div style="color:var(--text3);font-size:10px">Chats</div></div><div style="background:var(--surf);border-radius:var(--r2);padding:8px;text-align:center"><div style="font-size:16px;font-weight:700;color:var(--text)">${totalMsgs}</div><div style="color:var(--text3);font-size:10px">Messages</div></div><div style="background:var(--surf);border-radius:var(--r2);padding:8px;text-align:center"><div style="font-size:16px;font-weight:700;color:var(--text)">${storageUsed}KB</div><div style="color:var(--text3);font-size:10px">Local Storage</div></div></div></div>`+
   `<div class="sgrp"><div class="slabel">Export</div><button class="add-model-btn" onclick="exportAllChats()" style="margin-bottom:6px">Export all chats (JSON)</button><span class="sinote">Download a backup of all your conversations.</span></div>`+
@@ -1270,28 +1277,31 @@ function renderUsageTab() {
   const projMonthly = dailyAvg * 30;
 
   return `
-    <div class="usage-section"><div class="usage-section-title">Overview</div>
+    <div class="usage-section"><div class="usage-section-title">All Time</div>
       <div class="usage-stats">
         <div class="stat-card"><div class="stat-val">${totalMessages.toLocaleString()}</div><div class="stat-label">Messages</div></div>
         <div class="stat-card"><div class="stat-val">${fmtTok(totalTokens)}</div><div class="stat-label">Tokens</div></div>
         <div class="stat-card"><div class="stat-val">$${totalCost.toFixed(2)}</div><div class="stat-label">Est. Cost</div></div>
         <div class="stat-card"><div class="stat-val">${activeDays}</div><div class="stat-label">Active Days</div></div>
       </div>
-    </div>
-    <div class="usage-section"><div class="usage-section-title">This Week</div>
-      <div class="usage-stats">
-        <div class="stat-card"><div class="stat-val">${weekMsgs.length}</div><div class="stat-label">Messages</div></div>
-        <div class="stat-card"><div class="stat-val">${fmtTok(weekTok)}</div><div class="stat-label">Tokens</div></div>
-        <div class="stat-card"><div class="stat-val">$${weekCost.toFixed(2)}</div><div class="stat-label">Cost</div></div>
-        <div class="stat-card"><div class="stat-val">${weekDays}/7</div><div class="stat-label">Active Days</div></div>
-      </div>
-    </div>
-    <div class="usage-section"><div class="usage-section-title">This Month</div>
-      <div class="usage-stats">
-        <div class="stat-card"><div class="stat-val">${monthMsgs.length}</div><div class="stat-label">Messages</div></div>
-        <div class="stat-card"><div class="stat-val">${fmtTok(monthTok)}</div><div class="stat-label">Tokens</div></div>
-        <div class="stat-card"><div class="stat-val">$${monthCost.toFixed(2)}</div><div class="stat-label">Cost</div></div>
-        <div class="stat-card"><div class="stat-val">${monthDays}/30</div><div class="stat-label">Active Days</div></div>
+      <button class="usage-expand-btn" onclick="toggleUsageExpand(this)"><span class="arrow">▶</span> This week &amp; month</button>
+      <div class="usage-expand" id="usageExpandPeriods">
+        <div style="margin-top:10px"><div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">This Week</div>
+          <div class="usage-stats">
+            <div class="stat-card"><div class="stat-val">${weekMsgs.length}</div><div class="stat-label">Messages</div></div>
+            <div class="stat-card"><div class="stat-val">${fmtTok(weekTok)}</div><div class="stat-label">Tokens</div></div>
+            <div class="stat-card"><div class="stat-val">$${weekCost.toFixed(2)}</div><div class="stat-label">Cost</div></div>
+            <div class="stat-card"><div class="stat-val">${weekDays}/7</div><div class="stat-label">Active Days</div></div>
+          </div>
+        </div>
+        <div style="margin-top:10px"><div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">This Month</div>
+          <div class="usage-stats">
+            <div class="stat-card"><div class="stat-val">${monthMsgs.length}</div><div class="stat-label">Messages</div></div>
+            <div class="stat-card"><div class="stat-val">${fmtTok(monthTok)}</div><div class="stat-label">Tokens</div></div>
+            <div class="stat-card"><div class="stat-val">$${monthCost.toFixed(2)}</div><div class="stat-label">Cost</div></div>
+            <div class="stat-card"><div class="stat-val">${monthDays}/30</div><div class="stat-label">Active Days</div></div>
+          </div>
+        </div>
       </div>
     </div>
     <div class="usage-section"><div class="usage-section-title">Activity</div>
