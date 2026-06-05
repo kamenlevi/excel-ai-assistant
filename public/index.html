@@ -69,8 +69,8 @@ html,body{height:100%;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;
 .new-chat:hover{background:var(--accent2)}
 .new-train{flex:none;width:34px;background:#22c55e;color:#fff;border:none;border-radius:var(--r2);padding:7px 0;font-size:15px;font-weight:700;cursor:pointer;transition:background .15s;text-align:center;line-height:1}
 .new-train:hover{background:#16a34a}
-.train-back{display:none;padding:6px 12px;background:#22c55e;color:#fff;font-size:12px;font-weight:600;cursor:pointer;border:none;width:100%;text-align:left;font-family:inherit;transition:background .15s}
-.train-back:hover{background:#16a34a}
+.train-back-btn{flex:none;width:34px;background:var(--accent);color:#fff;border:none;border-radius:var(--r2);padding:7px 0;font-size:13px;font-weight:700;cursor:pointer;transition:background .15s;text-align:center;line-height:1;display:none}
+.train-back-btn:hover{background:var(--accent2)}
 .chat-item.training{border-left:3px solid #22c55e}
 .chat-item.training .chat-title{color:#22c55e}
 .train-badge{display:inline-block;background:#22c55e;color:#fff;font-size:8px;font-weight:700;padding:1px 4px;border-radius:3px;margin-left:4px;vertical-align:middle;text-transform:uppercase}
@@ -573,8 +573,7 @@ mark.search-hl.current{background:rgba(var(--accent-rgb),.6)}
 <div class="sidebar" id="sidebar">
   <div class="sidebar-backdrop" onclick="closeSidebar()"></div>
   <div class="sidebar-drawer">
-    <button class="train-back" id="trainBack" onclick="exitTrainMode()">← Back to chats</button>
-    <div class="sidebar-head">
+    <div class="sidebar-head" id="sidebarHead">
       <button class="new-chat" id="newChatBtn" onclick="newChat()">+ New</button>
       <button class="new-train" id="trainBtn" onclick="enterTrainMode()" title="New training chat">+</button>
       <button class="sidebar-close" onclick="closeSidebar()">✕</button>
@@ -1825,11 +1824,11 @@ let trainHistory = [];
 let trainSkills = [];
 
 function applyTrainUI() {
-  document.getElementById('trainBack').style.display = '';
-  document.getElementById('newChatBtn').textContent = '+ Train';
-  document.getElementById('newChatBtn').style.background = '#22c55e';
-  document.getElementById('newChatBtn').onclick = () => newTrainingChat();
-  document.getElementById('trainBtn').style.display = 'none';
+  const head = document.getElementById('sidebarHead');
+  head.innerHTML =
+    '<button class="train-back-btn" style="display:flex;align-items:center;justify-content:center" onclick="exitTrainMode()" title="Back to chats">←</button>' +
+    '<button class="new-chat" style="background:#22c55e" onclick="newTrainingChat()">+ Train</button>' +
+    '<button class="sidebar-close" onclick="closeSidebar()">✕</button>';
   document.getElementById('sidebarSearch').placeholder = 'Search training…';
   document.getElementById('logoIcon').textContent = 'TR';
   document.getElementById('logoIcon').style.background = '#22c55e';
@@ -1837,11 +1836,11 @@ function applyTrainUI() {
 }
 
 function removeTrainUI() {
-  document.getElementById('trainBack').style.display = 'none';
-  document.getElementById('newChatBtn').textContent = '+ New';
-  document.getElementById('newChatBtn').style.background = '';
-  document.getElementById('newChatBtn').onclick = () => newChat();
-  document.getElementById('trainBtn').style.display = '';
+  const head = document.getElementById('sidebarHead');
+  head.innerHTML =
+    '<button class="new-chat" id="newChatBtn" onclick="newChat()">+ New</button>' +
+    '<button class="new-train" id="trainBtn" onclick="enterTrainMode()" title="New training chat">+</button>' +
+    '<button class="sidebar-close" onclick="closeSidebar()">✕</button>';
   document.getElementById('sidebarSearch').placeholder = 'Search chats…';
   document.getElementById('logoIcon').textContent = 'AI';
   document.getElementById('logoIcon').style.background = '';
@@ -1850,9 +1849,17 @@ function removeTrainUI() {
 
 async function enterTrainMode() {
   trainMode = true;
-  closeSidebar();
   applyTrainUI();
-  await newTrainingChat();
+  closeSidebar();
+  // Create a training chat immediately — render empty state first, then create on server
+  trainChatId = null;
+  trainHistory = [];
+  renderTrainingView();
+  try {
+    const r = await fetch('/api/training', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ title: 'New Training' }) });
+    const c = await r.json();
+    trainChatId = c.id;
+  } catch {}
 }
 
 function exitTrainMode() {
@@ -1888,14 +1895,15 @@ async function loadTrainingChats() {
 }
 
 async function newTrainingChat() {
-  if (trainChatId) await saveTrainingChat();
+  if (trainChatId) saveTrainingChat();
+  trainChatId = null;
+  trainHistory = [];
+  renderTrainingView();
+  closeSidebar();
   try {
     const r = await fetch('/api/training', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ title: 'New Training' }) });
     const c = await r.json();
     trainChatId = c.id;
-    trainHistory = [];
-    renderTrainingView();
-    closeSidebar();
   } catch {}
 }
 
@@ -1926,7 +1934,7 @@ async function delTrainingChat(e, id) {
 }
 
 function renderTrainingView() {
-  const msgs = document.getElementById('msgs');
+  const msgs = document.getElementById('messages');
   if (!trainHistory.length) {
     msgs.innerHTML =
       '<div class="empty-state" id="emptyState">' +
