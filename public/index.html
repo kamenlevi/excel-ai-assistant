@@ -341,8 +341,8 @@ html,body{height:100%;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;
 .stat-card{background:var(--surf);border-radius:var(--r2);padding:10px;text-align:center}
 .stat-val{font-size:20px;font-weight:700;color:var(--text)}
 .stat-label{font-size:10px;color:var(--text3);margin-top:2px}
-.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:1px}
-.cal-cell{width:100%;aspect-ratio:1;border-radius:1px;background:var(--surf);min-width:0}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);grid-auto-rows:4px;gap:1px 2px}
+.cal-cell{border-radius:1px;background:var(--surf)}
 .cal-cell[data-lvl="1"]{background:rgba(var(--accent-rgb),.25)}
 .cal-cell[data-lvl="2"]{background:rgba(var(--accent-rgb),.5)}
 .cal-cell[data-lvl="3"]{background:rgba(var(--accent-rgb),.75)}
