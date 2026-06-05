@@ -917,34 +917,50 @@ function setCalRange(range) {
 function renderCalGrid() {
   const container = document.getElementById('calContainer');
   if (!container) return;
-  const weeks = _calRange === '1y' ? 52 : _calRange === '6m' ? 26 : 5;
   const today = new Date();
-  const startDate = new Date(today);
-  startDate.setDate(startDate.getDate() - (weeks * 7 - 1));
-  startDate.setDate(startDate.getDate() - startDate.getDay());
-  const totalSlots = weeks * 7;
   const dayNames = ['S','M','T','W','T','F','S'];
   function calLevel(n) { return n === 0 ? 0 : n <= 3 ? 1 : n <= 10 ? 2 : n <= 25 ? 3 : 4; }
+
+  let rangeStart, rangeEnd;
+  if (_calRange === '1m') {
+    rangeStart = new Date(today.getFullYear(), today.getMonth(), 1);
+    rangeEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+  } else {
+    const weeksBack = _calRange === '1y' ? 52 : 26;
+    rangeEnd = today;
+    rangeStart = new Date(today);
+    rangeStart.setDate(rangeStart.getDate() - (weeksBack * 7 - 1));
+  }
+  // Align start to Sunday
+  const gridStart = new Date(rangeStart);
+  gridStart.setDate(gridStart.getDate() - gridStart.getDay());
+  // Align end to Saturday
+  const gridEnd = new Date(rangeEnd);
+  gridEnd.setDate(gridEnd.getDate() + (6 - gridEnd.getDay()));
+  const totalDays = Math.round((gridEnd - gridStart) / 86400000) + 1;
+  const weeks = totalDays / 7;
+
   let cells = '';
-  const monthLabels = [];
-  let lastMonth = -1;
-  for (let i = 0; i < totalSlots; i++) {
-    const d = new Date(startDate); d.setDate(d.getDate() + i);
-    if (d > today) { cells += '<div class="cal-cell" style="visibility:hidden"></div>'; continue; }
+  for (let i = 0; i < totalDays; i++) {
+    const d = new Date(gridStart); d.setDate(d.getDate() + i);
+    if (d < rangeStart || d > today) { cells += '<div class="cal-cell" style="visibility:hidden"></div>'; continue; }
     const ds = d.toISOString().slice(0,10);
     const cnt = _calDayCounts[ds] || 0;
     cells += '<div class="cal-cell" data-lvl="'+calLevel(cnt)+'" title="'+ds+': '+cnt+' messages"></div>';
-    if (i % 7 === 0 && d.getMonth() !== lastMonth) { lastMonth = d.getMonth(); monthLabels.push({ row: Math.floor(i/7), label: d.toLocaleString('default',{month:'short'}) }); }
   }
-  const wkInterval = weeks <= 5 ? 1 : weeks <= 26 ? 4 : 8;
+
+  const wkInterval = weeks <= 6 ? 1 : weeks <= 26 ? 4 : 8;
   const weekLabels = [];
   for (let w = 0; w < weeks; w++) {
-    const d = new Date(startDate); d.setDate(d.getDate() + w * 7);
+    const d = new Date(gridStart); d.setDate(d.getDate() + w * 7);
     const oneJan = new Date(d.getFullYear(),0,1);
     const wn = Math.ceil(((d - oneJan) / 86400000 + oneJan.getDay() + 1) / 7);
     weekLabels.push(w % wkInterval === 0 ? 'W'+wn : '');
   }
+
+  const title = _calRange === '1m' ? today.toLocaleString('default',{month:'long',year:'numeric'}) : '';
   container.innerHTML =
+    (title ? '<div style="font-size:11px;color:var(--text2);margin-bottom:4px;font-weight:600">'+title+'</div>' : '')+
     '<div style="display:flex;gap:1px;justify-content:space-around;padding:0 0 2px 0;margin-right:22px">'+dayNames.map(d=>'<div style="flex:1;text-align:center;font-size:8px;color:var(--text3)">'+d+'</div>').join('')+'</div>'+
     '<div style="display:flex;gap:2px">'+
       '<div style="flex:1"><div class="cal-grid">'+cells+'</div></div>'+
