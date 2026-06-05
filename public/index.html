@@ -1219,7 +1219,7 @@ function renderUsageTab() {
   const peakHour2 = topHours[1]?.[0] ?? 0;
   const topDays = dayTotals.map((c,i) => [i,c]).sort((a,b) => b[1]-a[1]);
   const peakDay = dayNames[topDays[0]?.[0] ?? 0];
-  function fmtHr(h) { return h === 0 ? '12am' : h < 12 ? h+'am' : h === 12 ? '12pm' : (h-12)+'pm'; }
+  function fmtHr(h) { return h === 0 ? '0am' : h < 12 ? h+'am' : h === 12 ? '12pm' : (h-12)+'pm'; }
   function getPersonality(h) {
     if (h >= 5 && h < 9) return 'Early bird! You like getting things done before the world wakes up.';
     if (h >= 9 && h < 12) return 'Morning person — you hit your stride with the first coffee.';
@@ -1349,7 +1349,7 @@ function renderUsageTab() {
       <div class="heat-day-labels">${dayNames.map(d=>'<div>'+d.slice(0,2)+'</div>').join('')}</div>
       <div style="display:flex;gap:2px">
         <div style="flex:1"><div class="heat-grid">${heatCells}</div></div>
-        <div class="heat-labels"><span>12a</span><span>6a</span><span>12p</span><span>6p</span><span>11p</span></div>
+        <div class="heat-labels"><span>0a</span><span>6a</span><span>12p</span><span>6p</span><span>11p</span></div>
       </div>
       <div class="usage-insight">${personalityMsg}</div>
     </div>
