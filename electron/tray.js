@@ -1,36 +1,42 @@
 const { Tray, Menu, nativeImage, shell, app } = require('electron');
 const path = require('path');
+const fs = require('fs');
 
 let tray = null;
 
 function createTray(opts = {}) {
   const iconFile = process.platform === 'win32' ? 'tray-icon.ico' : 'tray-icon.png';
   let iconPath;
-  if (process.resourcesPath && require('fs').existsSync(path.join(process.resourcesPath, 'assets', iconFile))) {
-    iconPath = path.join(process.resourcesPath, 'assets', iconFile);
-  } else {
-    iconPath = path.join(__dirname, '..', 'assets', iconFile);
-  }
+  const resPath = path.join(process.resourcesPath || '', 'assets', iconFile);
+  if (fs.existsSync(resPath)) iconPath = resPath;
+  else iconPath = path.join(__dirname, '..', 'assets', iconFile);
 
   let icon;
   try { icon = nativeImage.createFromPath(iconPath); }
   catch { icon = nativeImage.createEmpty(); }
 
   tray = new Tray(icon);
-  tray.setToolTip('Excel AI Assistant');
+  tray.setToolTip('Excel AI Assistant — Running');
 
   const contextMenu = Menu.buildFromTemplate([
-    { label: 'Server: Running ✓', enabled: false },
-    { type: 'separator' },
+    { label: 'Open Excel AI', click: () => { if (opts.onShowWindow) opts.onShowWindow(); } },
     { label: 'Open Excel', click: () => openExcel() },
+    { type: 'separator' },
+    { label: 'Server: Running ✓', enabled: false },
     { type: 'separator' },
     { label: 'Check for Updates', click: () => { if (opts.onCheckUpdate) opts.onCheckUpdate(); } },
     { label: 'Reinstall Add-in', click: () => { if (opts.onReinstall) opts.onReinstall(); } },
     { type: 'separator' },
-    { label: 'Quit', click: () => app.quit() },
+    { label: 'Quit', click: () => { app.isQuitting = true; app.quit(); } },
   ]);
 
   tray.setContextMenu(contextMenu);
+
+  // Click tray icon → show window
+  tray.on('click', () => { if (opts.onShowWindow) opts.onShowWindow(); });
+  // Double-click on Windows
+  tray.on('double-click', () => { if (opts.onShowWindow) opts.onShowWindow(); });
+
   return tray;
 }
 
