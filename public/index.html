@@ -91,6 +91,9 @@ body.train-active .input-box:focus-within{border-color:#22c55e;box-shadow:0 0 0 
 .train-guide-popup .guide-num{flex-shrink:0;width:20px;height:20px;border-radius:50%;background:#22c55e;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center}
 .train-guide-popup .guide-actions{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap}
 .train-guide-popup .guide-actions button{font-size:11px;padding:5px 10px}
+.guide-code{position:relative;background:var(--code-bg);border-radius:6px;padding:8px 36px 8px 10px;margin:4px 0 8px 28px;font-family:monospace;font-size:11px;line-height:1.5;white-space:pre-wrap;word-break:break-all;color:var(--text)}
+.guide-copy{position:absolute;top:4px;right:4px;background:var(--surf2);border:1px solid var(--border);border-radius:4px;padding:2px 6px;font-size:10px;cursor:pointer;color:var(--text2);transition:all .15s}
+.guide-copy:hover{background:var(--accent);color:#fff;border-color:var(--accent)}
 .skill-example{background:var(--code-bg);border-radius:var(--r2);padding:6px 8px;margin-top:4px;font-size:11px;line-height:1.4}
 .sidebar-close{background:none;border:none;color:var(--text2);cursor:pointer;font-size:18px;padding:2px 5px;border-radius:4px;line-height:1}
 .sidebar-close:hover{background:var(--surf2)}
@@ -758,8 +761,9 @@ function classifyIntent(text) {
 // ── Security state ────────────────────────────────────────────────────────────
 let sessionDangerConfirmed = new Set(); // 'high', 'critical' confirmed this session
 let sessionPasswordVerified = false;    // password entered once this session
-const APP_VERSION = 'v7.0.2';
+const APP_VERSION = 'v7.0.3';
 const CHANGELOG = [
+  { ver: 'v7.0.3', date: '2026-06-05', summary: 'Training polish: green ⚡ logo with hover tooltip, green empty state icon, comprehensive fine-tuning guide with copy-to-clipboard code blocks for Ollama/Unsloth/MLX, both action buttons now green, Modelfile generator downloads ready-to-use file.' },
   { ver: 'v7.0.2', date: '2026-06-05', summary: 'Training mode polish: streaming responses with live timer and token count (matches normal chats), green focus glow on input field, 📖 fine-tuning guide button with step-by-step instructions for Ollama/Unsloth/MLX/OpenAI, Export JSONL and Generate Modelfile actions, hide attach/options buttons in training mode.' },
   { ver: 'v7.0.1', date: '2026-06-05', summary: 'Training UX: informative empty state explains Skill vs Examples paths, button tooltips, Export JSONL button in Usage tab, guidance for cloud vs local model workflows.' },
   { ver: 'v7.0.0', date: '2026-06-05', summary: 'AI Training System: teach the AI new skills through training chats. Green ⚡ button in sidebar opens training mode — describe what you want the AI to learn, it generates examples you can approve as skills or training data. Skills are injected into every AI response. Export training data as JSONL for local model fine-tuning. Trained Skills counter in Usage tab shows real data.' },
@@ -1842,8 +1846,9 @@ function applyTrainUI() {
     '<button class="new-chat" style="background:#22c55e" onclick="newTrainingChat()">+ Train</button>' +
     '<button class="sidebar-close" onclick="closeSidebar()">✕</button>';
   document.getElementById('sidebarSearch').placeholder = 'Search training…';
-  document.getElementById('logoIcon').textContent = 'TR';
-  document.getElementById('logoIcon').style.background = '#22c55e';
+  const li = document.getElementById('logoIcon');
+  li.textContent = '⚡'; li.style.background = '#22c55e'; li.style.fontSize = '13px';
+  li.title = 'Training Mode — teaching the AI new skills and patterns';
   document.getElementById('sendBtn').style.background = '#22c55e';
   document.body.classList.add('train-active');
   // Show guide button, hide attach/plus
@@ -1865,8 +1870,9 @@ function removeTrainUI() {
     '<button class="new-train" id="trainBtn" onclick="enterTrainMode()" title="New training chat">+</button>' +
     '<button class="sidebar-close" onclick="closeSidebar()">✕</button>';
   document.getElementById('sidebarSearch').placeholder = 'Search chats…';
-  document.getElementById('logoIcon').textContent = 'AI';
-  document.getElementById('logoIcon').style.background = '';
+  const li = document.getElementById('logoIcon');
+  li.textContent = 'AI'; li.style.background = ''; li.style.fontSize = '';
+  li.title = '';
   document.getElementById('sendBtn').style.background = '';
   document.body.classList.remove('train-active');
   document.querySelector('.act-btn[title="Attach file"]').style.display = '';
@@ -1966,7 +1972,7 @@ function renderTrainingView() {
   if (!trainHistory.length) {
     msgs.innerHTML =
       '<div class="empty-state" id="emptyState">' +
-      '<div class="empty-icon" style="color:#22c55e">⚡</div>' +
+      '<div class="empty-icon" style="background:#22c55e;color:#fff">⚡</div>' +
       '<div class="empty-title" style="color:#22c55e">Training Mode</div>' +
       '<div class="empty-sub">Teach the AI new skills by chatting. Describe what you want it to learn, then save its responses.</div>' +
       '<div style="text-align:left;font-size:11px;color:var(--text2);margin:12px 0 8px;line-height:1.5">' +
@@ -2062,33 +2068,58 @@ function toggleTrainGuide() {
   popup.innerHTML = `
     <h3>📖 Fine-Tuning Guide</h3>
     <p>You have <strong>${skillCount} skill${skillCount!==1?'s':''}</strong> and <strong>${exCount} training example${exCount!==1?'s':''}</strong> saved.</p>
-    <h4>How skills work</h4>
-    <div class="guide-step"><div class="guide-num">1</div><div>Chat in training mode — describe what you want the AI to learn</div></div>
-    <div class="guide-step"><div class="guide-num">2</div><div><strong>💡 Save as Skill</strong> — the AI's response becomes a permanent rule, injected into every future chat. Works instantly with cloud models (OpenRouter, Groq).</div></div>
-    <div class="guide-step"><div class="guide-num">3</div><div><strong>📋 Save as Examples</strong> — saves input/output pairs as structured training data for fine-tuning local models.</div></div>
-    <h4>Fine-tuning a local model</h4>
-    <div class="guide-step"><div class="guide-num">1</div><div>Save enough examples (20+ recommended for good results)</div></div>
-    <div class="guide-step"><div class="guide-num">2</div><div>Export your training data as JSONL (button below)</div></div>
-    <div class="guide-step"><div class="guide-num">3</div><div>Fine-tune with your preferred tool:</div></div>
-    <div style="margin:4px 0 4px 28px;font-size:11px;line-height:1.7">
-      <strong>Ollama (easiest)</strong><br>
-      <code>ollama create my-excel-ai -f Modelfile</code><br>
-      Where Modelfile contains: <code>FROM llama3.2</code> + <code>SYSTEM "..."</code> with your skills<br><br>
-      <strong>Unsloth (best quality, needs GPU)</strong><br>
-      <code>pip install unsloth</code> → use the exported JSONL with their fine-tuning script<br>
-      Supports LoRA fine-tuning on Llama, Mistral, Gemma, Qwen<br><br>
-      <strong>MLX (Mac Apple Silicon)</strong><br>
-      <code>pip install mlx-lm</code> → <code>mlx_lm.lora --train --data training-data.jsonl</code><br><br>
-      <strong>OpenAI-compatible</strong><br>
-      The JSONL format is compatible with OpenAI, Together AI, and Fireworks fine-tuning APIs.
-    </div>
+    <h4>How training works</h4>
+    <div class="guide-step"><div class="guide-num">1</div><div>Chat here — describe what you want the AI to learn</div></div>
+    <div class="guide-step"><div class="guide-num">2</div><div><strong>💡 Save as Skill</strong> — saves a rule/preference. Injected into every future chat automatically. <em>No extra steps — works instantly with any model.</em></div></div>
+    <div class="guide-step"><div class="guide-num">3</div><div><strong>📋 Save as Examples</strong> — saves input/output pairs for fine-tuning. Export below, then train a local model to natively understand your patterns.</div></div>
+
+    <h4>Fine-tune with Ollama (easiest)</h4>
+    <div class="guide-step"><div class="guide-num">1</div><div>Install Ollama if you haven't: <a href="https://ollama.com" target="_blank" style="color:#22c55e">ollama.com</a></div></div>
+    <div class="guide-step"><div class="guide-num">2</div><div>Click "Generate Modelfile" below — it bakes your skills into a custom model</div></div>
+    <div class="guide-step"><div class="guide-num">3</div><div>Open a terminal and run:</div></div>
+    <div class="guide-code">ollama create my-excel-ai -f ~/Downloads/Modelfile<button class="guide-copy" onclick="copyGuideCode(this)">Copy</button></div>
+    <div class="guide-step"><div class="guide-num">4</div><div>Select "my-excel-ai" from the model picker in the app — done!</div></div>
+
+    <h4>Fine-tune with Unsloth (best quality, needs NVIDIA GPU)</h4>
+    <div class="guide-step"><div class="guide-num">1</div><div>Click "Export JSONL" below, then install Unsloth:</div></div>
+    <div class="guide-code">pip install unsloth<button class="guide-copy" onclick="copyGuideCode(this)">Copy</button></div>
+    <div class="guide-step"><div class="guide-num">2</div><div>Run the fine-tuning (uses LoRA — fast and memory-efficient):</div></div>
+    <div class="guide-code">python -m unsloth.train \\
+  --model unsloth/Llama-3.2-3B-Instruct \\
+  --data training-data.jsonl \\
+  --output ./my-excel-ai-lora \\
+  --epochs 3<button class="guide-copy" onclick="copyGuideCode(this)">Copy</button></div>
+    <div class="guide-step"><div class="guide-num">3</div><div>Convert to Ollama and import:</div></div>
+    <div class="guide-code">python -m unsloth.save --model ./my-excel-ai-lora --push_to ollama --name my-excel-ai<button class="guide-copy" onclick="copyGuideCode(this)">Copy</button></div>
+
+    <h4>Fine-tune with MLX (Mac Apple Silicon)</h4>
+    <div class="guide-step"><div class="guide-num">1</div><div>Export JSONL below, then:</div></div>
+    <div class="guide-code">pip install mlx-lm<button class="guide-copy" onclick="copyGuideCode(this)">Copy</button></div>
+    <div class="guide-step"><div class="guide-num">2</div><div>Run LoRA fine-tuning:</div></div>
+    <div class="guide-code">mlx_lm.lora \\
+  --model mlx-community/Llama-3.2-3B-Instruct-4bit \\
+  --train --data training-data.jsonl \\
+  --iters 200<button class="guide-copy" onclick="copyGuideCode(this)">Copy</button></div>
+
+    <h4>OpenAI-compatible APIs</h4>
+    <p style="margin:0 0 4px 28px;font-size:11px">The exported JSONL is compatible with OpenAI, Together AI, and Fireworks fine-tuning APIs. Upload it directly to their dashboards.</p>
+
     <div class="guide-actions">
       <button class="add-model-btn" style="background:#22c55e;color:#fff" onclick="exportSkillsJSONL()">📋 Export JSONL (${exCount} examples)</button>
-      <button class="add-model-btn" onclick="createOllamaModelfile()">🦙 Generate Ollama Modelfile</button>
+      <button class="add-model-btn" style="background:#22c55e;color:#fff" onclick="createOllamaModelfile()">🦙 Generate Modelfile</button>
     </div>`;
   document.querySelector('.input-box').appendChild(popup);
   popup.addEventListener('click', e => e.stopPropagation());
   setTimeout(() => document.addEventListener('click', function h() { popup.classList.remove('show'); document.removeEventListener('click', h); }), 10);
+}
+
+function copyGuideCode(btn) {
+  const block = btn.parentElement;
+  const text = block.textContent.replace('Copy','').replace('Copied!','').trim();
+  navigator.clipboard.writeText(text).then(() => {
+    btn.textContent = 'Copied!'; btn.style.background = '#22c55e'; btn.style.color = '#fff';
+    setTimeout(() => { btn.textContent = 'Copy'; btn.style.background = ''; btn.style.color = ''; }, 1500);
+  });
 }
 
 async function createOllamaModelfile() {
