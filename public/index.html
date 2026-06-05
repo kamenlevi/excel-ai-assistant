@@ -341,17 +341,13 @@ html,body{height:100%;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;
 .stat-card{background:var(--surf);border-radius:var(--r2);padding:10px;text-align:center}
 .stat-val{font-size:20px;font-weight:700;color:var(--text)}
 .stat-label{font-size:10px;color:var(--text3);margin-top:2px}
-.cal-grid{display:grid;grid-template-columns:repeat(26,1fr);gap:2px}
-.cal-cell{width:100%;aspect-ratio:1;border-radius:2px;background:var(--surf);min-width:5px}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:1px}
+.cal-cell{width:100%;aspect-ratio:1;border-radius:1px;background:var(--surf);min-width:0}
 .cal-cell[data-lvl="1"]{background:rgba(var(--accent-rgb),.25)}
 .cal-cell[data-lvl="2"]{background:rgba(var(--accent-rgb),.5)}
 .cal-cell[data-lvl="3"]{background:rgba(var(--accent-rgb),.75)}
 .cal-cell[data-lvl="4"]{background:var(--accent)}
-.cal-row-label{font-size:8px;color:var(--text3);width:14px;text-align:right;flex-shrink:0}
-.cal-wrap{display:flex;gap:2px}
-.cal-days{display:flex;flex-direction:column;gap:1px;justify-content:space-between;padding:1px 0}
-.cal-months{display:flex;gap:0;font-size:8px;color:var(--text3);margin-bottom:2px;padding-left:16px}
-.cal-months span{flex:1;min-width:0}
+.cal-row-label{font-size:8px;color:var(--text3);text-align:center;flex-shrink:0}
 .cal-months{display:flex;flex-direction:column;gap:0;font-size:8px;color:var(--text3);margin-right:2px;justify-content:space-between;width:24px;flex-shrink:0}
 .cal-months span{min-width:0}
 .streak-row{display:flex;gap:12px;margin-top:6px;font-size:11px;color:var(--text2)}
@@ -1127,7 +1123,7 @@ function renderUsageTab() {
   msgs.forEach(e => { const d = e.ts?.slice(0,10); if(d) dayCounts[d] = (dayCounts[d]||0)+1; });
   function calLevel(n) { return n === 0 ? 0 : n <= 3 ? 1 : n <= 10 ? 2 : n <= 25 ? 3 : 4; }
   let calCells = '';
-  const CAL_WEEKS = 26;
+  const CAL_WEEKS = 52;
   const CAL_DAYS = CAL_WEEKS * 7;
   const startDate = new Date(today);
   startDate.setDate(startDate.getDate() - (CAL_DAYS - 1));
@@ -1144,12 +1140,15 @@ function renderUsageTab() {
     calCells += `<div class="cal-cell" data-lvl="${calLevel(cnt)}" title="${ds}: ${cnt} messages"></div>`;
     if (i % 7 === 0 && d.getMonth() !== lastMonth) { lastMonth = d.getMonth(); monthLabels.push({ col: Math.floor(i/7), label: d.toLocaleString('default',{month:'short'}) }); }
   }
-  let monthsHtml = '<div class="cal-months">';
+  // Week labels (show every 4th week number)
+  const weekLabels = [];
   for (let w = 0; w < CAL_WEEKS; w++) {
-    const ml = monthLabels.find(m => m.col === w);
-    monthsHtml += `<span>${ml ? ml.label : ''}</span>`;
+    const d = new Date(startDate);
+    d.setDate(d.getDate() + w * 7);
+    const oneJan = new Date(d.getFullYear(),0,1);
+    const wn = Math.ceil(((d - oneJan) / 86400000 + oneJan.getDay() + 1) / 7);
+    weekLabels.push(w % 4 === 0 ? 'W'+wn : '');
   }
-  monthsHtml += '</div>';
 
   // Streaks
   let curStreak = 0, maxStreak = 0, streak = 0;
@@ -1307,10 +1306,10 @@ function renderUsageTab() {
       </div>
     </div>
     <div class="usage-section"><div class="usage-section-title">Activity</div>
-      ${monthsHtml}
-      <div class="cal-wrap">
-        <div class="cal-days">${['','M','','W','','F',''].map(d=>'<div class="cal-row-label">'+d+'</div>').join('')}</div>
-        <div class="cal-grid">${calCells}</div>
+      <div class="cal-days" style="display:flex;gap:1px;justify-content:space-around;padding:0 0 2px 0;margin-left:0;margin-right:22px">${dayNames.map(d=>'<div class="cal-row-label" style="flex:1;text-align:center">'+d.slice(0,1)+'</div>').join('')}</div>
+      <div style="display:flex;gap:2px">
+        <div style="flex:1"><div class="cal-grid">${calCells}</div></div>
+        <div style="display:flex;flex-direction:column;justify-content:space-between;width:20px;font-size:7px;color:var(--text3);flex-shrink:0;text-align:left">${weekLabels.map(w=>'<div>'+w+'</div>').join('')}</div>
       </div>
       <div class="streak-row"><span>Current streak: <strong>${curStreak} day${curStreak!==1?'s':''}</strong></span><span>Longest: <strong>${maxStreak} day${maxStreak!==1?'s':''}</strong></span></div>
     </div>
