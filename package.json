@@ -2,6 +2,10 @@
   "name": "excel-ai-assistant",
   "version": "6.0.0",
   "description": "AI assistant for Excel — desktop app with auto-setup",
+  "author": {
+    "name": "Kamen Levi",
+    "email": "kamenlevi@gmail.com"
+  },
   "main": "electron/main.js",
   "scripts": {
     "start": "node server.js",
