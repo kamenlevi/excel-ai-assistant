@@ -1824,48 +1824,50 @@ let trainChatId = null;
 let trainHistory = [];
 let trainSkills = [];
 
-function enterTrainMode() {
-  trainMode = true;
-  // Update sidebar
+function applyTrainUI() {
   document.getElementById('trainBack').style.display = '';
   document.getElementById('newChatBtn').textContent = '+ Train';
   document.getElementById('newChatBtn').style.background = '#22c55e';
   document.getElementById('newChatBtn').onclick = () => newTrainingChat();
   document.getElementById('trainBtn').style.display = 'none';
   document.getElementById('sidebarSearch').placeholder = 'Search training…';
-  // Update header
-  const logo = document.getElementById('logoIcon');
-  logo.textContent = 'TR';
-  logo.style.background = '#22c55e';
-  // Load training chats in sidebar
-  loadTrainingChats();
-  // Create a new training chat
-  newTrainingChat();
+  document.getElementById('logoIcon').textContent = 'TR';
+  document.getElementById('logoIcon').style.background = '#22c55e';
+  document.getElementById('sendBtn').style.background = '#22c55e';
 }
 
-function exitTrainMode() {
-  trainMode = false;
-  trainChatId = null;
-  trainHistory = [];
-  // Restore sidebar
+function removeTrainUI() {
   document.getElementById('trainBack').style.display = 'none';
   document.getElementById('newChatBtn').textContent = '+ New';
   document.getElementById('newChatBtn').style.background = '';
   document.getElementById('newChatBtn').onclick = () => newChat();
   document.getElementById('trainBtn').style.display = '';
   document.getElementById('sidebarSearch').placeholder = 'Search chats…';
-  // Restore header
-  const logo = document.getElementById('logoIcon');
-  logo.textContent = 'AI';
-  logo.style.background = '';
-  // Restore normal chats
+  document.getElementById('logoIcon').textContent = 'AI';
+  document.getElementById('logoIcon').style.background = '';
+  document.getElementById('sendBtn').style.background = '';
+}
+
+async function enterTrainMode() {
+  trainMode = true;
+  closeSidebar();
+  applyTrainUI();
+  await newTrainingChat();
+}
+
+function exitTrainMode() {
+  trainMode = false;
+  trainChatId = null;
+  trainHistory = [];
+  removeTrainUI();
+  closeSidebar();
   loadChats();
   if (chatId) { loadChat(chatId); } else { renderEmpty(); }
 }
 
 function openSidebarInMode() {
+  if (trainMode) { applyTrainUI(); loadTrainingChats(); }
   openSidebar();
-  if (trainMode) loadTrainingChats();
 }
 
 async function loadTrainingChats() {
@@ -1894,7 +1896,6 @@ async function newTrainingChat() {
     trainHistory = [];
     renderTrainingView();
     closeSidebar();
-    await loadTrainingChats();
   } catch {}
 }
 
@@ -1926,7 +1927,20 @@ async function delTrainingChat(e, id) {
 
 function renderTrainingView() {
   const msgs = document.getElementById('msgs');
-  let html = '<div class="train-header"><strong>⚡ Training Mode</strong><br>Teach the AI new skills. Describe what you want it to learn — it will generate examples you can approve, edit, or save as knowledge.</div>';
+  if (!trainHistory.length) {
+    msgs.innerHTML =
+      '<div class="empty-state" id="emptyState">' +
+      '<div class="empty-icon" style="color:#22c55e">⚡</div>' +
+      '<div class="empty-title" style="color:#22c55e">Training Mode</div>' +
+      '<div class="empty-sub">Teach the AI new skills. Tell it what to learn and it will generate examples you can save.</div>' +
+      '<div class="chips">' +
+      '<button class="chip" style="border-color:#22c55e;color:#22c55e" onclick="useSugg(this)">Learn how I format financial reports</button>' +
+      '<button class="chip" style="border-color:#22c55e;color:#22c55e" onclick="useSugg(this)">Get better at writing VLOOKUP formulas</button>' +
+      '<button class="chip" style="border-color:#22c55e;color:#22c55e" onclick="useSugg(this)">Learn my preferred chart styling</button>' +
+      '</div></div>';
+    return;
+  }
+  let html = '';
   trainHistory.forEach((m, i) => {
     if (m.role === 'user') {
       html += '<div class="msg user"><div class="bubble user-bubble">' + esc(m.content) + '</div></div>';
@@ -2084,7 +2098,8 @@ Always be specific to Excel operations. Include CODE_JS blocks in outputs when t
   }
 
   loading = false;
-  sb.textContent = '↑'; sb.disabled = false; sb.className = 'send';
+  sb.textContent = 'Send'; sb.disabled = false; sb.className = 'send';
+  sb.style.background = '#22c55e';
   renderTrainingView();
 }
 
