@@ -67,14 +67,10 @@ html,body{height:100%;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;
 .sidebar-head{padding:12px;border-bottom:1px solid var(--border);display:flex;gap:8px;align-items:center}
 .new-chat{flex:1;background:var(--accent);color:#fff;border:none;border-radius:var(--r2);padding:7px 10px;font-size:13px;font-weight:600;cursor:pointer;transition:background .15s}
 .new-chat:hover{background:var(--accent2)}
-.new-train{width:34px;height:34px;background:#22c55e;color:#fff;border:none;border-radius:var(--r2);font-size:16px;font-weight:700;cursor:pointer;transition:background .15s;flex-shrink:0;display:flex;align-items:center;justify-content:center}
+.new-train{flex:none;width:34px;background:#22c55e;color:#fff;border:none;border-radius:var(--r2);padding:7px 0;font-size:15px;font-weight:700;cursor:pointer;transition:background .15s;text-align:center;line-height:1}
 .new-train:hover{background:#16a34a}
-.train-mode .new-chat{background:#22c55e}
-.train-mode .new-chat:hover{background:#16a34a}
-.sidebar-mode-toggle{display:flex;gap:0;margin:0 12px 6px;border-radius:var(--r2);overflow:hidden;border:1px solid var(--border)}
-.sidebar-mode-btn{flex:1;padding:5px 0;font-size:11px;font-weight:600;cursor:pointer;background:var(--surf);color:var(--text2);border:none;transition:all .15s;font-family:inherit}
-.sidebar-mode-btn.active{background:var(--accent);color:#fff}
-.sidebar-mode-btn.active.train{background:#22c55e}
+.train-back{display:none;padding:6px 12px;background:#22c55e;color:#fff;font-size:12px;font-weight:600;cursor:pointer;border:none;width:100%;text-align:left;font-family:inherit;transition:background .15s}
+.train-back:hover{background:#16a34a}
 .chat-item.training{border-left:3px solid #22c55e}
 .chat-item.training .chat-title{color:#22c55e}
 .train-badge{display:inline-block;background:#22c55e;color:#fff;font-size:8px;font-weight:700;padding:1px 4px;border-radius:3px;margin-left:4px;vertical-align:middle;text-transform:uppercase}
@@ -496,8 +492,8 @@ mark.search-hl.current{background:rgba(var(--accent-rgb),.6)}
 <div class="app">
   <div class="main">
     <header class="header">
-      <button class="btn-icon" onclick="openSidebar()" title="Chat history">☰</button>
-      <div class="logo-icon">AI</div>
+      <button class="btn-icon" onclick="openSidebarInMode()" title="Chat history">☰</button>
+      <div class="logo-icon" id="logoIcon">AI</div>
       <button class="model-btn" id="modelBtn" onclick="openModelPicker()"></button>
       <script>document.getElementById('modelBtn').textContent=(function(){try{var id=localStorage.getItem('selModel')||'meta-llama/llama-3.3-70b-instruct';return(id.split('/').pop()||id)+' ▾'}catch(e){return'Model ▾'}})();</script>
       <div class="sync-box ok" id="syncBox">
@@ -577,14 +573,11 @@ mark.search-hl.current{background:rgba(var(--accent-rgb),.6)}
 <div class="sidebar" id="sidebar">
   <div class="sidebar-backdrop" onclick="closeSidebar()"></div>
   <div class="sidebar-drawer">
+    <button class="train-back" id="trainBack" onclick="exitTrainMode()">← Back to chats</button>
     <div class="sidebar-head">
-      <button class="new-chat" id="newChatBtn" onclick="sidebarNewChat()">+ New</button>
-      <button class="new-train" onclick="toggleTrainMode()" id="trainModeBtn" title="Training mode">⚡</button>
+      <button class="new-chat" id="newChatBtn" onclick="newChat()">+ New</button>
+      <button class="new-train" id="trainBtn" onclick="enterTrainMode()" title="New training chat">+</button>
       <button class="sidebar-close" onclick="closeSidebar()">✕</button>
-    </div>
-    <div class="sidebar-mode-toggle" id="sidebarModeToggle" style="display:none">
-      <button class="sidebar-mode-btn active" id="modeChats" onclick="setSidebarMode('chats')">Chats</button>
-      <button class="sidebar-mode-btn train" id="modeTraining" onclick="setSidebarMode('training')">Training</button>
     </div>
     <input class="sidebar-search" id="sidebarSearch" placeholder="Search chats…" oninput="searchChats(this.value)">
     <div class="chat-list" id="chatList"><div class="no-chats">No chats yet</div></div>
@@ -1831,47 +1824,48 @@ let trainChatId = null;
 let trainHistory = [];
 let trainSkills = [];
 
-function toggleTrainMode() {
-  trainMode = !trainMode;
-  const drawer = document.querySelector('.sidebar-drawer');
-  const toggle = document.getElementById('sidebarModeToggle');
-  const btn = document.getElementById('newChatBtn');
-  if (trainMode) {
-    drawer.classList.add('train-mode');
-    toggle.style.display = '';
-    setSidebarMode('training');
-    btn.textContent = '+ Train';
-    btn.onclick = () => newTrainingChat();
-  } else {
-    drawer.classList.remove('train-mode');
-    toggle.style.display = 'none';
-    setSidebarMode('chats');
-    btn.textContent = '+ New';
-    btn.onclick = () => newChat();
-    // Restore normal chat view
-    if (trainChatId) { trainChatId = null; trainHistory = []; }
-    if (chatId) { loadChat(chatId); } else { renderEmpty(); }
-  }
+function enterTrainMode() {
+  trainMode = true;
+  // Update sidebar
+  document.getElementById('trainBack').style.display = '';
+  document.getElementById('newChatBtn').textContent = '+ Train';
+  document.getElementById('newChatBtn').style.background = '#22c55e';
+  document.getElementById('newChatBtn').onclick = () => newTrainingChat();
+  document.getElementById('trainBtn').style.display = 'none';
+  document.getElementById('sidebarSearch').placeholder = 'Search training…';
+  // Update header
+  const logo = document.getElementById('logoIcon');
+  logo.textContent = 'TR';
+  logo.style.background = '#22c55e';
+  // Load training chats in sidebar
+  loadTrainingChats();
+  // Create a new training chat
+  newTrainingChat();
 }
 
-function setSidebarMode(mode) {
-  document.getElementById('modeChats').className = 'sidebar-mode-btn' + (mode === 'chats' ? ' active' : '');
-  document.getElementById('modeTraining').className = 'sidebar-mode-btn train' + (mode === 'training' ? ' active' : '');
-  const btn = document.getElementById('newChatBtn');
-  if (mode === 'training') {
-    btn.textContent = '+ Train';
-    btn.onclick = () => newTrainingChat();
-    loadTrainingChats();
-  } else {
-    btn.textContent = '+ New';
-    btn.onclick = () => newChat();
-    loadChats();
-  }
+function exitTrainMode() {
+  trainMode = false;
+  trainChatId = null;
+  trainHistory = [];
+  // Restore sidebar
+  document.getElementById('trainBack').style.display = 'none';
+  document.getElementById('newChatBtn').textContent = '+ New';
+  document.getElementById('newChatBtn').style.background = '';
+  document.getElementById('newChatBtn').onclick = () => newChat();
+  document.getElementById('trainBtn').style.display = '';
+  document.getElementById('sidebarSearch').placeholder = 'Search chats…';
+  // Restore header
+  const logo = document.getElementById('logoIcon');
+  logo.textContent = 'AI';
+  logo.style.background = '';
+  // Restore normal chats
+  loadChats();
+  if (chatId) { loadChat(chatId); } else { renderEmpty(); }
 }
 
-function sidebarNewChat() {
-  if (trainMode) newTrainingChat();
-  else newChat();
+function openSidebarInMode() {
+  openSidebar();
+  if (trainMode) loadTrainingChats();
 }
 
 async function loadTrainingChats() {
