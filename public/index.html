@@ -918,7 +918,7 @@ function renderCalGrid() {
   const container = document.getElementById('calContainer');
   if (!container) return;
   const today = new Date();
-  const dayNames = ['S','M','T','W','T','F','S'];
+  const dayNames = ['M','T','W','T','F','S','S'];
   function calLevel(n) { return n === 0 ? 0 : n <= 3 ? 1 : n <= 10 ? 2 : n <= 25 ? 3 : 4; }
 
   let rangeStart, rangeEnd;
@@ -931,12 +931,14 @@ function renderCalGrid() {
     rangeStart = new Date(today);
     rangeStart.setDate(rangeStart.getDate() - (weeksBack * 7 - 1));
   }
-  // Align start to Sunday
+  // Align start to Monday (day 1; Sunday=0 wraps to -6)
   const gridStart = new Date(rangeStart);
-  gridStart.setDate(gridStart.getDate() - gridStart.getDay());
-  // Align end to Saturday
+  const startDow = gridStart.getDay();
+  gridStart.setDate(gridStart.getDate() - ((startDow + 6) % 7));
+  // Align end to Sunday
   const gridEnd = new Date(rangeEnd);
-  gridEnd.setDate(gridEnd.getDate() + (6 - gridEnd.getDay()));
+  const endDow = gridEnd.getDay();
+  gridEnd.setDate(gridEnd.getDate() + ((7 - endDow) % 7));
   const totalDays = Math.round((gridEnd - gridStart) / 86400000) + 1;
   const weeks = totalDays / 7;
 
@@ -1204,12 +1206,13 @@ function renderUsageTab() {
   const maxHD = Math.max(1, ...Object.values(hourDay));
   function hdLevel(n) { const r = n/maxHD; return r === 0 ? 0 : r <= 0.25 ? 1 : r <= 0.5 ? 2 : r <= 0.75 ? 3 : 4; }
   let heatCells = '';
-  const dayNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-  // Vertical: iterate hours first (rows), then days (columns) — but grid-auto-flow:column means we iterate by column (day), then row (hour)
-  for (let dow = 0; dow < 7; dow++) {
+  const dayNames = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  const dowOrder = [1,2,3,4,5,6,0];
+  for (let di = 0; di < 7; di++) {
+    const dow = dowOrder[di];
     for (let h = 0; h < 24; h++) {
       const cnt = hourDay[dow+'-'+h] || 0;
-      heatCells += `<div class="heat-cell" data-lvl="${hdLevel(cnt)}" title="${dayNames[dow]} ${h}:00 — ${cnt} msgs"></div>`;
+      heatCells += `<div class="heat-cell" data-lvl="${hdLevel(cnt)}" title="${dayNames[di]} ${h}:00 — ${cnt} msgs"></div>`;
     }
   }
 
@@ -1218,7 +1221,8 @@ function renderUsageTab() {
   const peakHour1 = topHours[0]?.[0] ?? 0;
   const peakHour2 = topHours[1]?.[0] ?? 0;
   const topDays = dayTotals.map((c,i) => [i,c]).sort((a,b) => b[1]-a[1]);
-  const peakDay = dayNames[topDays[0]?.[0] ?? 0];
+  const peakDayIdx = topDays[0]?.[0] ?? 1;
+  const peakDay = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][peakDayIdx];
   function fmtHr(h) { return h === 0 ? '0am' : h < 12 ? h+'am' : h === 12 ? '12pm' : (h-12)+'pm'; }
   function getPersonality(h) {
     if (h >= 5 && h < 9) return 'Early bird! You like getting things done before the world wakes up.';
