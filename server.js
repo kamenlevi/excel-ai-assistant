@@ -20,14 +20,19 @@ const supabase = process.env.SUPABASE_URL && process.env.SUPABASE_ANON_KEY
   : null;
 
 // ── SSL cert — use office-addin-dev-certs (trusted by Excel desktop) ──
-const DEV_CERTS_DIR = path.join(process.env.USERPROFILE || process.env.HOME, '.office-addin-dev-certs');
-const pems = {
-  cert:    fs.readFileSync(path.join(DEV_CERTS_DIR, 'localhost.crt'), 'utf8'),
-  private: fs.readFileSync(path.join(DEV_CERTS_DIR, 'localhost.key'), 'utf8'),
-};
+const DEV_CERTS_DIR = process.env.EXCEL_AI_CERTS_DIR || path.join(process.env.USERPROFILE || process.env.HOME, '.office-addin-dev-certs');
+let pems;
+try {
+  pems = {
+    cert:    fs.readFileSync(path.join(DEV_CERTS_DIR, 'localhost.crt'), 'utf8'),
+    private: fs.readFileSync(path.join(DEV_CERTS_DIR, 'localhost.key'), 'utf8'),
+  };
+} catch {
+  pems = null; // certs will be provided by startServer(opts) or Electron
+}
 
 // ── Data dir for chat persistence ─────────────────────────────────────────────
-const DATA_DIR    = path.join(__dirname, 'data');
+const DATA_DIR    = process.env.EXCEL_AI_DATA_DIR || path.join(__dirname, 'data');
 const CHATS_FILE  = path.join(DATA_DIR, 'chats.json');
 fs.mkdirSync(DATA_DIR, { recursive: true });
 
@@ -1928,9 +1933,28 @@ app.get('/auth/callback', (req, res) => {
     <p>Signing in…</p></body></html>`);
 });
 
-const server = https.createServer({ key: pems.private, cert: pems.cert }, app);
-server.listen(3000, () => {
-  console.log('Excel AI Assistant running at https://localhost:3000');
-  console.log(`Mode: ${USE_OPENROUTER ? 'OpenRouter' : USE_MLX ? 'MLX' : USE_GROQ ? 'Groq' : 'Ollama'}`);
-  console.log(`Default model: ${DEFAULT_MODEL}`);
+// ── App version endpoint (used by Electron updater UI) ───────────────────────
+app.get('/api/app/version', (req, res) => {
+  res.json({ version: process.env.EXCEL_AI_APP_VERSION || require('./package.json').version, electron: !!process.versions.electron });
 });
+
+function startServer(opts = {}) {
+  const certDir = opts.certDir || DEV_CERTS_DIR;
+  const serverPems = {
+    key:  fs.readFileSync(path.join(certDir, 'localhost.key'), 'utf8'),
+    cert: fs.readFileSync(path.join(certDir, 'localhost.crt'), 'utf8'),
+  };
+  const server = https.createServer(serverPems, app);
+  server.listen(3000, () => {
+    console.log('Excel AI Assistant running at https://localhost:3000');
+    console.log(`Mode: ${USE_OPENROUTER ? 'OpenRouter' : USE_MLX ? 'MLX' : USE_GROQ ? 'Groq' : 'Ollama'}`);
+    console.log(`Default model: ${DEFAULT_MODEL}`);
+  });
+  return server;
+}
+
+if (require.main === module) {
+  startServer();
+}
+
+module.exports = { startServer, app };

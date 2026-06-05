@@ -19,6 +19,9 @@ data/
 *.key
 *.pem
 
+# Electron build output
+dist/
+
 # OS junk
 .DS_Store
 Thumbs.db

@@ -727,8 +727,9 @@ function classifyIntent(text) {
 // ── Security state ────────────────────────────────────────────────────────────
 let sessionDangerConfirmed = new Set(); // 'high', 'critical' confirmed this session
 let sessionPasswordVerified = false;    // password entered once this session
-const APP_VERSION = 'v5.14.1';
+const APP_VERSION = 'v6.0.0';
 const CHANGELOG = [
+  { ver: 'v6.0.0', date: '2026-06-05', summary: 'Desktop app: Electron packaging turns the add-in into an installable app. Install once — it auto-generates SSL certs, starts the server, and sideloads the manifest into Excel. System tray icon with server status, Open Excel, Check for Updates, and Reinstall Add-in. Auto-updates via GitHub Releases (Apple-style: auto-patches, prompted major updates). Settings shows update controls when running in Electron. Supports Windows, Linux, and macOS. npm start still works standalone for development.' },
   { ver: 'v5.14.1', date: '2026-06-04', summary: 'UX polish: smooth animations for settings overlay (fade+slide), account button (spring scale), and tab content (fade-in). Slash popup capped at 10 items; Enter now executes the selected popup item instead of sending raw partial text. Ctrl+F search supports arrow keys and Enter/Shift+Enter for navigation. Sign-out button shows loading state. Settings always accessible (account icon opens settings even when not signed in). Calendar grid shows 26 weeks with larger cells. Fixed horizontal scroll in settings content area.' },
   { ver: 'v5.14.0', date: '2026-06-04', summary: 'Usage dashboard: GitHub-style activity calendar, time-of-day heatmap, model usage bars, task category donut chart, code execution success rate, cost breakdown table, streak tracking. 12 new slash commands: /undo, /redo, /export (md/json), /usage, /search, /model, /provider, /pin, /forget, /version, /find. Sidebar search: filter chat history by title or message content with live previews. In-conversation search (Ctrl+F): highlights matches with up/down navigation. Full analytics tracking engine logs every interaction (messages, code executions, undos, slash commands) with auto-classified task categories.' },
   { ver: 'v5.13.0', date: '2026-06-04', summary: 'Major settings redesign: full-overlay settings panel (Claude-style) replaces the old drawer. 7 subcategories: Profile, General, Providers, Capabilities, Preferences, Privacy & Security, History. Universal provider system — pick from 10 providers (OpenRouter, Groq, OpenAI, Anthropic, Google AI, Mistral, Together, Ollama, MLX, Custom) with per-provider API key fields. Server refactored to route by provider config (3 format branches: openai-compat, ollama, anthropic). Header redesigned: logo shrunk, sync status is now an informative box with hover tooltip (sheet name, rows, cols, last sync time), settings button removed — account icon opens settings. Cost limit bug fixed (prompt/session modes no longer cross-contaminate). Input placeholder simplified.' },
@@ -1004,6 +1005,7 @@ function renderGeneralTab() {
   const th = localStorage.getItem('theme') || 'light';
   return `<div class="sgrp"><div class="slabel">Theme</div><div class="theme-row"><button class="theme-opt${th==='light'?' active':''}" id="tLight" onclick="setTheme('light');renderSettingsTab()">☀ Light</button><button class="theme-opt${th==='dark'?' active':''}" id="tDark" onclick="setTheme('dark');renderSettingsTab()">☾ Dark</button></div></div>`+
   `<div class="sgrp"><div class="slabel">Behaviour</div><div class="srow"><span class="srow-label">Auto-sync workbook</span><div class="toggle${autoSync?' on':''}" id="autoSyncTog" onclick="togSet('autoSync','autoSyncTog')"></div></div><div class="srow" style="margin-top:8px"><span class="srow-label">Show generated code</span><div class="toggle${showCode?' on':''}" id="showCodeTog" onclick="togSet('showCode','showCodeTog')"></div></div></div>`+
+  `<div class="sgrp" id="updateSection" style="display:none"><div class="slabel">App Updates</div><div class="srow"><span class="srow-label">Auto-update patches</span><div class="toggle" id="autoUpdateTog" onclick="toggleAutoUpdate()"></div></div><div style="margin-top:8px"><button class="add-model-btn" id="checkUpdateBtn" onclick="checkForUpdate()">Check for Updates</button><span class="sinote" id="updateStatusNote" style="margin-top:4px"></span></div></div>`+
   `<div class="sgrp"><div class="sfooter" style="cursor:pointer" onclick="openChangelog()" title="Click to see version history">Excel AI Assistant · <strong id="versionLabel">${APP_VERSION}</strong></div></div>`;
 }
 function renderProvidersTab() {
@@ -1233,7 +1235,43 @@ function renderUsageTab() {
     <div class="usage-section"><button class="sdanger" onclick="if(confirm('Clear all usage data?')){usageLog=[];localStorage.removeItem('usage_log');renderSettingsTab();}">Reset usage data</button></div>
   `;
 }
-function bindSettingsEvents() {}
+function bindSettingsEvents() {
+  // Show update section if running inside Electron
+  fetch('/api/app/update-settings').then(r=>r.json()).then(d=>{
+    const sec=document.getElementById('updateSection');
+    if(sec){sec.style.display='';
+      document.getElementById('autoUpdateTog').className='toggle'+(d.autoUpdatePatches?' on':'');
+      const note=document.getElementById('updateStatusNote');
+      if(d.updateStatus==='up-to-date')note.textContent='You\'re up to date ('+d.currentVersion+')';
+      else if(d.updateStatus==='ready')note.textContent='Update '+d.latestVersion+' ready — restart to install';
+      else if(d.updateStatus&&d.updateStatus.startsWith('downloading'))note.textContent='Downloading update…';
+      else note.textContent='Version '+d.currentVersion;
+    }
+  }).catch(()=>{});
+}
+function toggleAutoUpdate(){
+  const tog=document.getElementById('autoUpdateTog');
+  const isOn=tog.classList.contains('on');
+  tog.className='toggle'+(!isOn?' on':'');
+  fetch('/api/app/update-settings',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({autoUpdatePatches:!isOn})}).catch(()=>{});
+}
+function checkForUpdate(){
+  const btn=document.getElementById('checkUpdateBtn');
+  const note=document.getElementById('updateStatusNote');
+  btn.disabled=true;btn.textContent='Checking…';
+  fetch('/api/app/check-update',{method:'POST'}).then(()=>{
+    note.textContent='Checking for updates…';
+    setTimeout(()=>{
+      fetch('/api/app/update-settings').then(r=>r.json()).then(d=>{
+        if(d.updateStatus==='up-to-date')note.textContent='You\'re up to date ('+d.currentVersion+')';
+        else if(d.updateStatus==='ready')note.textContent='Update '+d.latestVersion+' ready — restart to install';
+        else if(d.updateStatus==='major-available')note.textContent='Major update '+d.latestVersion+' available';
+        else note.textContent=d.updateStatus||'Checked';
+        btn.disabled=false;btn.textContent='Check for Updates';
+      }).catch(()=>{btn.disabled=false;btn.textContent='Check for Updates';});
+    },3000);
+  }).catch(()=>{btn.disabled=false;btn.textContent='Check for Updates';note.textContent='Could not check for updates';});
+}
 
 function openChangelog() {
   const list=document.getElementById('changelogList');

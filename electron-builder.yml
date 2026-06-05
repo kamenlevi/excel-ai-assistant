@@ -1,0 +1,58 @@
+appId: com.excelai.assistant
+productName: Excel AI Assistant
+
+directories:
+  output: dist
+
+files:
+  - server.js
+  - package.json
+  - public/**/*
+  - electron/**/*
+  - node_modules/**/*
+  - "!node_modules/*/{CHANGELOG.md,README.md,readme.md,test,__tests__,tests,*.d.ts,*.map}"
+  - "!data/**"
+  - "!eval/**"
+  - "!docs/**"
+  - "!dist/**"
+  - "!.git/**"
+  - "!.github/**"
+  - "!*.jsonl"
+  - "!*.bat"
+  - "!.env"
+  - "!CLAUDE.md"
+
+extraResources:
+  - from: manifest.xml
+    to: manifest.xml
+  - from: assets/
+    to: assets/
+
+asar: true
+
+win:
+  target: nsis
+  icon: build/icon.ico
+
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  perMachine: false
+
+linux:
+  target:
+    - AppImage
+    - deb
+  icon: build/icon.png
+  category: Office
+  desktop:
+    StartupWMClass: excel-ai-assistant
+
+mac:
+  target: dmg
+  icon: build/icon.png
+
+publish:
+  provider: github
+  owner: kamenlevi
+  repo: excel-ai-assistant

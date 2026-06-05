@@ -1,19 +1,31 @@
 {
   "name": "excel-ai-assistant",
-  "version": "5.14.1",
-  "description": "Private local AI assistant for Excel",
+  "version": "6.0.0",
+  "description": "AI assistant for Excel — desktop app with auto-setup",
+  "main": "electron/main.js",
   "scripts": {
     "start": "node server.js",
+    "electron:dev": "electron .",
+    "dist": "electron-builder",
+    "dist:win": "electron-builder --win",
+    "dist:linux": "electron-builder --linux",
+    "dist:mac": "electron-builder --mac",
     "eval": "node eval/run.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.106.2",
     "dotenv": "^17.4.2",
+    "electron-store": "^8.2.0",
+    "electron-updater": "^6.3.9",
     "exceljs": "^4.4.0",
     "express": "^4.18.2",
     "https": "^1.0.0",
     "node-fetch": "^2.7.0",
     "selfsigned": "^2.4.1",
     "uuid": "^14.0.0"
+  },
+  "devDependencies": {
+    "electron": "^33.3.1",
+    "electron-builder": "^25.1.8"
   }
 }
