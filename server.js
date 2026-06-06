@@ -2394,13 +2394,17 @@ app.get('/api/auth/config', (req, res) => {
 
 
 // OAuth callback — Supabase redirects here after social sign-in
+// Store tokens server-side so the add-in (different webview) can poll for them
+let _pendingAuthTokens = null;
+let _pendingAuthExpiry = 0;
+
 app.get('/auth/callback', (req, res) => {
   res.send(`<!DOCTYPE html><html><head><title>Signing in…</title></head><body>
-    <p>Signing in…</p>
+    <p>Signing in… you can close this window.</p>
     <script>
       var hash = window.location.hash;
+      // Try postMessage to opener first (same-context popup flow)
       var sent = false;
-      // Try postMessage to opener (works when popup kept its opener ref)
       try {
         if (window.opener && !window.opener.closed) {
           window.opener.postMessage({ type: 'supabase-auth-callback', hash: hash }, window.location.origin);
@@ -2408,14 +2412,36 @@ app.get('/auth/callback', (req, res) => {
           setTimeout(function(){ window.close(); }, 500);
         }
       } catch(e) {}
-      // If no opener (redirect flow, or popup lost opener), redirect main page
-      if (!sent) {
-        // Store tokens so the main page can pick them up
-        try { localStorage.setItem('supabase-auth-hash', hash); } catch(e) {}
-        window.location.href = '/' + hash;
+      // Always store tokens on server as fallback (for cross-context flows like Excel add-in)
+      if (hash && hash.includes('access_token')) {
+        fetch('/api/auth/pending-token', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ hash: hash })
+        }).then(function() {
+          if (!sent) {
+            document.body.innerHTML = '<p style="font-family:sans-serif;text-align:center;margin-top:40px">Signed in! You can close this tab and return to Excel.</p>';
+          }
+        });
       }
     <\/script>
     </body></html>`);
+});
+
+app.post('/api/auth/pending-token', (req, res) => {
+  _pendingAuthTokens = req.body.hash || null;
+  _pendingAuthExpiry = Date.now() + 120000; // expires in 2 minutes
+  res.json({ ok: true });
+});
+
+app.get('/api/auth/pending-token', (req, res) => {
+  if (_pendingAuthTokens && Date.now() < _pendingAuthExpiry) {
+    const hash = _pendingAuthTokens;
+    _pendingAuthTokens = null; // consume once
+    res.json({ hash });
+  } else {
+    res.json({ hash: null });
+  }
 });
 
 // ── App version endpoint (used by Electron updater UI) ───────────────────────
