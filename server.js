@@ -2388,15 +2388,26 @@ app.get('/api/auth/config', (req, res) => {
 // OAuth callback — Supabase redirects here after social sign-in
 app.get('/auth/callback', (req, res) => {
   res.send(`<!DOCTYPE html><html><head><title>Signing in…</title></head><body>
+    <p>Signing in…</p>
     <script>
-      if (window.opener) {
-        window.opener.postMessage({ type: 'supabase-auth-callback', hash: window.location.hash }, window.location.origin);
-        window.close();
-      } else {
-        window.location.href = '/index.html' + window.location.hash;
+      var hash = window.location.hash;
+      var sent = false;
+      // Try postMessage to opener (works when popup kept its opener ref)
+      try {
+        if (window.opener && !window.opener.closed) {
+          window.opener.postMessage({ type: 'supabase-auth-callback', hash: hash }, window.location.origin);
+          sent = true;
+          setTimeout(function(){ window.close(); }, 500);
+        }
+      } catch(e) {}
+      // If no opener (redirect flow, or popup lost opener), redirect main page
+      if (!sent) {
+        // Store tokens so the main page can pick them up
+        try { localStorage.setItem('supabase-auth-hash', hash); } catch(e) {}
+        window.location.href = '/' + hash;
       }
     <\/script>
-    <p>Signing in…</p></body></html>`);
+    </body></html>`);
 });
 
 // ── App version endpoint (used by Electron updater UI) ───────────────────────
