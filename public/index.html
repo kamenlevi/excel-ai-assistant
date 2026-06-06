@@ -811,8 +811,9 @@ function classifyIntent(text) {
 // ── Security state ────────────────────────────────────────────────────────────
 let sessionDangerConfirmed = new Set(); // 'high', 'critical' confirmed this session
 let sessionPasswordVerified = false;    // password entered once this session
-const APP_VERSION = 'v9.1.6';
+const APP_VERSION = 'v9.1.7';
 const CHANGELOG = [
+  { ver: 'v9.1.7', date: '2026-06-06', summary: 'OAuth: show "click here to complete" button after Google sign-in opens, since Excel webview cannot detect focus/visibility changes.' },
   { ver: 'v9.1.6', date: '2026-06-06', summary: 'Fix OAuth token pickup: poll triggers on window focus and visibility change so tokens are detected immediately when user returns to Excel from Chrome.' },
   { ver: 'v9.1.5', date: '2026-06-06', summary: 'Fix OAuth for Excel add-in: tokens now pass through server (not localStorage/postMessage) so sign-in works even when OAuth opens in Chrome while the app runs in Excel\'s webview. Client polls server for pending tokens after opening OAuth window.' },
   { ver: 'v9.1.4', date: '2026-06-06', summary: 'Fix performance gap: unauthenticated users now read the primary user\'s data (skills, chats) when only one account exists. Improved sign-up flow with auto-switch to sign-in after account creation.' },
@@ -4085,10 +4086,12 @@ async function signInWithOAuth(provider) {
       return;
     }
     // Poll server for tokens (handles cross-context flows where postMessage doesn't work)
-    err.style.color = 'var(--text2)'; err.textContent = 'Waiting for sign-in… Return here after signing in.';
     _oauthPollActive = true;
     pollForOAuthToken();
     setTimeout(() => { _oauthPollActive = false; }, 120000);
+    const errEl = document.getElementById('authErr');
+    errEl.style.color = 'var(--text2)';
+    errEl.innerHTML = 'Sign in with Google in the browser, then <button onclick="pollForOAuthToken()" style="background:var(--accent);color:#fff;border:none;padding:4px 12px;border-radius:6px;cursor:pointer;font-size:12px;font-family:inherit">click here to complete</button>';
   } catch (e) { err.textContent = e.message; }
 }
 
