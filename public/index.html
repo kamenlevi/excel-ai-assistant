@@ -811,8 +811,9 @@ function classifyIntent(text) {
 // ── Security state ────────────────────────────────────────────────────────────
 let sessionDangerConfirmed = new Set(); // 'high', 'critical' confirmed this session
 let sessionPasswordVerified = false;    // password entered once this session
-const APP_VERSION = 'v9.1.2';
+const APP_VERSION = 'v9.1.3';
 const CHANGELOG = [
+  { ver: 'v9.1.3', date: '2026-06-06', summary: 'OAuth popup fallback: if browser blocks the popup, redirects the full page to the OAuth provider instead of showing an error.' },
   { ver: 'v9.1.2', date: '2026-06-06', summary: 'Fix OAuth login: callback page now handles lost popup opener (stores tokens in localStorage, redirects to main page). Main page checks URL hash and localStorage for OAuth tokens on init. Fixes Google/Microsoft sign-in not completing.' },
   { ver: 'v9.1.1', date: '2026-06-06', summary: 'Fix agent abort: stopping generation now cleans up agent bar and server stops spawning new agents between stages. Auth UX: Enter key submits login, better error messages for wrong password/unconfirmed email/rate limits.' },
   { ver: 'v9.1.0', date: '2026-06-06', summary: 'Agent Pipeline v2: 6-stage architecture — (1) Council: 5 diverse perspectives (business analyst, technical analyst, UX thinker, devil\'s advocate, domain expert) form a unified understanding. (2) Specialists: architect, coder, formatter, formula/chart/data experts, perf optimizer, error handler produce implementations. (3) Jury: code reviewer, security auditor, edge case tester, API compliance checker independently vote pass/fail. (4) Documenter: summarizes the solution. (5) Executioner: final gate that tries to break everything — approves, revises with fixes, or rejects entirely. (6) Synthesis: merges all findings into one production-quality response. Orchestrator decides how many of each role based on task complexity.' },
@@ -4041,7 +4042,7 @@ async function signInWithOAuth(provider) {
     if (error) throw error;
     const popup = window.open(data.url, 'auth-popup', 'width=500,height=720,menubar=no,toolbar=no');
     if (!popup || popup.closed) {
-      err.textContent = 'Popup blocked — allow popups for https://localhost:3000 and try again';
+      window.location.href = data.url;
     }
   } catch (e) { err.textContent = e.message; }
 }
