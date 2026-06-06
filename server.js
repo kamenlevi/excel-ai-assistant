@@ -38,7 +38,15 @@ fs.mkdirSync(DATA_DIR, { recursive: true });
 // Per-user data directories — keyed by x-user-id header
 const _userCaches = {};
 function getUserDir(userId) {
-  if (!userId) return DATA_DIR;
+  if (!userId) {
+    // No user ID — try to use the first (primary) user's data if one exists
+    const usersDir = path.join(DATA_DIR, 'users');
+    try {
+      const dirs = fs.readdirSync(usersDir);
+      if (dirs.length === 1) return path.join(usersDir, dirs[0]);
+    } catch {}
+    return DATA_DIR;
+  }
   const dir = path.join(DATA_DIR, 'users', userId.replace(/[^a-zA-Z0-9@._-]/g, '_'));
   fs.mkdirSync(dir, { recursive: true });
   // Migrate shared data on first access
