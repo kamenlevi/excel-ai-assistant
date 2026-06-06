@@ -14,7 +14,7 @@
   --sidebar:  #EDEAE4;
   --text:     #1A1918;
   --text2:    #6B6560;
-  --text3:    #A09890;
+  --text3:    #8A8279;
   --accent:   #CC785C;
   --accent2:  #B5674C;
   --border:   #DEDAD3;
@@ -38,7 +38,7 @@
   --sidebar:  #141414;
   --text:     #F0EDE8;
   --text2:    #9E9890;
-  --text3:    #6B6560;
+  --text3:    #8A8279;
   --accent:   #CC785C;
   --accent2:  #D98A6E;
   --border:   #333;
@@ -144,7 +144,7 @@ body.train-active .input-box:focus-within{border-color:#22c55e;box-shadow:0 0 0 
 .msg-role.user{color:var(--accent)}
 .msg-meta{font-size:11px;color:var(--text3);margin-left:auto}
 .msg-via{font-size:10px;color:var(--text3);background:var(--surf);border:1px solid var(--border);border-radius:10px;padding:1px 6px;white-space:nowrap}
-.msg-body{font-size:14px;line-height:1.6;color:var(--text);white-space:pre-wrap;word-break:break-word}
+.msg-body{font-size:inherit;line-height:1.6;color:var(--text);white-space:pre-wrap;word-break:break-word}
 .msg.user{align-items:flex-end}
 .msg.user .msg-head{flex-direction:row-reverse}
 .msg.user .msg-body{background:var(--user-bg);padding:9px 12px;border-radius:14px 14px 4px 14px;max-width:90%}
@@ -160,9 +160,9 @@ body.train-active .input-box:focus-within{border-color:#22c55e;box-shadow:0 0 0 
 .undo-btn:hover{color:var(--accent);background:var(--surf2)}
 .undo-btn:disabled{cursor:default}
 .undo-btn.done{color:var(--ok)}
-.copy-msg-btn{background:none;border:none;color:var(--text3);cursor:pointer;font-size:11px;padding:2px 6px;border-radius:4px;transition:color .1s,background .1s}
+.copy-msg-btn{background:none;border:none;color:var(--text3);cursor:pointer;font-size:11px;padding:2px 6px;border-radius:4px;transition:all .15s}
 .copy-msg-btn:hover{color:var(--text);background:var(--surf2)}
-.copy-msg-btn.copied{color:var(--ok)}
+.copy-msg-btn.copied{color:#fff;background:var(--ok);border-radius:4px;transform:scale(1.05);transition:all .15s}
 .pin-btn{background:none;border:none;color:var(--text3);cursor:pointer;font-size:11px;padding:2px 6px;border-radius:4px;transition:color .1s,background .1s}
 .pin-btn:hover{color:var(--accent);background:var(--surf2)}
 .pin-btn.pinned{color:var(--accent);opacity:.6;cursor:default}
@@ -492,9 +492,9 @@ mark.search-hl.current{background:rgba(var(--accent-rgb),.6)}
 .msg-body p{margin:0 0 6px}
 .msg-body p:last-child{margin-bottom:0}
 .msg-body ul,.msg-body ol{margin:4px 0 6px 18px;display:flex;flex-direction:column;gap:2px}
-.msg-body li{font-size:14px;line-height:1.5}
-.msg-body h3{font-size:14px;font-weight:700;margin:8px 0 4px;color:var(--text)}
-.msg-body h4{font-size:13px;font-weight:700;margin:6px 0 3px;color:var(--text)}
+.msg-body li{font-size:inherit;line-height:1.5}
+.msg-body h3{font-size:inherit;font-weight:700;margin:8px 0 4px;color:var(--text)}
+.msg-body h4{font-size:inherit;font-weight:700;margin:6px 0 3px;color:var(--text)}
 .msg-body code{font-family:'Menlo','Monaco','Courier New',monospace;font-size:12px;background:var(--surf2);padding:1px 5px;border-radius:3px}
 .md-code{font-family:'Menlo','Monaco','Courier New',monospace;font-size:12px;line-height:1.5;background:var(--code-bg);border:1px solid var(--border);border-radius:var(--r2);padding:10px;overflow-x:auto;margin:6px 0}
 .msg-body hr{border:none;border-top:1px solid var(--border);margin:8px 0}
@@ -762,8 +762,9 @@ function classifyIntent(text) {
 // ── Security state ────────────────────────────────────────────────────────────
 let sessionDangerConfirmed = new Set(); // 'high', 'critical' confirmed this session
 let sessionPasswordVerified = false;    // password entered once this session
-const APP_VERSION = 'v7.1.0';
+const APP_VERSION = 'v7.1.1';
 const CHANGELOG = [
+  { ver: 'v7.1.1', date: '2026-06-06', summary: 'UX fixes: plus popup closes on outside click (invisible backdrop); clipboard copy fixed (was infinite recursion) with toast + green animation; font size applies to all message elements; text3 color bumped for readability; slash Tab autocomplete no longer moves focus; model filters search full catalog when active; removed Capabilities tab.' },
   { ver: 'v7.1.0', date: '2026-06-06', summary: 'Major reliability fixes: font size setting now works (was targeting wrong element ID); clipboard copy uses fallback for Office add-in context; retry sends full chat history + failed code to AI for better fixes; error messages classify source (Excel API / code / network); undo retries once on failure; slash popup shows full descriptions without truncation; all popups close on outside click; calendar shows future dates as grey boxes; chat sends 30 messages (was 15) for better context; removed Capabilities settings tab.' },
   { ver: 'v7.0.2', date: '2026-06-05', summary: 'Training mode polish: streaming responses with live timer and token count (matches normal chats), green focus glow on input field, 📖 fine-tuning guide button with step-by-step instructions for Ollama/Unsloth/MLX/OpenAI, Export JSONL and Generate Modelfile actions, hide attach/options buttons in training mode.' },
   { ver: 'v7.0.1', date: '2026-06-05', summary: 'Training UX: informative empty state explains Skill vs Examples paths, button tooltips, Export JSONL button in Usage tab, guidance for cloud vs local model workflows.' },
@@ -1529,8 +1530,16 @@ function cancelSend() {
 
 // ── Plus popup ────────────────────────────────────────────────────────────────
 function togglePlus() { plusOpen ? closePlus() : openPlus(); }
-function openPlus()  { plusOpen=true; document.getElementById('plusPopup').classList.add('open'); }
-function closePlus() { plusOpen=false; document.getElementById('plusPopup').classList.remove('open'); }
+function openPlus()  {
+  plusOpen=true; document.getElementById('plusPopup').classList.add('open');
+  let bd = document.getElementById('plusBackdrop');
+  if (!bd) { bd=document.createElement('div'); bd.id='plusBackdrop'; bd.style.cssText='position:fixed;inset:0;z-index:199;'; bd.onclick=closePlus; document.body.appendChild(bd); }
+  bd.style.display='block';
+}
+function closePlus() {
+  plusOpen=false; document.getElementById('plusPopup').classList.remove('open');
+  const bd=document.getElementById('plusBackdrop'); if(bd) bd.style.display='none';
+}
 function toggleOpt(k) {
   opts[k] = !opts[k];
   const idMap = { deep:'deepCheck', dynamic:'dynamicCheck', auto:'autoCheck', plan:'planCheck' };
@@ -1711,7 +1720,43 @@ function renderModelList(query) {
       recentObjs.forEach(m=>list.appendChild(mkModelOpt(m, customModels.some(c=>c.id===m.id))));
     }
 
-    // ── All groups ──
+    // ── When filtering/sorting, search full catalog if available ──
+    if ((activeModelFilter || modelSortMode) && catalogLoaded && catalogModels.length) {
+      let models = filterTag(sortModels(catalogModels));
+      // Also include local models
+      if (localModels.length) {
+        const locals = localModels.map(m=>({id:'ollama:'+m.id,name:m.name,provider:'Ollama',in:0,out:0,tags:['local','free']}));
+        models = [...filterTag(sortModels(locals)), ...models];
+      }
+      if (models.length) {
+        const lbl=document.createElement('div'); lbl.className='model-grp'; lbl.style='padding:8px 12px 4px';
+        lbl.textContent = (activeModelFilter ? activeModelFilter.charAt(0).toUpperCase()+activeModelFilter.slice(1)+' models' : 'All models') + ' ('+models.length+')';
+        list.appendChild(lbl);
+        const presetIds = new Set([...OR_MODELS.map(m=>m.id),...GROQ_MODELS.map(m=>'groq:'+m.id)]);
+        const customIds = new Set(customModels.map(m=>m.id));
+        models.slice(0,50).forEach(m => {
+          const isCustom = customIds.has(m.id);
+          const el = mkModelOpt(m, isCustom);
+          if (!presetIds.has(m.id) && !isCustom) {
+            el.onclick = e => {
+              if(e.target.classList.contains('model-opt-del'))return;
+              customModels.push({id:m.id,name:m.name,provider:'OpenRouter',in:m.in||0,out:m.out||0,tags:m.tags||[]});
+              localStorage.setItem('customModels',JSON.stringify(customModels));
+              selectedModel=m.id;localStorage.setItem('selModel',m.id);addToRecent(m.id);renderModelBtn();closeModelPicker();
+            };
+          }
+          list.appendChild(el);
+        });
+        if (models.length > 50) {
+          const more=document.createElement('div');more.className='no-local';more.textContent=`+${models.length-50} more — type to search`;list.appendChild(more);
+        }
+      } else {
+        const d=document.createElement('div');d.className='no-local';d.textContent='No models match this filter.';list.appendChild(d);
+      }
+      return;
+    }
+
+    // ── All groups (no filter) ──
     for (const grp of allModelGroups()) {
       let models = filterTag(sortModels(grp.models));
       if (!models.length) continue;
@@ -2449,7 +2494,7 @@ function mkMsg(role,text,isErr,ms,tok,code,savedTime,via,vba) {
   const actions=document.createElement('div'); actions.className='msg-actions';
   const copyBtn=document.createElement('button'); copyBtn.className='copy-msg-btn'; copyBtn.innerHTML='⎘ Copy';
   const btnId='copy-'+Math.random();clipboardTimeouts[btnId]=null;
-  copyBtn.onclick=()=>{clipCopy(text).then(()=>{copyBtn.innerHTML='✓ Copied';copyBtn.classList.add('copied');if(clipboardTimeouts[btnId])clearTimeout(clipboardTimeouts[btnId]);clipboardTimeouts[btnId]=setTimeout(()=>{if(copyBtn.parentElement){copyBtn.innerHTML='⎘ Copy';copyBtn.classList.remove('copied');}delete clipboardTimeouts[btnId];},1500);});};
+  copyBtn.onclick=()=>{clipCopy(text).then(()=>{copyBtn.innerHTML='✓ Copied';copyBtn.classList.add('copied');showToast('Copied to clipboard');if(clipboardTimeouts[btnId])clearTimeout(clipboardTimeouts[btnId]);clipboardTimeouts[btnId]=setTimeout(()=>{if(copyBtn.parentElement){copyBtn.innerHTML='⎘ Copy';copyBtn.classList.remove('copied');}delete clipboardTimeouts[btnId];},1500);}).catch(()=>showToast('Copy failed'));};
   el.addEventListener('DOMNodeRemoved',()=>{if(clipboardTimeouts[btnId])clearTimeout(clipboardTimeouts[btnId]);delete clipboardTimeouts[btnId];},{once:true});
   actions.appendChild(copyBtn);
   if(role==='user'){
@@ -3190,7 +3235,7 @@ function handleKey(e){
   if (slashPopupItems.length) {
     if (e.key === 'ArrowDown') { e.preventDefault(); slashPopupSel = (slashPopupSel+1) % slashPopupItems.length; renderSlashPopup(); return; }
     if (e.key === 'ArrowUp')   { e.preventDefault(); slashPopupSel = (slashPopupSel-1+slashPopupItems.length) % slashPopupItems.length; renderSlashPopup(); return; }
-    if (e.key === 'Tab' || e.key === 'ArrowRight') { e.preventDefault(); pickSlashItem(slashPopupSel); return; }
+    if (e.key === 'Tab' || e.key === 'ArrowRight') { e.preventDefault(); e.stopImmediatePropagation(); pickSlashItem(slashPopupSel); return; }
     if (e.key === 'Escape')    { e.preventDefault(); closeSlashPopup(); return; }
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -3476,7 +3521,7 @@ async function sendMessage() {
           // Actions
           const acts=document.createElement('div');acts.className='msg-actions';
           const cpb=document.createElement('button');cpb.className='copy-msg-btn';cpb.innerHTML='⎘ Copy';
-          cpb.onclick=()=>{clipCopy(finalText).then(()=>{cpb.innerHTML='✓ Copied';cpb.classList.add('copied');setTimeout(()=>{cpb.innerHTML='⎘ Copy';cpb.classList.remove('copied');},1500);});};
+          cpb.onclick=()=>{clipCopy(finalText).then(()=>{cpb.innerHTML='✓ Copied';cpb.classList.add('copied');showToast('Copied to clipboard');setTimeout(()=>{cpb.innerHTML='⎘ Copy';cpb.classList.remove('copied');},1500);}).catch(()=>showToast('Copy failed'));};
           acts.appendChild(cpb);
           const rb=document.createElement('button');rb.className='report-btn';rb.title='Report';rb.innerHTML='⚑ Report';
           rb.onclick=()=>reportMsg(rb,finalText,code);acts.appendChild(rb);
@@ -3566,7 +3611,7 @@ async function reportMsg(btn,response,code) {
 function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function clipCopy(text) {
   if (navigator.clipboard?.writeText) {
-    return clipCopy(text).catch(() => clipCopyFallback(text));
+    return navigator.clipboard.writeText(text).catch(() => clipCopyFallback(text));
   }
   return clipCopyFallback(text);
 }
