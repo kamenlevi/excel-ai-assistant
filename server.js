@@ -1917,21 +1917,90 @@ app.post('/api/chat/stream', async (req, res) => {
     } catch {}
   }
 
+  // ── Deep Think: multi-agent orchestrator ──────────────────────────────────
+  let agentResults = null;
   if (deepThink) {
     const lastUserIdx = recentMessages.map(m=>m.role).lastIndexOf('user');
     if (lastUserIdx !== -1) {
+      const orig = recentMessages[lastUserIdx].content;
+      const wbSnippet = (workbookData||'').slice(0, 3000);
       try {
-        const orig = recentMessages[lastUserIdx].content;
-        const { text: enhanced } = await callAI([
-          { role: 'system', content: 'You are a prompt engineer for an Excel AI assistant. Rewrite the user\'s request to be maximally clear, precise, and complete. Preserve intent exactly. Add explicit handling for edge cases. Output ONLY the rewritten prompt.' },
-          { role: 'user', content: `Workbook context:\n${(workbookData||'').slice(0,2000)}\n\nOriginal request: ${orig}` }
-        ], 700, effectiveModel, useOllama || false, useGroq || false, apiKey || null, groqKey || null);
-        recentMessages[lastUserIdx] = { ...recentMessages[lastUserIdx], content: enhanced.replace(/<think>[\s\S]*?<\/think>/g,'').trim() };
+        // Phase 1: Orchestrator — analyze, decompose, and enhance
+        const { text: orchestratorRaw } = await callAI([
+          { role: 'system', content: `You are an orchestrator for an Excel AI assistant. Analyze the user's request and the workbook data, then decompose it into focused subtasks that can be solved independently.
+
+Output JSON ONLY (no markdown, no explanation):
+{
+  "enhanced_prompt": "the user's request rewritten to be maximally clear and precise, referencing specific columns/sheets from the workbook data",
+  "complexity": 1|2|3,
+  "subtasks": [
+    {"id": 1, "focus": "short label", "prompt": "specific instruction for this subtask referencing exact columns/cells"},
+    ...
+  ]
+}
+
+Rules:
+- complexity 1 (simple): 0 subtasks, just enhance the prompt
+- complexity 2 (moderate): 2-3 subtasks
+- complexity 3 (complex): 3-5 subtasks
+- Each subtask should focus on ONE aspect (data reading, calculation, formatting, validation, etc.)
+- Reference specific column names, sheet names, and data ranges from the workbook
+- Subtask prompts should be self-contained — include all context needed` },
+          { role: 'user', content: `Workbook:\n${wbSnippet}\n\nRequest: ${orig}` }
+        ], 800, effectiveModel, useOllama || false, useGroq || false, apiKey || null, groqKey || null);
+
+        const orchClean = orchestratorRaw.replace(/<think>[\s\S]*?<\/think>/g,'').trim();
+        const orchMatch = orchClean.match(/\{[\s\S]*\}/);
+        if (orchMatch) {
+          const orch = JSON.parse(orchMatch[0]);
+          recentMessages[lastUserIdx] = { ...recentMessages[lastUserIdx], content: orch.enhanced_prompt || orig };
+          maxTokens = Math.max(maxTokens, 8192);
+
+          // Phase 2: Run subtask agents in parallel
+          if (orch.subtasks && orch.subtasks.length >= 2) {
+            const agentPromises = orch.subtasks.map(async (task) => {
+              try {
+                const { text } = await callAI([
+                  { role: 'system', content: SYSTEM_PROMPT + `\n\nYou are a specialist agent. Focus ONLY on this aspect of the task. Be thorough and precise. Reference specific cells, columns, and ranges. If you need to write code, output a CODE_JS block.` },
+                  ...(workbookData ? [
+                    { role: 'user', content: `Workbook:\n${wbSnippet}` },
+                    { role: 'assistant', content: 'I can see the workbook data.' }
+                  ] : []),
+                  { role: 'user', content: task.prompt }
+                ], 2048, effectiveModel, useOllama || false, useGroq || false, apiKey || null, groqKey || null);
+                return { id: task.id, focus: task.focus, result: text.replace(/<think>[\s\S]*?<\/think>/g,'').trim() };
+              } catch (e) {
+                return { id: task.id, focus: task.focus, result: `Error: ${e.message}` };
+              }
+            });
+            agentResults = await Promise.all(agentPromises);
+
+            // Inject agent findings into the system context
+            const agentContext = agentResults.map(a =>
+              `[Agent: ${a.focus}]\n${a.result}`
+            ).join('\n\n---\n\n');
+            recentMessages[lastUserIdx] = {
+              ...recentMessages[lastUserIdx],
+              content: recentMessages[lastUserIdx].content +
+                `\n\nSPECIALIST AGENT FINDINGS (use these to produce the final comprehensive response):\n\n${agentContext}\n\nSynthesize all agent findings into ONE coherent response with a SINGLE CODE_JS block that handles everything. Do not skip any agent's contribution.`
+            };
+          }
+        }
+      } catch {
+        // Fallback: just enhance the prompt
+        try {
+          const { text: enhanced } = await callAI([
+            { role: 'system', content: 'Rewrite this Excel request to be maximally clear and precise. Reference specific columns/sheets from the workbook data. Output ONLY the rewritten prompt.' },
+            { role: 'user', content: `Workbook context:\n${wbSnippet}\n\nOriginal request: ${orig}` }
+          ], 700, effectiveModel, useOllama || false, useGroq || false, apiKey || null, groqKey || null);
+          recentMessages[lastUserIdx] = { ...recentMessages[lastUserIdx], content: enhanced.replace(/<think>[\s\S]*?<\/think>/g,'').trim() };
+        } catch {}
         maxTokens = Math.max(maxTokens, 8192);
-      } catch {}
+      }
     }
   }
 
+  // ── Plan First: generate plan for user approval ─────────────────────────
   let planText = null;
   if (planFirst && !isQuestion(rawUserMessage)) {
     try {
@@ -1941,8 +2010,9 @@ app.post('/api/chat/stream', async (req, res) => {
         { role: 'assistant', content: 'I can see the full workbook. What would you like me to do?' }
       ] : [];
       const { text: planReply } = await callAI([
-        { role: 'system', content: SYSTEM_PROMPT + prefsSection_ + '\n\nIMPORTANT: Output a short numbered plan (3-5 steps). No CODE_JS block.' },
+        { role: 'system', content: SYSTEM_PROMPT + prefsSection_ + '\n\nIMPORTANT: Output a short numbered plan (3-5 steps). No CODE_JS block. Be specific about which columns, sheets, and ranges you will modify.' },
         ...contextMessages_,
+        ...(summary ? [{ role: 'user', content: `Conversation context: ${summary}` }, { role: 'assistant', content: 'Got it.' }] : []),
         { role: 'user', content: `Before executing, give me a brief plan for: ${rawUserMessage}` }
       ], 512, effectiveModel, useOllama || false, useGroq || false, apiKey || null, groqKey || null);
       planText = planReply.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
@@ -2052,7 +2122,7 @@ app.post('/api/chat/stream', async (req, res) => {
 
     const danger = analyzeDanger(finalCode);
     if (danger) console.log(`[server] Danger classified: ${danger.level} — ${danger.reason}`);
-    sse({ type: 'done', code: finalCode, vba, cleaned, usage: finalUsage, selectedModel, plan: planText, danger });
+    sse({ type: 'done', code: finalCode, vba, cleaned, usage: finalUsage, selectedModel, plan: planText, danger, agents: agentResults ? agentResults.length : 0 });
     res.end();
   } catch (err) {
     sse({ type: 'error', message: err.message });

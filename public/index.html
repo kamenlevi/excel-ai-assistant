@@ -557,7 +557,7 @@ mark.search-hl.current{background:rgba(var(--accent-rgb),.6)}
               <div class="plus-popup" id="plusPopup">
                 <div class="plus-item" onclick="toggleOpt('deep')">
                   <div class="plus-check" id="deepCheck"></div>
-                  <div><div class="plus-label">Deep Think</div><div class="plus-sub">Refines your prompt + maximum reasoning budget</div></div>
+                  <div><div class="plus-label">Deep Think</div><div class="plus-sub">Multi-agent orchestration — decomposes complex tasks and runs specialist agents in parallel</div></div>
                 </div>
                 <div class="plus-item" onclick="toggleOpt('dynamic')">
                   <div class="plus-check" id="dynamicCheck"></div>
@@ -570,7 +570,7 @@ mark.search-hl.current{background:rgba(var(--accent-rgb),.6)}
                 <div class="plus-sep"></div>
                 <div class="plus-item" onclick="toggleOpt('plan')">
                   <div class="plus-check" id="planCheck"></div>
-                  <div><div class="plus-label">Plan First</div><div class="plus-sub">Brief plan before executing changes</div></div>
+                  <div><div class="plus-label">Plan First</div><div class="plus-sub">Shows a plan for your approval before executing</div></div>
                 </div>
               </div>
               <button class="act-btn" id="plusBtn" onclick="togglePlus()" title="Options">+</button>
@@ -762,8 +762,9 @@ function classifyIntent(text) {
 // ── Security state ────────────────────────────────────────────────────────────
 let sessionDangerConfirmed = new Set(); // 'high', 'critical' confirmed this session
 let sessionPasswordVerified = false;    // password entered once this session
-const APP_VERSION = 'v7.2.0';
+const APP_VERSION = 'v8.0.0';
 const CHANGELOG = [
+  { ver: 'v8.0.0', date: '2026-06-06', summary: 'Agentic AI: Deep Think now uses a multi-agent orchestrator — complex tasks are decomposed into subtasks and solved by parallel specialist agents, then synthesized into one response. Plan First shows an approval dialog where you can approve, edit, or cancel before execution. All modes auto-deselect after each prompt. Agent count shown in response header.' },
   { ver: 'v7.2.0', date: '2026-06-06', summary: 'Observe-Act memory loop: workbook is re-read before every prompt and after every code execution, so the AI always sees the current state. Conversation summary upgraded from 120 to 300 words with data structure details. History kept for 25 messages (was 15) before compression. Compress triggers at 40 messages (was 20). Retry re-reads workbook before sending. Summary injection rewritten to emphasize continuity.' },
   { ver: 'v7.1.0', date: '2026-06-06', summary: 'Major reliability fixes: font size setting now works (was targeting wrong element ID); clipboard copy uses fallback for Office add-in context; retry sends full chat history + failed code to AI for better fixes; error messages classify source (Excel API / code / network); undo retries once on failure; slash popup shows full descriptions without truncation; all popups close on outside click; calendar shows future dates as grey boxes; chat sends 30 messages (was 15) for better context; removed Capabilities settings tab.' },
   { ver: 'v7.0.2', date: '2026-06-05', summary: 'Training mode polish: streaming responses with live timer and token count (matches normal chats), green focus glow on input field, 📖 fine-tuning guide button with step-by-step instructions for Ollama/Unsloth/MLX/OpenAI, Export JSONL and Generate Modelfile actions, hide attach/options buttons in training mode.' },
@@ -2620,6 +2621,44 @@ async function registerListeners() {
 }
 
 // ── Security: danger confirmation before executing risky code ─────────────────
+function showPlanConfirmation(planText) {
+  return new Promise(resolve => {
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:600;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.45)';
+    const box = document.createElement('div');
+    box.style.cssText = 'position:relative;background:var(--bg);border:1px solid var(--border);border-radius:var(--r);box-shadow:var(--shadow2);padding:20px;max-width:360px;width:90%;max-height:70vh;overflow-y:auto;z-index:1';
+    box.innerHTML = `
+      <div style="font-size:15px;font-weight:600;color:var(--text);margin-bottom:8px">📋 Proposed Plan</div>
+      <div style="font-size:13px;color:var(--text);line-height:1.6;white-space:pre-wrap;margin-bottom:14px">${esc(planText)}</div>
+      <div style="font-size:12px;color:var(--text2);margin-bottom:12px">Do you want to proceed with this plan, or would you like to modify it?</div>
+      <textarea id="planEditArea" style="display:none;width:100%;min-height:80px;margin-bottom:10px;padding:8px;border:1px solid var(--border);border-radius:var(--r2);background:var(--input-bg);color:var(--text);font-size:12px;font-family:inherit;resize:vertical" placeholder="Describe changes to the plan…"></textarea>
+      <div style="display:flex;gap:8px">
+        <button id="planApprove" style="flex:1;padding:8px;border:none;border-radius:var(--r2);background:var(--accent);color:#fff;font-weight:600;cursor:pointer;font-size:13px">✓ Approve & Execute</button>
+        <button id="planEdit" style="padding:8px 12px;border:1px solid var(--border);border-radius:var(--r2);background:var(--surf);color:var(--text);cursor:pointer;font-size:13px">✏ Edit</button>
+        <button id="planCancel" style="padding:8px 12px;border:1px solid var(--border);border-radius:var(--r2);background:var(--surf);color:var(--text);cursor:pointer;font-size:13px">✕ Cancel</button>
+      </div>
+    `;
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+    document.getElementById('planApprove').onclick = () => { overlay.remove(); resolve(true); };
+    document.getElementById('planCancel').onclick = () => { overlay.remove(); resolve(false); };
+    document.getElementById('planEdit').onclick = () => {
+      const ta = document.getElementById('planEditArea');
+      if (ta.style.display === 'none') {
+        ta.style.display = 'block'; ta.focus();
+        document.getElementById('planEdit').textContent = '✓ Send Edit';
+      } else {
+        const edit = ta.value.trim();
+        if (edit) {
+          // Add the user's edit as a follow-up message
+          history.push({role:'user',content:'Modify the plan: '+edit, internal:true});
+        }
+        overlay.remove(); resolve(true);
+      }
+    };
+  });
+}
+
 function requestDangerConfirmation(danger) {
   // Already confirmed at this level (or lower) this session
   if (sessionDangerConfirmed.has(danger.level)) return Promise.resolve(true);
@@ -3496,13 +3535,31 @@ async function sendMessage() {
           streamBody.textContent=answerText.split('CODE_JS::')[0].split('VBA_MACRO::')[0];
           box.scrollTop=box.scrollHeight;
         }else if(ev.type==='plan'){
-          history.push({role:'assistant',content:'📋 Plan:\n'+ev.text});
-          addMsg('assistant','📋 Plan:\n'+ev.text);
+          // Show plan confirmation dialog — pause until user approves
+          clearInterval(timerInterval); timerInterval=null;
+          removeTyping();
+          const planApproved = await showPlanConfirmation(ev.text);
+          if (!planApproved) {
+            history.push({role:'assistant',content:'📋 Plan (cancelled by user):\n'+ev.text});
+            addMsg('assistant','📋 Plan was cancelled. Feel free to ask differently or modify the approach.');
+            loading=false;
+            const sb3=document.getElementById('sendBtn');sb3.textContent='Send';sb3.className='send';sb3.onclick=sendMessage;
+            opts.plan=false;
+            const pc2=document.getElementById('planCheck');if(pc2)pc2.className='plus-check';
+            await saveChat();
+            return;
+          }
+          history.push({role:'assistant',content:'📋 Approved plan:\n'+ev.text});
+          addMsg('assistant','📋 Plan approved — executing…');
+          addTyping();
+          const t0b=Date.now();
+          if(timerInterval)clearInterval(timerInterval);
+          timerInterval=setInterval(()=>{const te=document.getElementById('liveTimer');if(te)te.textContent=((Date.now()-t0b)/1000).toFixed(1)+'s';},100);
         }else if(ev.type==='done'){
           clearInterval(timerInterval);timerInterval=null;
           playSound('done');
           const ms=Date.now()-t0;
-          const{code,vba,cleaned,usage,selectedModel:autoSelected,danger}=ev;
+          const{code,vba,cleaned,usage,selectedModel:autoSelected,danger,agents:agentCount}=ev;
           const tok=usage?.completion_tokens??null;
           if(tok){totalTok+=tok;updateTok();}
           if(usage)addActualCost(usage,autoSelected||selectedModel);
@@ -3516,6 +3573,7 @@ async function sendMessage() {
           const parts=[];
           if(ms!=null)parts.push((ms/1000).toFixed(1)+'s');
           if(tok!=null)parts.push(tok.toLocaleString()+' tok');
+          if(agentCount)parts.push(agentCount+' agents');
           parts.push(new Date().toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'}));
           streamEl.querySelector('.msg-head').innerHTML=
             '<span class="msg-role assistant">Excel AI</span>'
@@ -3606,6 +3664,12 @@ async function sendMessage() {
   }
   loading=false;
   const sb2=document.getElementById('sendBtn');sb2.textContent='Send';sb2.className='send';sb2.onclick=sendMessage;
+  // Auto-deselect all modes after each prompt
+  opts.deep=false; opts.dynamic=false; opts.auto=false; opts.plan=false;
+  ['deepCheck','dynamicCheck','autoCheck','planCheck'].forEach(id => {
+    const el=document.getElementById(id); if(el) el.className='plus-check';
+  });
+  const pb=document.getElementById('plusBtn'); if(pb) pb.className='act-btn';
 }
 
 async function reportMsg(btn,response,code) {
