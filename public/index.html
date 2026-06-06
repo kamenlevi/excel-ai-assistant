@@ -171,6 +171,24 @@ body.train-active .input-box:focus-within{border-color:#22c55e;box-shadow:0 0 0 
 .memory-chip{background:rgba(204,120,92,.12);color:var(--accent);border-radius:10px;padding:2px 8px;font-size:10px;display:flex;align-items:center;gap:4px;max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .memory-chip-x{cursor:pointer;opacity:.6;font-size:9px;flex-shrink:0;line-height:1}
 .memory-chip-x:hover{opacity:1}
+.agent-bar{display:none;padding:6px 10px;background:rgba(99,102,241,.08);border-bottom:1px solid rgba(99,102,241,.2);font-size:11px;color:var(--text2);flex-shrink:0;cursor:pointer;transition:background .15s}
+.agent-bar.visible{display:flex;align-items:center;gap:8px}
+.agent-bar:hover{background:rgba(99,102,241,.14)}
+.agent-bar .ab-icon{font-size:13px;flex-shrink:0}
+.agent-bar .ab-summary{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.agent-bar .ab-count{font-weight:700;color:var(--text)}
+.agent-bar .ab-spinner{width:12px;height:12px;border:2px solid rgba(99,102,241,.3);border-top-color:#6366f1;border-radius:50%;animation:spin .8s linear infinite;flex-shrink:0}
+.agent-panel{display:none;padding:8px 12px;background:var(--bg);border-bottom:1px solid var(--border);box-shadow:0 4px 16px rgba(0,0,0,.12);max-height:260px;overflow-y:auto;animation:settingsFadeIn .15s ease}
+.agent-panel.visible{display:block}
+.agent-row{display:flex;align-items:center;gap:8px;padding:4px 0;font-size:11px;border-bottom:1px solid var(--border)}
+.agent-row:last-child{border-bottom:none}
+.agent-row .ar-status{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.agent-row .ar-status.running{background:#f59e0b;animation:pulse 1s infinite}
+.agent-row .ar-status.done{background:#22c55e}
+.agent-row .ar-status.error{background:#ef4444}
+.agent-row .ar-label{flex:1;color:var(--text)}
+.agent-row .ar-meta{color:var(--text3);font-size:10px}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
 
 .danger-banner{border-radius:var(--r);margin:8px 0;padding:10px 12px;font-size:13px;line-height:1.5}
 .danger-banner.high{background:rgba(230,160,40,.12);border:1px solid rgba(230,160,40,.35);color:var(--text)}
@@ -518,6 +536,8 @@ mark.search-hl.current{background:rgba(var(--accent-rgb),.6)}
     </header>
 
     <div class="memory-strip" id="memoryStrip"></div>
+    <div class="agent-bar" id="agentBar" onclick="toggleAgentPanel()"></div>
+    <div class="agent-panel" id="agentPanel"></div>
     <div style="position:relative;flex:1;display:flex;flex-direction:column;overflow:hidden">
     <div class="conv-search" id="convSearch">
       <input id="convSearchInput" placeholder="Find in conversation…" oninput="doConvSearch(this.value)" onkeydown="convSearchKey(event)">
@@ -738,17 +758,46 @@ let convSearchOpen = false, convSearchIdx = 0, convSearchTotal = 0;
 let _lastCategory = 'other';
 
 // ── Usage analytics ──────────────────────────────────────────────────────────
-let usageLog;
-try { usageLog = JSON.parse(localStorage.getItem('usage_log') || '[]'); if (!Array.isArray(usageLog)) usageLog = []; } catch { usageLog = []; }
-const USAGE_MAX = 10000;
+let usageLog = [];
+let _usageSynced = false;
+const USAGE_MAX = 5000;
+async function loadUsageLog() {
+  let serverData = [], localData = [];
+  try { const r = await fetch('/api/usage'); serverData = await r.json(); if (!Array.isArray(serverData)) serverData = []; } catch { serverData = []; }
+  try { localData = JSON.parse(localStorage.getItem('usage_log') || '[]'); if (!Array.isArray(localData)) localData = []; } catch { localData = []; }
+  if (serverData.length && !localData.length) {
+    usageLog = serverData;
+  } else if (localData.length && !serverData.length) {
+    usageLog = localData;
+    fetch('/api/usage', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(localData) }).catch(()=>{});
+  } else if (serverData.length >= localData.length) {
+    usageLog = serverData;
+  } else {
+    usageLog = localData;
+    fetch('/api/usage', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(localData) }).catch(()=>{});
+  }
+  _usageSynced = true;
+}
+let _usageFlushTimer = null;
+let _usagePending = [];
 function logUsage(entry) {
   try {
     entry.ts = new Date().toISOString();
     usageLog.push(entry);
+    _usagePending.push(entry);
     if (usageLog.length > USAGE_MAX) usageLog.splice(0, Math.floor(USAGE_MAX * 0.2));
     localStorage.setItem('usage_log', JSON.stringify(usageLog));
+    clearTimeout(_usageFlushTimer);
+    _usageFlushTimer = setTimeout(flushUsage, 1500);
   } catch {}
 }
+function flushUsage() {
+  if (!_usagePending.length) return;
+  const batch = _usagePending.slice();
+  _usagePending = [];
+  fetch('/api/usage', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(batch) }).catch(() => { _usagePending.unshift(...batch); });
+}
+window.addEventListener('beforeunload', flushUsage);
 function classifyIntent(text) {
   const t = (text || '').toLowerCase();
   if (/\b(formula|sum|average|vlookup|xlookup|if\(|countif|index|match|hlookup|sumif)\b/.test(t)) return 'formula';
@@ -762,8 +811,17 @@ function classifyIntent(text) {
 // ── Security state ────────────────────────────────────────────────────────────
 let sessionDangerConfirmed = new Set(); // 'high', 'critical' confirmed this session
 let sessionPasswordVerified = false;    // password entered once this session
-const APP_VERSION = 'v8.0.0';
+const APP_VERSION = 'v9.1.0';
 const CHANGELOG = [
+  { ver: 'v9.1.0', date: '2026-06-06', summary: 'Agent Pipeline v2: 6-stage architecture — (1) Council: 5 diverse perspectives (business analyst, technical analyst, UX thinker, devil\'s advocate, domain expert) form a unified understanding. (2) Specialists: architect, coder, formatter, formula/chart/data experts, perf optimizer, error handler produce implementations. (3) Jury: code reviewer, security auditor, edge case tester, API compliance checker independently vote pass/fail. (4) Documenter: summarizes the solution. (5) Executioner: final gate that tries to break everything — approves, revises with fixes, or rejects entirely. (6) Synthesis: merges all findings into one production-quality response. Orchestrator decides how many of each role based on task complexity.' },
+  { ver: 'v9.0.0', date: '2026-06-06', summary: 'Agent Council: Deep Think now deploys a full council of specialized agents — analyst, planner, coder, reviewer, formatter, validator, and domain experts (formula, chart, data). The orchestrator decides which roles to deploy based on task complexity. Agents have dependency chains (analyst → planner → coder → reviewer) so each builds on prior findings. The reviewer acts as a judge, catching bugs and producing corrected code. Council findings are synthesized into a single production-quality response.' },
+  { ver: 'v8.2.0', date: '2026-06-06', summary: 'Per-account data: chats, skills, training data, and usage stats are now scoped to logged-in user. Switching accounts loads that account\'s data. Existing shared data auto-migrates to first logged-in user. All API calls include x-user-id header. Version label shown directly under settings nav tabs.' },
+  { ver: 'v8.1.3', date: '2026-06-06', summary: 'Version label shown at bottom of settings nav sidebar. Usage persistence fix: batched flush with dedup (no more lost entries on rapid actions or restart), merge local+server on load keeping the larger set, beforeunload flush, server deduplicates by timestamp.' },
+  { ver: 'v8.1.2', date: '2026-06-06', summary: 'Settings cleanup: merged Preferences tab into General (theme, font, behaviour, preferences, cost limit all in one place). Version footer now appears at the bottom of every settings tab.' },
+  { ver: 'v8.1.1', date: '2026-06-06', summary: 'Edit and Retry buttons on user messages: hover over any of your prompts to edit (loads text into input, removes that message and everything after) or retry (resends the same prompt, replacing the old response).' },
+  { ver: 'v8.1.0', date: '2026-06-06', summary: 'Live agent bar: when Deep Think spawns agents, a bar appears below the model selector showing agent count, elapsed time, tokens, and which agents are running. Click to expand a panel with per-agent status (running/done/error), timing, and token counts. Bar replaces the memory strip while agents are active, restores it when done.' },
+  { ver: 'v8.0.2', date: '2026-06-06', summary: 'Persist usage stats server-side: usage log now saved to data/usage.json so stats survive restarts and re-logins. Existing localStorage data auto-migrates on first load.' },
+  { ver: 'v8.0.1', date: '2026-06-06', summary: 'Fix Manage Skills button: added Training tab to settings with skill/example management, delete, and export actions.' },
   { ver: 'v8.0.0', date: '2026-06-06', summary: 'Agentic AI: Deep Think now uses a multi-agent orchestrator — complex tasks are decomposed into subtasks and solved by parallel specialist agents, then synthesized into one response. Plan First shows an approval dialog where you can approve, edit, or cancel before execution. All modes auto-deselect after each prompt. Agent count shown in response header.' },
   { ver: 'v7.2.0', date: '2026-06-06', summary: 'Observe-Act memory loop: workbook is re-read before every prompt and after every code execution, so the AI always sees the current state. Conversation summary upgraded from 120 to 300 words with data structure details. History kept for 25 messages (was 15) before compression. Compress triggers at 40 messages (was 20). Retry re-reads workbook before sending. Summary injection rewritten to emphasize continuity.' },
   { ver: 'v7.1.0', date: '2026-06-06', summary: 'Major reliability fixes: font size setting now works (was targeting wrong element ID); clipboard copy uses fallback for Office add-in context; retry sends full chat history + failed code to AI for better fixes; error messages classify source (Excel API / code / network); undo retries once on failure; slash popup shows full descriptions without truncation; all popups close on outside click; calendar shows future dates as grey boxes; chat sends 30 messages (was 15) for better context; removed Capabilities settings tab.' },
@@ -876,7 +934,7 @@ Office.onReady(async info => {
   }
   loadSettings();
   customModels = JSON.parse(localStorage.getItem('customModels') || '[]');
-  try { await Promise.all([loadChats(), detectLocal(), loadSkills()]); } catch {}
+  try { await Promise.all([loadChats(), detectLocal(), loadSkills(), loadUsageLog()]); } catch {}
   renderModelBtn();
   applyChatFontSize();
   renderMemoryStrip();
@@ -1081,15 +1139,15 @@ const SETTINGS_TABS = [
   { id: 'profile',      label: 'Profile' },
   { id: 'general',      label: 'General' },
   { id: 'providers',    label: 'Providers' },
-  { id: 'preferences',  label: 'Preferences' },
   { id: 'privacy',      label: 'Privacy' },
+  { id: 'training',     label: 'Training' },
   { id: 'usage',        label: 'Usage' },
   { id: 'history',      label: 'History' },
 ];
 let activeSettingsTab = 'profile';
 
 function openSettings(tab) {
-  activeSettingsTab = tab || 'profile';
+  activeSettingsTab = tab === 'preferences' ? 'general' : (tab || 'profile');
   const overlay = document.getElementById('settingsOverlay');
   overlay.classList.add('open');
   document.querySelector('.main').style.display = 'none';
@@ -1109,7 +1167,7 @@ function renderSettingsNav() {
   const nav = document.getElementById('settingsNav');
   nav.innerHTML = SETTINGS_TABS.map(t =>
     `<button class="snav-item${t.id === activeSettingsTab ? ' active' : ''}" onclick="switchSettingsTab('${t.id}')">${t.label}</button>`
-  ).join('');
+  ).join('') + `<div style="padding:4px 8px;font-size:9px;color:var(--text3);cursor:pointer;opacity:.7" onclick="openChangelog()" title="Version history">${APP_VERSION}</div>`;
 }
 function renderSettingsTab() {
   const el = document.getElementById('settingsContent');
@@ -1118,8 +1176,8 @@ function renderSettingsTab() {
     general: renderGeneralTab,
     providers: renderProvidersTab,
     capabilities: renderCapabilitiesTab,
-    preferences: renderPreferencesTab,
     privacy: renderPrivacyTab,
+    training: renderTrainingTab,
     usage: renderUsageTab,
     history: renderHistoryTab,
   }[activeSettingsTab];
@@ -1154,7 +1212,7 @@ function renderGeneralTab() {
   `<div class="sgrp"><div class="slabel">Chat Font Size</div><div class="theme-row"><button class="theme-opt${fontSize==='small'?' active':''}" onclick="localStorage.setItem('chatFontSize','small');applyChatFontSize();renderSettingsTab()">Small</button><button class="theme-opt${fontSize==='default'?' active':''}" onclick="localStorage.setItem('chatFontSize','default');applyChatFontSize();renderSettingsTab()">Default</button><button class="theme-opt${fontSize==='large'?' active':''}" onclick="localStorage.setItem('chatFontSize','large');applyChatFontSize();renderSettingsTab()">Large</button></div></div>`+
   `<div class="sgrp"><div class="slabel">Behaviour</div><div class="srow"><span class="srow-label">Auto-sync workbook</span><div class="toggle${autoSync?' on':''}" id="autoSyncTog" onclick="togSet('autoSync','autoSyncTog')"></div></div><div class="srow" style="margin-top:8px"><span class="srow-label">Show generated code</span><div class="toggle${showCode?' on':''}" id="showCodeTog" onclick="togSet('showCode','showCodeTog')"></div></div><div class="srow" style="margin-top:8px"><span class="srow-label">Sound effects</span><div class="toggle${soundOn?' on':''}" id="soundTog" onclick="toggleSound()"></div></div></div>`+
   `<div class="sgrp" id="updateSection" style="display:none"><div class="slabel">App Updates</div><div class="srow"><span class="srow-label">Auto-update patches</span><div class="toggle" id="autoUpdateTog" onclick="toggleAutoUpdate()"></div></div><div style="margin-top:8px"><button class="add-model-btn" id="checkUpdateBtn" onclick="checkForUpdate()">Check for Updates</button><span class="sinote" id="updateStatusNote" style="margin-top:4px"></span></div></div>`+
-  `<div class="sgrp"><div class="sfooter" style="cursor:pointer" onclick="openChangelog()" title="Click to see version history">Excel AI Assistant · <strong id="versionLabel">${APP_VERSION}</strong></div></div>`;
+  renderPreferencesTab();
 }
 function renderProvidersTab() {
   const providers = PROVIDERS || [];
@@ -1204,7 +1262,30 @@ function renderHistoryTab() {
   const storageUsed = (function(){ try { let total=0; for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);total+=k.length+(localStorage.getItem(k)||'').length} return (total*2/1024).toFixed(0); } catch{return '?'} })();
   return `<div class="sgrp"><div class="slabel">Storage</div><div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;font-size:12px"><div style="background:var(--surf);border-radius:var(--r2);padding:8px;text-align:center"><div style="font-size:16px;font-weight:700;color:var(--text)">${chatCount}</div><div style="color:var(--text3);font-size:10px">Chats</div></div><div style="background:var(--surf);border-radius:var(--r2);padding:8px;text-align:center"><div style="font-size:16px;font-weight:700;color:var(--text)">${totalMsgs}</div><div style="color:var(--text3);font-size:10px">Messages</div></div><div style="background:var(--surf);border-radius:var(--r2);padding:8px;text-align:center"><div style="font-size:16px;font-weight:700;color:var(--text)">${storageUsed}KB</div><div style="color:var(--text3);font-size:10px">Local Storage</div></div></div></div>`+
   `<div class="sgrp"><div class="slabel">Export</div><button class="add-model-btn" onclick="exportAllChats()" style="margin-bottom:6px">Export all chats (JSON)</button><span class="sinote">Download a backup of all your conversations.</span></div>`+
-  `<div class="sgrp"><div class="slabel">Danger Zone</div><button class="sdanger" onclick="if(confirm('Clear all usage analytics data?')){usageLog=[];localStorage.removeItem('usage_log');showToast('Usage data cleared');}">Clear usage data</button><button class="sdanger" style="margin-top:6px" onclick="clearAllHistory()">Delete all chat history</button><span class="sinote" style="margin-top:4px">These actions cannot be undone.</span></div>`;
+  `<div class="sgrp"><div class="slabel">Danger Zone</div><button class="sdanger" onclick="if(confirm('Clear all usage analytics data?')){usageLog=[];localStorage.removeItem('usage_log');fetch('/api/usage',{method:'DELETE'}).catch(()=>{});showToast('Usage data cleared');}">Clear usage data</button><button class="sdanger" style="margin-top:6px" onclick="clearAllHistory()">Delete all chat history</button><span class="sinote" style="margin-top:4px">These actions cannot be undone.</span></div>`;
+}
+function renderTrainingTab() {
+  const skills = trainSkills.filter(s => s.type === 'knowledge');
+  const examples = trainSkills.filter(s => s.type === 'examples');
+  const exCount = examples.reduce((a,s) => a + (s.examples?.length || 0), 0);
+  let html = `<div class="sgrp"><div class="slabel">Overview</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px"><div style="background:var(--surf);border-radius:var(--r2);padding:10px;text-align:center"><div style="font-size:20px;font-weight:700;color:var(--text)">${skills.length}</div><div style="color:var(--text3);font-size:10px">Skills</div></div><div style="background:var(--surf);border-radius:var(--r2);padding:10px;text-align:center"><div style="font-size:20px;font-weight:700;color:var(--text)">${exCount}</div><div style="color:var(--text3);font-size:10px">Training Examples</div></div></div></div>`;
+  if (skills.length) {
+    html += `<div class="sgrp"><div class="slabel">Skills</div>`;
+    skills.forEach(s => {
+      html += `<div style="background:var(--surf);border-radius:var(--r2);padding:10px;margin-bottom:6px"><div style="display:flex;justify-content:space-between;align-items:center"><strong style="font-size:13px;color:var(--text)">${s.title || 'Untitled'}</strong><button class="sdanger" style="font-size:10px;padding:2px 8px" onclick="deleteSkill('${s.id}');renderSettingsTab()">Remove</button></div><div style="font-size:11px;color:var(--text2);margin-top:4px;line-height:1.4">${(s.content || '').slice(0, 200)}${(s.content || '').length > 200 ? '…' : ''}</div></div>`;
+    });
+    html += `</div>`;
+  }
+  if (examples.length) {
+    html += `<div class="sgrp"><div class="slabel">Example Sets</div>`;
+    examples.forEach(s => {
+      html += `<div style="background:var(--surf);border-radius:var(--r2);padding:10px;margin-bottom:6px"><div style="display:flex;justify-content:space-between;align-items:center"><strong style="font-size:13px;color:var(--text)">${s.title || 'Untitled'}</strong><span style="font-size:11px;color:var(--text3)">${s.examples?.length || 0} examples</span><button class="sdanger" style="font-size:10px;padding:2px 8px" onclick="deleteSkill('${s.id}');renderSettingsTab()">Remove</button></div></div>`;
+    });
+    html += `</div>`;
+  }
+  html += `<div class="sgrp"><div class="slabel">Export</div><button class="add-model-btn" onclick="exportSkillsJSONL()" style="margin-bottom:6px">Export training data (JSONL)</button><button class="add-model-btn" onclick="createOllamaModelfile()" style="margin-bottom:6px">Download Ollama Modelfile</button><span class="sinote">Use exported data to fine-tune local models.</span></div>`;
+  if (!trainSkills.length) html += `<div style="text-align:center;padding:20px;color:var(--text3);font-size:12px">No skills yet. Use the ⚡ training button in the sidebar to teach the AI.</div>`;
+  return html;
 }
 function renderUsageTab() {
   const log = usageLog;
@@ -1414,7 +1495,7 @@ function renderUsageTab() {
       ${costTableHtml}
       <div style="font-size:11px;color:var(--text3);margin-top:6px">Daily avg: $${dailyAvg.toFixed(4)} · Projected monthly: $${projMonthly.toFixed(2)}</div>
     </div>
-    <div class="usage-section"><button class="sdanger" onclick="if(confirm('Clear all usage data?')){usageLog=[];localStorage.removeItem('usage_log');renderSettingsTab();}">Reset usage data</button></div>
+    <div class="usage-section"><button class="sdanger" onclick="if(confirm('Clear all usage data?')){usageLog=[];localStorage.removeItem('usage_log');fetch('/api/usage',{method:'DELETE'}).catch(()=>{});renderSettingsTab();}">Reset usage data</button></div>
   `;
 }
 function bindSettingsEvents() {
@@ -2193,6 +2274,7 @@ async function deleteSkill(id) {
   if (!confirm('Remove this skill?')) return;
   await fetch('/api/skills/' + id, { method: 'DELETE' });
   await loadSkills();
+  if (activeSettingsTab === 'training') renderSettingsTab();
   showToast('Skill removed');
 }
 
@@ -2499,6 +2581,21 @@ function mkMsg(role,text,isErr,ms,tok,code,savedTime,via,vba) {
   el.addEventListener('DOMNodeRemoved',()=>{if(clipboardTimeouts[btnId])clearTimeout(clipboardTimeouts[btnId]);delete clipboardTimeouts[btnId];},{once:true});
   actions.appendChild(copyBtn);
   if(role==='user'){
+    const editBtn=document.createElement('button'); editBtn.className='copy-msg-btn'; editBtn.innerHTML='✎ Edit'; editBtn.title='Edit and resend';
+    editBtn.onclick=()=>{
+      const inp=document.getElementById('msgInput'); inp.value=text; inp.focus(); inp.style.height='auto'; inp.style.height=inp.scrollHeight+'px';
+      const idx=history.findIndex(m=>m.role==='user'&&m.content===text);
+      if(idx>=0){history.splice(idx);renderMsgs();saveChat();}
+    };
+    actions.appendChild(editBtn);
+    const retryBtn=document.createElement('button'); retryBtn.className='copy-msg-btn'; retryBtn.innerHTML='↻ Retry'; retryBtn.title='Resend this prompt';
+    retryBtn.onclick=()=>{
+      const idx=history.findIndex(m=>m.role==='user'&&m.content===text);
+      if(idx>=0){history.splice(idx);renderMsgs();saveChat();}
+      const inp=document.getElementById('msgInput'); inp.value=text;
+      sendMessage();
+    };
+    actions.appendChild(retryBtn);
     const pinBtn=document.createElement('button'); pinBtn.className='pin-btn'; pinBtn.innerHTML='📌 Pin'; pinBtn.title='Pin to permanent memory';
     pinBtn.onclick=()=>{
       const item={text:text.slice(0,150),pinned:new Date().toISOString()};
@@ -3332,6 +3429,88 @@ function attachFile(e){
 }
 function clearAttach(){attached=null;document.getElementById('attachBadge').innerHTML='';document.getElementById('attachStrip').classList.remove('show');}
 
+// ── Agent bar ────────────────────────────────────────────────────────────────
+let _agents = [];
+let _agentsTotal = 0;
+let _agentsDone = 0;
+let _agentsT0 = 0;
+let _agentPanelOpen = false;
+let _agentTimer = null;
+
+function showAgentBar(total, subtasks) {
+  _agents = subtasks.map(s => ({ id: s.id, focus: s.focus, status: 'pending', ms: null, tok: null }));
+  _agentsTotal = total;
+  _agentsDone = 0;
+  _agentsT0 = Date.now();
+  const bar = document.getElementById('agentBar');
+  const strip = document.getElementById('memoryStrip');
+  strip.classList.remove('visible');
+  bar.classList.add('visible');
+  updateAgentBar();
+  clearInterval(_agentTimer);
+  _agentTimer = setInterval(updateAgentBar, 500);
+}
+
+function updateAgentBar() {
+  const bar = document.getElementById('agentBar');
+  const running = _agents.filter(a => a.status === 'running').length;
+  const done = _agents.filter(a => a.status === 'done' || a.status === 'error').length;
+  const elapsed = ((Date.now() - _agentsT0) / 1000).toFixed(1);
+  const totalTok = _agents.reduce((s, a) => s + (a.tok || 0), 0);
+  const allDone = done === _agentsTotal;
+  bar.innerHTML = (allDone
+    ? '<span class="ab-icon">✓</span>'
+    : '<div class="ab-spinner"></div>')
+    + '<span class="ab-summary">'
+    + '<span class="ab-count">' + _agentsTotal + ' agents</span>'
+    + ' · ' + done + '/' + _agentsTotal + ' done'
+    + ' · ' + elapsed + 's'
+    + (totalTok ? ' · ' + totalTok.toLocaleString() + ' tok' : '')
+    + (running ? ' · ' + _agents.filter(a => a.status === 'running').map(a => a.focus).join(', ') : '')
+    + '</span>';
+  updateAgentPanel();
+}
+
+function updateAgentPanel() {
+  if (!_agentPanelOpen) return;
+  const panel = document.getElementById('agentPanel');
+  panel.innerHTML = _agents.map(a => {
+    const st = a.status === 'running' ? 'running' : a.status === 'error' ? 'error' : a.status === 'done' ? 'done' : 'running';
+    const meta = a.status === 'done' ? [(a.ms/1000).toFixed(1)+'s', a.tok ? a.tok+' tok' : ''].filter(Boolean).join(' · ')
+      : a.status === 'error' ? 'failed'
+      : a.status === 'running' ? 'running…' : 'queued';
+    return '<div class="agent-row"><div class="ar-status '+st+'"></div><span class="ar-label">'+esc(a.focus)+'</span><span class="ar-meta">'+meta+'</span></div>';
+  }).join('');
+}
+
+function toggleAgentPanel() {
+  _agentPanelOpen = !_agentPanelOpen;
+  document.getElementById('agentPanel').classList.toggle('visible', _agentPanelOpen);
+  if (_agentPanelOpen) updateAgentPanel();
+}
+
+function agentStarted(id) {
+  const a = _agents.find(a => a.id === id);
+  if (a) a.status = 'running';
+  updateAgentBar();
+}
+
+function agentFinished(id, ms, tok, error) {
+  const a = _agents.find(a => a.id === id);
+  if (a) { a.status = error ? 'error' : 'done'; a.ms = ms; a.tok = tok; }
+  _agentsDone++;
+  updateAgentBar();
+}
+
+function hideAgentBar() {
+  clearInterval(_agentTimer); _agentTimer = null;
+  document.getElementById('agentBar').classList.remove('visible');
+  document.getElementById('agentPanel').classList.remove('visible');
+  _agentPanelOpen = false;
+  _agents = [];
+  renderMemoryStrip();
+}
+
 // ── Memory strip ──────────────────────────────────────────────────────────────
 function renderMemoryStrip() {
   const strip = document.getElementById('memoryStrip');
@@ -3555,7 +3734,16 @@ async function sendMessage() {
           const t0b=Date.now();
           if(timerInterval)clearInterval(timerInterval);
           timerInterval=setInterval(()=>{const te=document.getElementById('liveTimer');if(te)te.textContent=((Date.now()-t0b)/1000).toFixed(1)+'s';},100);
+        }else if(ev.type==='agents_start'){
+          showAgentBar(ev.total, ev.subtasks);
+        }else if(ev.type==='agent_start'){
+          agentStarted(ev.id);
+        }else if(ev.type==='agent_done'){
+          agentFinished(ev.id, ev.ms, ev.tok, ev.error);
+        }else if(ev.type==='agents_done'){
+          updateAgentBar();
         }else if(ev.type==='done'){
+          hideAgentBar();
           clearInterval(timerInterval);timerInterval=null;
           playSound('done');
           const ms=Date.now()-t0;
@@ -3704,6 +3892,16 @@ const SUPABASE_CONFIG = {
 };
 
 let supabaseClient = null, currentUser = null, authMode = 'signin';
+const _origFetch = window.fetch;
+window.fetch = function(url, opts) {
+  if (currentUser?.id && typeof url === 'string' && url.startsWith('/api/')) {
+    opts = opts || {};
+    opts.headers = opts.headers || {};
+    if (opts.headers instanceof Headers) { opts.headers.set('x-user-id', currentUser.id); }
+    else { opts.headers['x-user-id'] = currentUser.id; }
+  }
+  return _origFetch.call(this, url, opts);
+};
 
 async function initAuth() {
   try {
@@ -3724,7 +3922,7 @@ function onAuthChange(user) {
   showAccountBtn(user);
   if (user) {
     document.getElementById('authModal')?.classList.remove('open');
-    loadChats(); // reload from Supabase-backed server
+    Promise.all([loadChats(), loadSkills(), loadUsageLog()]).catch(()=>{});
   }
 }
 

@@ -33,52 +33,61 @@ try {
 
 // ── Data dir for chat persistence ─────────────────────────────────────────────
 const DATA_DIR    = process.env.EXCEL_AI_DATA_DIR || path.join(__dirname, 'data');
-const CHATS_FILE  = path.join(DATA_DIR, 'chats.json');
-const TRAINING_FILE = path.join(DATA_DIR, 'training.json');
-const SKILLS_FILE = path.join(DATA_DIR, 'skills.json');
 fs.mkdirSync(DATA_DIR, { recursive: true });
 
-// In-memory cache — avoids blocking readFileSync/writeFileSync on every request
-let _chatsCache = null;
-function readChats() {
-  if (_chatsCache) return _chatsCache;
-  try { _chatsCache = JSON.parse(fs.readFileSync(CHATS_FILE, 'utf8')); } catch { _chatsCache = {}; }
-  return _chatsCache;
+// Per-user data directories — keyed by x-user-id header
+const _userCaches = {};
+function getUserDir(userId) {
+  if (!userId) return DATA_DIR;
+  const dir = path.join(DATA_DIR, 'users', userId.replace(/[^a-zA-Z0-9@._-]/g, '_'));
+  fs.mkdirSync(dir, { recursive: true });
+  // Migrate shared data on first access
+  if (!_userCaches[userId + ':migrated']) {
+    _userCaches[userId + ':migrated'] = true;
+    ['chats.json', 'training.json', 'skills.json', 'usage.json'].forEach(f => {
+      const shared = path.join(DATA_DIR, f);
+      const user = path.join(dir, f);
+      if (fs.existsSync(shared) && !fs.existsSync(user)) {
+        try { fs.copyFileSync(shared, user); } catch {}
+      }
+    });
+  }
+  return dir;
 }
-function writeChats(chats) {
-  _chatsCache = chats;
-  fs.writeFile(CHATS_FILE, JSON.stringify(chats, null, 2), 'utf8', err => {
-    if (err) console.error('[chats] write error:', err.message);
+
+function getCache(userId) {
+  const key = userId || '__default__';
+  if (!_userCaches[key]) _userCaches[key] = {};
+  return _userCaches[key];
+}
+
+function readJSON(userId, file, fallback) {
+  const cache = getCache(userId);
+  if (cache[file] !== undefined) return cache[file];
+  const fp = path.join(getUserDir(userId), file);
+  try { cache[file] = JSON.parse(fs.readFileSync(fp, 'utf8')); } catch { cache[file] = fallback; }
+  return cache[file];
+}
+function writeJSON(userId, file, data) {
+  const cache = getCache(userId);
+  cache[file] = data;
+  const fp = path.join(getUserDir(userId), file);
+  fs.writeFile(fp, JSON.stringify(data, null, 2), 'utf8', err => {
+    if (err) console.error('[' + file + '] write error:', err.message);
   });
 }
 
-// Training chats cache
-let _trainingCache = null;
-function readTraining() {
-  if (_trainingCache) return _trainingCache;
-  try { _trainingCache = JSON.parse(fs.readFileSync(TRAINING_FILE, 'utf8')); } catch { _trainingCache = {}; }
-  return _trainingCache;
-}
-function writeTraining(data) {
-  _trainingCache = data;
-  fs.writeFile(TRAINING_FILE, JSON.stringify(data, null, 2), 'utf8', err => {
-    if (err) console.error('[training] write error:', err.message);
-  });
-}
+function readChats(userId)          { return readJSON(userId, 'chats.json', {}); }
+function writeChats(userId, data)   { writeJSON(userId, 'chats.json', data); }
+function readTraining(userId)       { return readJSON(userId, 'training.json', {}); }
+function writeTraining(userId, data){ writeJSON(userId, 'training.json', data); }
+function readSkills(userId)         { return readJSON(userId, 'skills.json', []); }
+function writeSkills(userId, data)  { writeJSON(userId, 'skills.json', data); }
+function readUsage(userId)          { return readJSON(userId, 'usage.json', []); }
+function writeUsage(userId, data)   { writeJSON(userId, 'usage.json', data); }
 
-// Skills cache
-let _skillsCache = null;
-function readSkills() {
-  if (_skillsCache) return _skillsCache;
-  try { _skillsCache = JSON.parse(fs.readFileSync(SKILLS_FILE, 'utf8')); } catch { _skillsCache = []; }
-  return _skillsCache;
-}
-function writeSkills(data) {
-  _skillsCache = data;
-  fs.writeFile(SKILLS_FILE, JSON.stringify(data, null, 2), 'utf8', err => {
-    if (err) console.error('[skills] write error:', err.message);
-  });
-}
+// Extract user ID from request header
+function uid(req) { return req.headers['x-user-id'] || null; }
 
 // ── CONFIG ────────────────────────────────────────────────────────────────────
 const OLLAMA_HOST    = process.env.OLLAMA_HOST || '127.0.0.1';
@@ -909,7 +918,7 @@ function modelForgotCode(responseText, userMessage) {
 
 // ── Chat history endpoints ────────────────────────────────────────────────────
 app.get('/api/chats', (req, res) => {
-  const chats = readChats();
+  const chats = readChats(uid(req));
   const list = Object.values(chats)
     .sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt))
     .map(({ id, title, updatedAt, messageCount, totalTokens }) => ({ id, title, updatedAt, messageCount, totalTokens }));
@@ -919,7 +928,7 @@ app.get('/api/chats', (req, res) => {
 app.get('/api/chats/search', (req, res) => {
   const q = (req.query.q || '').toLowerCase();
   if (!q) return res.json([]);
-  const chats = readChats();
+  const chats = readChats(uid(req));
   const results = Object.values(chats).filter(c =>
     (c.title || '').toLowerCase().includes(q) ||
     (c.messages || []).some(m => (m.content || '').toLowerCase().includes(q))
@@ -933,23 +942,23 @@ app.get('/api/chats/search', (req, res) => {
 });
 
 app.post('/api/chats', (req, res) => {
-  const chats = readChats();
+  const chats = readChats(uid(req));
   const id = crypto.randomUUID();
   const now = new Date().toISOString();
   chats[id] = { id, title: req.body.title || 'New Chat', messages: req.body.messages || [], summary: null, totalTokens: 0, messageCount: 0, createdAt: now, updatedAt: now };
-  writeChats(chats);
+  writeChats(uid(req), chats);
   res.json(chats[id]);
 });
 
 app.get('/api/chats/:id', (req, res) => {
-  const chats = readChats();
+  const chats = readChats(uid(req));
   const chat = chats[req.params.id];
   if (!chat) return res.status(404).json({ error: 'Not found' });
   res.json(chat);
 });
 
 app.patch('/api/chats/:id', (req, res) => {
-  const chats = readChats();
+  const chats = readChats(uid(req));
   const chat = chats[req.params.id];
   if (!chat) return res.status(404).json({ error: 'Not found' });
   const { title, messages, summary, totalTokens } = req.body;
@@ -958,20 +967,20 @@ app.patch('/api/chats/:id', (req, res) => {
   if (summary !== undefined) chat.summary = summary;
   if (totalTokens !== undefined) chat.totalTokens = totalTokens;
   chat.updatedAt = new Date().toISOString();
-  writeChats(chats);
+  writeChats(uid(req), chats);
   res.json(chat);
 });
 
 app.delete('/api/chats/:id', (req, res) => {
-  const chats = readChats();
+  const chats = readChats(uid(req));
   delete chats[req.params.id];
-  writeChats(chats);
+  writeChats(uid(req), chats);
   res.json({ ok: true });
 });
 
 // ── Training chats ──────────────────────────────────────────────────────────
 app.get('/api/training', (req, res) => {
-  const data = readTraining();
+  const data = readTraining(uid(req));
   const list = Object.values(data)
     .sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt))
     .map(({ id, title, updatedAt, messageCount, skillCount }) => ({ id, title, updatedAt, messageCount: messageCount || 0, skillCount: skillCount || 0 }));
@@ -979,23 +988,23 @@ app.get('/api/training', (req, res) => {
 });
 
 app.post('/api/training', (req, res) => {
-  const data = readTraining();
+  const data = readTraining(uid(req));
   const id = crypto.randomUUID();
   const now = new Date().toISOString();
   data[id] = { id, title: req.body.title || 'New Training', messages: [], skillCount: 0, messageCount: 0, createdAt: now, updatedAt: now };
-  writeTraining(data);
+  writeTraining(uid(req), data);
   res.json(data[id]);
 });
 
 app.get('/api/training/:id', (req, res) => {
-  const data = readTraining();
+  const data = readTraining(uid(req));
   const chat = data[req.params.id];
   if (!chat) return res.status(404).json({ error: 'Not found' });
   res.json(chat);
 });
 
 app.patch('/api/training/:id', (req, res) => {
-  const data = readTraining();
+  const data = readTraining(uid(req));
   const chat = data[req.params.id];
   if (!chat) return res.status(404).json({ error: 'Not found' });
   const { title, messages, skillCount } = req.body;
@@ -1003,24 +1012,24 @@ app.patch('/api/training/:id', (req, res) => {
   if (messages !== undefined) { chat.messages = messages; chat.messageCount = messages.length; }
   if (skillCount !== undefined) chat.skillCount = skillCount;
   chat.updatedAt = new Date().toISOString();
-  writeTraining(data);
+  writeTraining(uid(req), data);
   res.json(chat);
 });
 
 app.delete('/api/training/:id', (req, res) => {
-  const data = readTraining();
+  const data = readTraining(uid(req));
   delete data[req.params.id];
-  writeTraining(data);
+  writeTraining(uid(req), data);
   res.json({ ok: true });
 });
 
 // ── Skills (approved training examples/knowledge) ────────────────────────────
 app.get('/api/skills', (req, res) => {
-  res.json(readSkills());
+  res.json(readSkills(uid(req)));
 });
 
 app.post('/api/skills', (req, res) => {
-  const skills = readSkills();
+  const skills = readSkills(uid(req));
   const skill = {
     id: crypto.randomUUID(),
     type: req.body.type || 'knowledge',
@@ -1032,19 +1041,19 @@ app.post('/api/skills', (req, res) => {
     createdAt: new Date().toISOString()
   };
   skills.push(skill);
-  writeSkills(skills);
+  writeSkills(uid(req), skills);
   res.json(skill);
 });
 
 app.delete('/api/skills/:id', (req, res) => {
-  let skills = readSkills();
+  let skills = readSkills(uid(req));
   skills = skills.filter(s => s.id !== req.params.id);
-  writeSkills(skills);
+  writeSkills(uid(req), skills);
   res.json({ ok: true });
 });
 
 app.get('/api/skills/export', (req, res) => {
-  const skills = readSkills();
+  const skills = readSkills(uid(req));
   const format = req.query.format || 'jsonl';
   if (format === 'jsonl') {
     const lines = [];
@@ -1067,6 +1076,27 @@ app.get('/api/skills/export', (req, res) => {
   } else {
     res.json(skills);
   }
+});
+
+// ── Usage log persistence ────────────────────────────────────────────────────
+app.get('/api/usage', (req, res) => {
+  res.json(readUsage(uid(req)));
+});
+app.post('/api/usage', (req, res) => {
+  const entries = req.body;
+  if (!Array.isArray(entries)) return res.status(400).json({ error: 'Expected array' });
+  const existing = readUsage(uid(req));
+  const existingTs = new Set(existing.map(e => e.ts));
+  const fresh = entries.filter(e => e.ts && !existingTs.has(e.ts));
+  const merged = existing.concat(fresh);
+  const USAGE_MAX = 5000;
+  if (merged.length > USAGE_MAX) merged.splice(0, merged.length - USAGE_MAX);
+  writeUsage(uid(req), merged);
+  res.json({ ok: true, count: merged.length });
+});
+app.delete('/api/usage', (req, res) => {
+  writeUsage(uid(req), []);
+  res.json({ ok: true });
 });
 
 // ── Full OpenRouter model catalog (cached 1 h) ────────────────────────────────
@@ -1807,7 +1837,7 @@ app.post('/api/chat', async (req, res) => {
       + allMemoryItems.map(m => `• ${m}`).join('\n')
     : '';
 
-  const _allSkills = readSkills();
+  const _allSkills = readSkills(uid(req));
   const _skillsSection = _allSkills.length
     ? '\n\nTRAINED SKILLS — the user has taught you the following. Apply them when relevant:\n'
       + _allSkills.map(s => {
@@ -1917,83 +1947,299 @@ app.post('/api/chat/stream', async (req, res) => {
     } catch {}
   }
 
-  // ── Deep Think: multi-agent orchestrator ──────────────────────────────────
+  // Start SSE early so agent events can stream
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.flushHeaders();
+  const sse = (data) => { if (!res.writableEnded) res.write(`data: ${JSON.stringify(data)}\n\n`); };
+
+  // ── Deep Think: multi-stage agent pipeline ──────────────────────────────
   let agentResults = null;
   if (deepThink) {
     const lastUserIdx = recentMessages.map(m=>m.role).lastIndexOf('user');
     if (lastUserIdx !== -1) {
       const orig = recentMessages[lastUserIdx].content;
       const wbSnippet = (workbookData||'').slice(0, 3000);
-      try {
-        // Phase 1: Orchestrator — analyze, decompose, and enhance
-        const { text: orchestratorRaw } = await callAI([
-          { role: 'system', content: `You are an orchestrator for an Excel AI assistant. Analyze the user's request and the workbook data, then decompose it into focused subtasks that can be solved independently.
+      const aiCall = (msgs, tok) => callAI(msgs, tok, effectiveModel, useOllama || false, useGroq || false, apiKey || null, groqKey || null);
+      const clean = t => t.replace(/<think>[\s\S]*?<\/think>/g,'').trim();
+      const wbContext = workbookData ? [
+        { role: 'user', content: `Current workbook state:\n${wbSnippet}` },
+        { role: 'assistant', content: 'I can see the workbook data.' }
+      ] : [];
 
-Output JSON ONLY (no markdown, no explanation):
+      // Agent runner with SSE events
+      let _agentId = 0;
+      const allAgents = [];
+      function nextId() { return ++_agentId; }
+      async function runOne(role, focus, prompt, priorContext, tokLimit, preId) {
+        const id = preId || nextId();
+        const agent = { id, role, focus, status: 'running', result: null, ms: null, tok: null };
+        allAgents.push(agent);
+        sse({ type: 'agent_start', id, focus: `[${role}] ${focus}` });
+        const t0 = Date.now();
+        try {
+          const { text, usage: u } = await aiCall([
+            { role: 'system', content: prompt },
+            ...wbContext,
+            ...(priorContext ? [
+              { role: 'user', content: `Context from prior stages:\n\n${priorContext}` },
+              { role: 'assistant', content: 'Understood. I will build on this.' }
+            ] : []),
+            { role: 'user', content: orig }
+          ], tokLimit || 2048);
+          agent.result = clean(text); agent.ms = Date.now() - t0; agent.tok = u?.completion_tokens || null; agent.status = 'done';
+          sse({ type: 'agent_done', id, focus: `[${role}] ${focus}`, ms: agent.ms, tok: agent.tok });
+          return agent;
+        } catch (e) {
+          agent.result = `Error: ${e.message}`; agent.ms = Date.now() - t0; agent.status = 'error';
+          sse({ type: 'agent_done', id, focus: `[${role}] ${focus}`, ms: agent.ms, error: e.message });
+          return agent;
+        }
+      }
+      async function runMany(tasks) { return Promise.all(tasks.map(t => runOne(t.role, t.focus, t.prompt, t.ctx || '', t.tok, t.id))); }
+      function fmt(agents) { return agents.filter(a=>a.status==='done').map(a=>`[${a.role.toUpperCase()}: ${a.focus}]\n${a.result}`).join('\n\n---\n\n'); }
+
+      try {
+        // ═══════════════════════════════════════════════════════════════════
+        //  PHASE 1 — ORCHESTRATOR: analyze task, decide pipeline shape
+        // ═══════════════════════════════════════════════════════════════════
+        const { text: orchRaw } = await aiCall([
+          { role: 'system', content: `You are the master orchestrator for an Excel AI agent pipeline. Analyze the task complexity and decide the pipeline configuration.
+
+The pipeline has 6 stages. You decide HOW MANY agents run in each stage.
+
+STAGE 1 — COUNCIL (diverse perspectives on the problem):
+  Roles: "business_analyst", "technical_analyst", "ux_thinker", "devil_advocate", "domain_expert"
+  Each examines the problem from their unique angle. They do NOT write code.
+
+STAGE 2 — SPECIALISTS (implementation):
+  Roles: "architect", "coder", "formatter", "formula_expert", "chart_expert", "data_expert", "perf_optimizer", "error_handler"
+  They receive the council's unified understanding and produce code/solutions.
+
+STAGE 3 — JURY (review gates):
+  Roles: "code_reviewer", "security_auditor", "edge_case_tester", "api_compliance"
+  Each independently reviews the specialists' output. They vote pass/fail.
+
+STAGE 4 — DOCUMENTATION:
+  Roles: "documenter"
+  Produces a clear summary of what the code does, any assumptions, and limitations.
+
+STAGE 5 — EXECUTIONER (final gate):
+  Roles: "executioner"
+  Tries to break everything. If they find ANY issue, they either send it back with fix instructions or reject entirely.
+
+STAGE 6 — SYNTHESIS:
+  Handled automatically — merges all findings into the final response.
+
+Output JSON ONLY:
 {
-  "enhanced_prompt": "the user's request rewritten to be maximally clear and precise, referencing specific columns/sheets from the workbook data",
+  "enhanced_prompt": "rewritten request referencing specific columns/sheets",
   "complexity": 1|2|3,
-  "subtasks": [
-    {"id": 1, "focus": "short label", "prompt": "specific instruction for this subtask referencing exact columns/cells"},
-    ...
-  ]
+  "council": [{"role":"...", "focus":"what this member examines"}],
+  "specialists": [{"role":"...", "focus":"what this specialist produces"}],
+  "jury": [{"role":"...", "focus":"what this juror checks"}]
 }
 
-Rules:
-- complexity 1 (simple): 0 subtasks, just enhance the prompt
-- complexity 2 (moderate): 2-3 subtasks
-- complexity 3 (complex): 3-5 subtasks
-- Each subtask should focus on ONE aspect (data reading, calculation, formatting, validation, etc.)
-- Reference specific column names, sheet names, and data ranges from the workbook
-- Subtask prompts should be self-contained — include all context needed` },
+RULES:
+- complexity 1: skip pipeline entirely, just enhance prompt. For trivial tasks (reading a cell, asking a question).
+- complexity 2 (moderate): 2-3 council, 2-3 specialists (must include coder), 1-2 jury. ~6-8 agents total.
+- complexity 3 (complex): 3-5 council, 3-5 specialists, 2-3 jury. ~10-14 agents total.
+- Always include at least "coder" in specialists and "code_reviewer" in jury.
+- The documenter and executioner always run (don't list them — they're automatic).
+- Pick council/specialist/jury members that are RELEVANT to the specific task. Don't add chart_expert for a sorting task.` },
           { role: 'user', content: `Workbook:\n${wbSnippet}\n\nRequest: ${orig}` }
-        ], 800, effectiveModel, useOllama || false, useGroq || false, apiKey || null, groqKey || null);
+        ], 1200);
 
-        const orchClean = orchestratorRaw.replace(/<think>[\s\S]*?<\/think>/g,'').trim();
+        const orchClean = clean(orchRaw);
         const orchMatch = orchClean.match(/\{[\s\S]*\}/);
         if (orchMatch) {
           const orch = JSON.parse(orchMatch[0]);
           recentMessages[lastUserIdx] = { ...recentMessages[lastUserIdx], content: orch.enhanced_prompt || orig };
           maxTokens = Math.max(maxTokens, 8192);
 
-          // Phase 2: Run subtask agents in parallel
-          if (orch.subtasks && orch.subtasks.length >= 2) {
-            const agentPromises = orch.subtasks.map(async (task) => {
-              try {
-                const { text } = await callAI([
-                  { role: 'system', content: SYSTEM_PROMPT + `\n\nYou are a specialist agent. Focus ONLY on this aspect of the task. Be thorough and precise. Reference specific cells, columns, and ranges. If you need to write code, output a CODE_JS block.` },
-                  ...(workbookData ? [
-                    { role: 'user', content: `Workbook:\n${wbSnippet}` },
-                    { role: 'assistant', content: 'I can see the workbook data.' }
-                  ] : []),
-                  { role: 'user', content: task.prompt }
-                ], 2048, effectiveModel, useOllama || false, useGroq || false, apiKey || null, groqKey || null);
-                return { id: task.id, focus: task.focus, result: text.replace(/<think>[\s\S]*?<\/think>/g,'').trim() };
-              } catch (e) {
-                return { id: task.id, focus: task.focus, result: `Error: ${e.message}` };
-              }
-            });
-            agentResults = await Promise.all(agentPromises);
+          const council = orch.council || [];
+          const specialists = orch.specialists || [];
+          const jury = orch.jury || [];
 
-            // Inject agent findings into the system context
-            const agentContext = agentResults.map(a =>
-              `[Agent: ${a.focus}]\n${a.result}`
-            ).join('\n\n---\n\n');
+          if (council.length + specialists.length >= 2) {
+            // Pre-assign IDs for all agents so agents_start matches agent_start events
+            let idCounter = 0;
+            const councilIds = council.map(() => ++idCounter);
+            const specIds = specialists.map(() => ++idCounter);
+            const juryIds = jury.map(() => ++idCounter);
+            const docId = ++idCounter;
+            const execId = ++idCounter;
+            const totalAgents = idCounter;
+            _agentId = 0; // reset so runOne's nextId() won't be used — we pass preId
+
+            sse({ type: 'agents_start', total: totalAgents, subtasks: [
+              ...council.map((c,i) => ({ id: councilIds[i], focus: `[council:${c.role}] ${c.focus}` })),
+              ...specialists.map((s,i) => ({ id: specIds[i], focus: `[specialist:${s.role}] ${s.focus}` })),
+              ...jury.map((j,i) => ({ id: juryIds[i], focus: `[jury:${j.role}] ${j.focus}` })),
+              { id: docId, focus: '[documenter] Summary' },
+              { id: execId, focus: '[executioner] Final gate' },
+            ]});
+
+            // ═══════════════════════════════════════════════════════
+            //  STAGE 1 — COUNCIL: diverse perspectives (parallel)
+            // ═══════════════════════════════════════════════════════
+            const COUNCIL_PROMPTS = {
+              business_analyst: `You are a BUSINESS ANALYST on the council. Examine this Excel task from a business perspective. What is the user actually trying to accomplish? What business logic is implied? What assumptions about the data should be validated? Are there business rules that should be enforced? Focus on the WHAT and WHY, not the HOW.`,
+              technical_analyst: `You are a TECHNICAL ANALYST on the council. Examine the workbook structure: data types, ranges, formulas, formatting patterns, sheet relationships. Identify technical constraints: row/column limits, performance concerns with large datasets, API limitations. Map out exactly what data exists and how it's organized.`,
+              ux_thinker: `You are a UX THINKER on the council. Consider: will the output be clear and useful to the user? Should results go on a new sheet or modify existing data? What about formatting — headers, colors, number formats? Would a chart or summary be helpful? Think about what the user will SEE after the code runs.`,
+              devil_advocate: `You are the DEVIL'S ADVOCATE on the council. Your job is to find problems BEFORE they happen. What could go wrong? What if the data is messy — empty cells, wrong types, duplicates, special characters? What if the sheet structure changes? What if there are 100,000 rows? Challenge every assumption the other council members might make.`,
+              domain_expert: `You are a DOMAIN EXPERT on the council (Excel/spreadsheet specialist). What's the best practice for this type of task in Excel? Are there native Excel features (tables, pivot tables, conditional formatting, named ranges) that would be better than raw code? What patterns do Excel power users use? Suggest the most idiomatic Excel approach.`,
+            };
+            const councilResults = await runMany(council.map((c,i) => ({
+              id: councilIds[i], role: `council:${c.role}`, focus: c.focus,
+              prompt: COUNCIL_PROMPTS[c.role] || COUNCIL_PROMPTS.technical_analyst,
+            })));
+            const councilSummary = fmt(councilResults);
+
+            // ═══════════════════════════════════════════════════════
+            //  STAGE 2 — SPECIALISTS: implementation (parallel)
+            // ═══════════════════════════════════════════════════════
+            const SPEC_PROMPTS = {
+              architect: `You are the ARCHITECT. Based on the council's analysis, design the code structure:\n- What operations in what order\n- What variables and data structures needed\n- How to handle edge cases identified by the council\n- Whether to use helpers or raw API calls\nOutput a detailed pseudocode plan. Do NOT write actual code.`,
+              coder: `${SYSTEM_PROMPT}\n\nYou are the PRIMARY CODER. Write the complete Office JS code. Output a single CODE_JS block.\n- Use helper functions where possible\n- Every .load() MUST be followed by await context.sync()\n- Handle edge cases: empty data, 0 rows, missing columns\n- Use .values (2D array) for bulk operations\n- Keep code clean and well-structured\n- This code MUST work on the first try`,
+              formatter: `${SYSTEM_PROMPT}\n\nYou are the FORMATTING SPECIALIST. Write a CODE_JS block that handles ONLY visual formatting:\n- Header styling (bold, background color, font color)\n- Number formats (currency, percentages, dates)\n- Column auto-fit widths\n- Borders and alignment\n- Conditional formatting where appropriate\nYour code will be MERGED into the main code block.`,
+              formula_expert: `${SYSTEM_PROMPT}\n\nYou are the FORMULA EXPERT. If this task involves formulas:\n- Write the optimal Excel formulas\n- Use CODE_JS to set .formulas or .formulasR1C1\n- Prefer dynamic array formulas where supported\n- Consider VLOOKUP vs INDEX/MATCH vs XLOOKUP\nIf no formulas needed, just say "No formulas required for this task."`,
+              chart_expert: `${SYSTEM_PROMPT}\n\nYou are the CHART EXPERT. If visualization would help:\n- Write CODE_JS to create an appropriate chart\n- Set title, legend, axis labels, data range\n- Choose the right chart type for the data\n- Position and size the chart appropriately\nIf no chart needed, say "No chart needed for this task."`,
+              data_expert: `${SYSTEM_PROMPT}\n\nYou are the DATA OPERATIONS EXPERT. Handle:\n- Sorting, filtering, deduplication\n- Data transformations (text-to-columns, type conversion)\n- Aggregations (sum, average, count by group)\n- Pivot table creation via createPivotTable helper\nWrite CODE_JS if your expertise is needed.`,
+              perf_optimizer: `You are the PERFORMANCE OPTIMIZER. Review the approach for performance:\n- Minimize context.sync() calls (batch operations)\n- Use .values arrays for bulk reads/writes instead of cell-by-cell\n- Watch for N+1 patterns (loop with sync inside)\n- Consider large dataset handling (>10k rows)\nOutput specific optimization recommendations.`,
+              error_handler: `You are the ERROR HANDLING SPECIALIST. Design the error handling strategy:\n- What try/catch blocks are needed\n- What to do when a sheet/column doesn't exist\n- How to handle type mismatches\n- What validation to run before operations\n- What error messages to throw for the user\nOutput specific error handling code snippets.`,
+            };
+            const specResults = await runMany(specialists.map((s,i) => ({
+              id: specIds[i], role: `specialist:${s.role}`, focus: s.focus,
+              prompt: SPEC_PROMPTS[s.role] || SPEC_PROMPTS.coder,
+              ctx: councilSummary,
+              tok: s.role === 'coder' ? 4096 : 2048,
+            })));
+            const specSummary = fmt(specResults);
+            const allPrior = councilSummary + '\n\n===\n\n' + specSummary;
+
+            // ═══════════════════════════════════════════════════════
+            //  STAGE 3 — JURY: independent reviews (parallel)
+            // ═══════════════════════════════════════════════════════
+            const JURY_PROMPTS = {
+              code_reviewer: `You are a CODE REVIEWER on the jury. Examine the code from the specialists. Check for:\n- Missing await context.sync() after .load()\n- Off-by-one errors in ranges\n- Wrong property names (.values not .value for ranges)\n- Missing .load() before reading properties\n- Hardcoded values that should be dynamic\n- Unused variables or dead code\n- Logic errors\n\nOutput JSON: {"verdict":"pass"|"fail","bugs":[{"issue":"...","fix":"..."}],"fixed_code":"corrected CODE_JS if verdict=fail"}`,
+              security_auditor: `You are a SECURITY AUDITOR on the jury. Check the code for:\n- Injection risks (formula injection via user data)\n- Data exposure (writing sensitive data to wrong sheets)\n- Destructive operations without guards (deleting sheets/data)\n- Overwriting existing data without backup\n- Unbounded operations that could hang Excel\n\nOutput JSON: {"verdict":"pass"|"fail","concerns":[{"severity":"high"|"medium"|"low","issue":"...","mitigation":"..."}]}`,
+              edge_case_tester: `You are an EDGE CASE TESTER on the jury. Think of every scenario that could break the code:\n- Empty worksheet (0 data rows)\n- Single row of data\n- Column headers with spaces/special chars\n- Cells with formulas vs values\n- Hidden rows or existing filters\n- Mixed data types in columns\n- Very large datasets (50k+ rows)\n- Sheet names with special characters\n\nOutput JSON: {"verdict":"pass"|"fail","cases":[{"scenario":"...","expected":"...","actual":"what the code would do","fix":"..."}]}`,
+              api_compliance: `You are an API COMPLIANCE CHECKER. Verify the code uses only:\n- ExcelApi 1.1 through 1.17 (Excel Online compatible)\n- No deprecated APIs\n- No desktop-only APIs (no COM, no ActiveX)\n- Correct use of context.sync() patterns\n- Proper use of .load() with specific properties\n- No unsupported features in the add-in sandbox\n\nOutput JSON: {"verdict":"pass"|"fail","issues":[{"api":"...","problem":"...","alternative":"..."}]}`,
+            };
+            const juryResults = await runMany(jury.map((j,i) => ({
+              id: juryIds[i], role: `jury:${j.role}`, focus: j.focus,
+              prompt: JURY_PROMPTS[j.role] || JURY_PROMPTS.code_reviewer,
+              ctx: allPrior,
+            })));
+            const jurySummary = fmt(juryResults);
+
+            // Collect jury verdicts
+            let juryFails = [];
+            let juryFixedCode = null;
+            for (const j of juryResults) {
+              if (j.status !== 'done') continue;
+              try {
+                const m = j.result.match(/\{[\s\S]*\}/);
+                if (m) {
+                  const v = JSON.parse(m[0]);
+                  if (v.verdict === 'fail') {
+                    juryFails.push(j.role);
+                    if (v.fixed_code && !juryFixedCode) juryFixedCode = v.fixed_code;
+                  }
+                }
+              } catch {}
+            }
+
+            // ═══════════════════════════════════════════════════════
+            //  STAGE 4 — DOCUMENTER
+            // ═══════════════════════════════════════════════════════
+            const docResult = await runOne('documenter', 'Summary & documentation',
+              `You are the DOCUMENTER. Produce a brief, clear summary:\n1. What the code does (2-3 sentences)\n2. Key assumptions made\n3. Edge cases handled\n4. Any limitations or caveats\n5. What the user should see after execution\nKeep it concise — this goes directly to the user.`,
+              councilSummary + '\n\n' + specSummary, 1024, docId);
+
+            // ═══════════════════════════════════════════════════════
+            //  STAGE 5 — EXECUTIONER: final gate
+            // ═══════════════════════════════════════════════════════
+            const allContext = councilSummary + '\n\n===\n\n' + specSummary + '\n\n===\n\n' + jurySummary
+              + (juryFails.length ? `\n\n⚠ JURY FAILURES: ${juryFails.join(', ')}` : '')
+              + (juryFixedCode ? `\n\nJURY CORRECTED CODE:\n${juryFixedCode}` : '');
+
+            const execResult = await runOne('executioner', 'Final gate',
+              `You are the EXECUTIONER — the final quality gate. Your job is to try to BREAK this solution.
+
+You receive all council analysis, specialist implementations, jury reviews, and documentation.
+
+DO THIS:
+1. Read the code carefully line by line
+2. Mentally trace execution with the actual workbook data
+3. Check if jury concerns were addressed
+4. Verify the code actually solves what the user asked for
+5. Check for subtle bugs the jury might have missed
+
+OUTPUT JSON:
+{
+  "decision": "approve" | "revise" | "reject",
+  "confidence": 1-10,
+  "issues": [{"severity":"critical"|"major"|"minor", "description":"...", "fix":"..."}],
+  "final_code": "if decision=revise, the corrected and complete CODE_JS block. if approve, copy the best code as-is.",
+  "notes": "brief note to the user about what was changed or verified"
+}
+
+RULES:
+- "approve": code is correct, efficient, handles edge cases. Ship it.
+- "revise": fixable issues found. You MUST provide the corrected code in final_code.
+- "reject": fundamentally flawed approach. Explain why so the synthesizer can start fresh.
+- Be thorough but fair. Don't reject over style — only correctness matters.
+- If the jury found bugs and provided fixed code, verify THAT code, not the original.`,
+              allContext, 4096, execId);
+
+            sse({ type: 'agents_done', total: allAgents.length });
+
+            // Parse executioner decision
+            let execDecision = 'approve', execCode = null, execNotes = '';
+            try {
+              const em = execResult.result.match(/\{[\s\S]*\}/);
+              if (em) {
+                const ev = JSON.parse(em[0]);
+                execDecision = ev.decision || 'approve';
+                execCode = ev.final_code || null;
+                execNotes = ev.notes || '';
+              }
+            } catch {}
+
+            // ═══════════════════════════════════════════════════════
+            //  STAGE 6 — SYNTHESIS: inject everything for final AI
+            // ═══════════════════════════════════════════════════════
+            const pipelineReport = [
+              `COUNCIL ANALYSIS (${councilResults.length} members):\n${councilSummary}`,
+              `SPECIALIST IMPLEMENTATIONS (${specResults.length} specialists):\n${specSummary}`,
+              `JURY REVIEWS (${juryResults.length} jurors, ${juryFails.length} failures):\n${jurySummary}`,
+              `DOCUMENTATION:\n${docResult.result || ''}`,
+              `EXECUTIONER (decision: ${execDecision.toUpperCase()}, confidence: ${execResult.result?.match(/"confidence":\s*(\d+)/)?.[1] || '?'}/10):\n${execResult.result || ''}`,
+            ].join('\n\n════════════════════════════════════\n\n');
+
+            agentResults = allAgents;
+
+            const bestCode = execCode || juryFixedCode || null;
             recentMessages[lastUserIdx] = {
               ...recentMessages[lastUserIdx],
               content: recentMessages[lastUserIdx].content +
-                `\n\nSPECIALIST AGENT FINDINGS (use these to produce the final comprehensive response):\n\n${agentContext}\n\nSynthesize all agent findings into ONE coherent response with a SINGLE CODE_JS block that handles everything. Do not skip any agent's contribution.`
+                `\n\nAGENT PIPELINE REPORT (${allAgents.length} agents across 5 stages):\n\n${pipelineReport}` +
+                (bestCode ? `\n\n✅ APPROVED CODE (use this exactly):\n${bestCode}` : '') +
+                (execDecision === 'reject' ? `\n\n❌ EXECUTIONER REJECTED — write a new solution from scratch addressing: ${execNotes}` : '') +
+                `\n\nINSTRUCTIONS: Produce ONE final response for the user. Use the executioner's approved/revised code if available. Include a brief explanation of what was done. Output a SINGLE CODE_JS block. The documenter's summary can inform your explanation. Quality was verified by ${juryResults.length} jurors and the executioner.`
             };
           }
         }
       } catch {
-        // Fallback: just enhance the prompt
         try {
-          const { text: enhanced } = await callAI([
+          const { text: enhanced } = await aiCall([
             { role: 'system', content: 'Rewrite this Excel request to be maximally clear and precise. Reference specific columns/sheets from the workbook data. Output ONLY the rewritten prompt.' },
             { role: 'user', content: `Workbook context:\n${wbSnippet}\n\nOriginal request: ${orig}` }
-          ], 700, effectiveModel, useOllama || false, useGroq || false, apiKey || null, groqKey || null);
-          recentMessages[lastUserIdx] = { ...recentMessages[lastUserIdx], content: enhanced.replace(/<think>[\s\S]*?<\/think>/g,'').trim() };
+          ], 700);
+          recentMessages[lastUserIdx] = { ...recentMessages[lastUserIdx], content: clean(enhanced) };
         } catch {}
         maxTokens = Math.max(maxTokens, 8192);
       }
@@ -2042,7 +2288,7 @@ Rules:
   const memorySection = allMemoryItems.length
     ? '\n\nPERMANENT MEMORY — always remember and follow these throughout the conversation:\n' + allMemoryItems.map(m=>`• ${m}`).join('\n')
     : '';
-  const _allSkills = readSkills();
+  const _allSkills = readSkills(uid(req));
   const _skillsSection = _allSkills.length
     ? '\n\nTRAINED SKILLS — the user has taught you the following. Apply them when relevant:\n'
       + _allSkills.map(s => {
@@ -2056,14 +2302,6 @@ Rules:
   if (forceNoThink && !systemContent.includes('/no_think')) systemContent += '\n/no_think';
   if (forceThink) systemContent += '__ALLOW_THINK__';
   const allMessages = [{ role: 'system', content: systemContent }, ...contextMessages, ...summaryMessages, ...recentMessages];
-
-  // All pre-processing done — now switch to SSE
-  res.setHeader('Content-Type', 'text/event-stream');
-  res.setHeader('Cache-Control', 'no-cache');
-  res.setHeader('Connection', 'keep-alive');
-  res.flushHeaders();
-
-  const sse = (data) => { if (!res.writableEnded) res.write(`data: ${JSON.stringify(data)}\n\n`); };
 
   if (planText) sse({ type: 'plan', text: planText });
 
