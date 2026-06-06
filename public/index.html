@@ -811,8 +811,9 @@ function classifyIntent(text) {
 // ── Security state ────────────────────────────────────────────────────────────
 let sessionDangerConfirmed = new Set(); // 'high', 'critical' confirmed this session
 let sessionPasswordVerified = false;    // password entered once this session
-const APP_VERSION = 'v9.1.5';
+const APP_VERSION = 'v9.1.6';
 const CHANGELOG = [
+  { ver: 'v9.1.6', date: '2026-06-06', summary: 'Fix OAuth token pickup: poll triggers on window focus and visibility change so tokens are detected immediately when user returns to Excel from Chrome.' },
   { ver: 'v9.1.5', date: '2026-06-06', summary: 'Fix OAuth for Excel add-in: tokens now pass through server (not localStorage/postMessage) so sign-in works even when OAuth opens in Chrome while the app runs in Excel\'s webview. Client polls server for pending tokens after opening OAuth window.' },
   { ver: 'v9.1.4', date: '2026-06-06', summary: 'Fix performance gap: unauthenticated users now read the primary user\'s data (skills, chats) when only one account exists. Improved sign-up flow with auto-switch to sign-in after account creation.' },
   { ver: 'v9.1.3', date: '2026-06-06', summary: 'OAuth popup fallback: if browser blocks the popup, redirects the full page to the OAuth provider instead of showing an error.' },
@@ -3908,6 +3909,37 @@ window.fetch = function(url, opts) {
   return _origFetch.call(this, url, opts);
 };
 
+let _oauthPollActive = false;
+async function pollForOAuthToken() {
+  if (!_oauthPollActive || !supabaseClient) return;
+  try {
+    const r = await _origFetch('/api/auth/pending-token');
+    const d = await r.json();
+    if (d.hash && d.hash.includes('access_token')) {
+      _oauthPollActive = false;
+      const errEl = document.getElementById('authErr');
+      if (errEl) errEl.textContent = '';
+      const params = new URLSearchParams(d.hash.replace(/^#/, ''));
+      const access_token = params.get('access_token');
+      const refresh_token = params.get('refresh_token');
+      if (access_token && refresh_token) {
+        await supabaseClient.auth.setSession({ access_token, refresh_token });
+      }
+      return;
+    }
+  } catch {}
+  // Keep polling while active
+  if (_oauthPollActive) setTimeout(pollForOAuthToken, 2000);
+}
+
+// When user returns to the app (tab/window focus), check for pending tokens
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden && _oauthPollActive) pollForOAuthToken();
+});
+window.addEventListener('focus', () => {
+  if (_oauthPollActive) pollForOAuthToken();
+});
+
 async function initAuth() {
   try {
     const cfg = await fetch('/api/auth/config').then(r => r.json()).catch(() => ({}));
@@ -4053,26 +4085,10 @@ async function signInWithOAuth(provider) {
       return;
     }
     // Poll server for tokens (handles cross-context flows where postMessage doesn't work)
-    err.style.color = 'var(--text2)'; err.textContent = 'Waiting for sign-in…';
-    let polls = 0;
-    const poller = setInterval(async () => {
-      polls++;
-      if (polls > 60) { clearInterval(poller); err.textContent = ''; return; } // 2 min timeout
-      try {
-        const r = await _origFetch('/api/auth/pending-token');
-        const d = await r.json();
-        if (d.hash && d.hash.includes('access_token')) {
-          clearInterval(poller);
-          err.textContent = '';
-          const params = new URLSearchParams(d.hash.replace(/^#/, ''));
-          const access_token = params.get('access_token');
-          const refresh_token = params.get('refresh_token');
-          if (access_token && refresh_token) {
-            await supabaseClient.auth.setSession({ access_token, refresh_token });
-          }
-        }
-      } catch {}
-    }, 2000);
+    err.style.color = 'var(--text2)'; err.textContent = 'Waiting for sign-in… Return here after signing in.';
+    _oauthPollActive = true;
+    pollForOAuthToken();
+    setTimeout(() => { _oauthPollActive = false; }, 120000);
   } catch (e) { err.textContent = e.message; }
 }
 
