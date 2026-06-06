@@ -1954,6 +1954,10 @@ app.post('/api/chat/stream', async (req, res) => {
   res.flushHeaders();
   const sse = (data) => { if (!res.writableEnded) res.write(`data: ${JSON.stringify(data)}\n\n`); };
 
+  // Abort signal for client disconnect
+  let clientAborted = false;
+  req.on('close', () => { clientAborted = true; });
+
   // ── Deep Think: multi-stage agent pipeline ──────────────────────────────
   let agentResults = null;
   if (deepThink) {
@@ -1973,6 +1977,7 @@ app.post('/api/chat/stream', async (req, res) => {
       const allAgents = [];
       function nextId() { return ++_agentId; }
       async function runOne(role, focus, prompt, priorContext, tokLimit, preId) {
+        if (clientAborted) return { id: preId || 0, role, focus, status: 'aborted', result: 'Aborted', ms: 0, tok: null };
         const id = preId || nextId();
         const agent = { id, role, focus, status: 'running', result: null, ms: null, tok: null };
         allAgents.push(agent);
@@ -2097,6 +2102,7 @@ RULES:
             })));
             const councilSummary = fmt(councilResults);
 
+            if (clientAborted) { sse({ type: 'agents_done', total: allAgents.length }); return res.end(); }
             // ═══════════════════════════════════════════════════════
             //  STAGE 2 — SPECIALISTS: implementation (parallel)
             // ═══════════════════════════════════════════════════════
@@ -2119,6 +2125,7 @@ RULES:
             const specSummary = fmt(specResults);
             const allPrior = councilSummary + '\n\n===\n\n' + specSummary;
 
+            if (clientAborted) { sse({ type: 'agents_done', total: allAgents.length }); return res.end(); }
             // ═══════════════════════════════════════════════════════
             //  STAGE 3 — JURY: independent reviews (parallel)
             // ═══════════════════════════════════════════════════════
@@ -2155,6 +2162,7 @@ RULES:
             // ═══════════════════════════════════════════════════════
             //  STAGE 4 — DOCUMENTER
             // ═══════════════════════════════════════════════════════
+            if (clientAborted) { sse({ type: 'agents_done', total: allAgents.length }); return res.end(); }
             const docResult = await runOne('documenter', 'Summary & documentation',
               `You are the DOCUMENTER. Produce a brief, clear summary:\n1. What the code does (2-3 sentences)\n2. Key assumptions made\n3. Edge cases handled\n4. Any limitations or caveats\n5. What the user should see after execution\nKeep it concise — this goes directly to the user.`,
               councilSummary + '\n\n' + specSummary, 1024, docId);

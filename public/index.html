@@ -704,8 +704,8 @@ mark.search-hl.current{background:rgba(var(--accent-rgb),.6)}
       <div class="auth-divider">or with email</div>
     </div>
     <div id="authEmailForm" style="display:flex;flex-direction:column;gap:8px">
-      <input class="auth-inp" type="email" id="authEmailInp" placeholder="Email address" autocomplete="email">
-      <input class="auth-inp" type="password" id="authPwdInp" placeholder="Password" autocomplete="current-password">
+      <input class="auth-inp" type="email" id="authEmailInp" placeholder="Email address" autocomplete="email" onkeydown="if(event.key==='Enter')document.getElementById('authPwdInp').focus()">
+      <input class="auth-inp" type="password" id="authPwdInp" placeholder="Password" autocomplete="current-password" onkeydown="if(event.key==='Enter')authSubmit()">
       <div class="auth-err" id="authErr"></div>
       <button class="auth-btn-primary" id="authSubmitBtn" onclick="authSubmit()">Sign in</button>
       <div style="display:flex;justify-content:center;gap:12px">
@@ -811,8 +811,9 @@ function classifyIntent(text) {
 // ── Security state ────────────────────────────────────────────────────────────
 let sessionDangerConfirmed = new Set(); // 'high', 'critical' confirmed this session
 let sessionPasswordVerified = false;    // password entered once this session
-const APP_VERSION = 'v9.1.0';
+const APP_VERSION = 'v9.1.1';
 const CHANGELOG = [
+  { ver: 'v9.1.1', date: '2026-06-06', summary: 'Fix agent abort: stopping generation now cleans up agent bar and server stops spawning new agents between stages. Auth UX: Enter key submits login, better error messages for wrong password/unconfirmed email/rate limits.' },
   { ver: 'v9.1.0', date: '2026-06-06', summary: 'Agent Pipeline v2: 6-stage architecture — (1) Council: 5 diverse perspectives (business analyst, technical analyst, UX thinker, devil\'s advocate, domain expert) form a unified understanding. (2) Specialists: architect, coder, formatter, formula/chart/data experts, perf optimizer, error handler produce implementations. (3) Jury: code reviewer, security auditor, edge case tester, API compliance checker independently vote pass/fail. (4) Documenter: summarizes the solution. (5) Executioner: final gate that tries to break everything — approves, revises with fixes, or rejects entirely. (6) Synthesis: merges all findings into one production-quality response. Orchestrator decides how many of each role based on task complexity.' },
   { ver: 'v9.0.0', date: '2026-06-06', summary: 'Agent Council: Deep Think now deploys a full council of specialized agents — analyst, planner, coder, reviewer, formatter, validator, and domain experts (formula, chart, data). The orchestrator decides which roles to deploy based on task complexity. Agents have dependency chains (analyst → planner → coder → reviewer) so each builds on prior findings. The reviewer acts as a judge, catching bugs and producing corrected code. Council findings are synthesized into a single production-quality response.' },
   { ver: 'v8.2.0', date: '2026-06-06', summary: 'Per-account data: chats, skills, training data, and usage stats are now scoped to logged-in user. Switching accounts loads that account\'s data. Existing shared data auto-migrates to first logged-in user. All API calls include x-user-id header. Version label shown directly under settings nav tabs.' },
@@ -3586,7 +3587,7 @@ async function maybeCompress() {
 }
 
 // ── Stop ──────────────────────────────────────────────────────────────────────
-function stopGen(){ctrl?.abort();loading=false;removeTyping();const b=document.getElementById('sendBtn');b.textContent='Send';b.className='send';b.onclick=sendMessage;}
+function stopGen(){ctrl?.abort();loading=false;removeTyping();hideAgentBar();const b=document.getElementById('sendBtn');b.textContent='Send';b.className='send';b.onclick=sendMessage;}
 
 // ── Send ──────────────────────────────────────────────────────────────────────
 async function sendMessage() {
@@ -3994,7 +3995,14 @@ async function authSubmit() {
       result = await supabaseClient.auth.signInWithPassword({ email, password: pwd });
       if (result.error) throw result.error;
     }
-  } catch (e) { err.style.color = 'var(--err)'; err.textContent = e.message; }
+  } catch (e) {
+    err.style.color = 'var(--err)';
+    const msg = e.message || String(e);
+    if (msg.includes('Invalid login')) err.textContent = 'Wrong email or password. Create an account if you don\'t have one.';
+    else if (msg.includes('Email not confirmed')) err.textContent = 'Check your email (including spam) for a confirmation link, then try again.';
+    else if (msg.includes('rate limit') || msg.includes('429')) err.textContent = 'Too many attempts. Wait a minute and try again.';
+    else err.textContent = msg;
+  }
   btn.textContent = authMode === 'signup' ? 'Create account' : 'Sign in';
   btn.disabled = false;
 }
