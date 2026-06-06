@@ -762,9 +762,9 @@ function classifyIntent(text) {
 // ── Security state ────────────────────────────────────────────────────────────
 let sessionDangerConfirmed = new Set(); // 'high', 'critical' confirmed this session
 let sessionPasswordVerified = false;    // password entered once this session
-const APP_VERSION = 'v7.1.1';
+const APP_VERSION = 'v7.2.0';
 const CHANGELOG = [
-  { ver: 'v7.1.1', date: '2026-06-06', summary: 'UX fixes: plus popup closes on outside click (invisible backdrop); clipboard copy fixed (was infinite recursion) with toast + green animation; font size applies to all message elements; text3 color bumped for readability; slash Tab autocomplete no longer moves focus; model filters search full catalog when active; removed Capabilities tab.' },
+  { ver: 'v7.2.0', date: '2026-06-06', summary: 'Observe-Act memory loop: workbook is re-read before every prompt and after every code execution, so the AI always sees the current state. Conversation summary upgraded from 120 to 300 words with data structure details. History kept for 25 messages (was 15) before compression. Compress triggers at 40 messages (was 20). Retry re-reads workbook before sending. Summary injection rewritten to emphasize continuity.' },
   { ver: 'v7.1.0', date: '2026-06-06', summary: 'Major reliability fixes: font size setting now works (was targeting wrong element ID); clipboard copy uses fallback for Office add-in context; retry sends full chat history + failed code to AI for better fixes; error messages classify source (Excel API / code / network); undo retries once on failure; slash popup shows full descriptions without truncation; all popups close on outside click; calendar shows future dates as grey boxes; chat sends 30 messages (was 15) for better context; removed Capabilities settings tab.' },
   { ver: 'v7.0.2', date: '2026-06-05', summary: 'Training mode polish: streaming responses with live timer and token count (matches normal chats), green focus glow on input field, 📖 fine-tuning guide button with step-by-step instructions for Ollama/Unsloth/MLX/OpenAI, Export JSONL and Generate Modelfile actions, hide attach/options buttons in training mode.' },
   { ver: 'v7.0.1', date: '2026-06-05', summary: 'Training UX: informative empty state explains Skill vs Examples paths, button tooltips, Export JSONL button in Usage tab, guidance for cloud vs local model workflows.' },
@@ -3343,8 +3343,8 @@ function unpinMemory(i) {
 
 // ── Compress (replaces maybeSummarize) ────────────────────────────────────────
 async function maybeCompress() {
-  if (history.length < 20) return;
-  const toCompress = history.slice(0, -15);
+  if (history.length < 40) return;
+  const toCompress = history.slice(0, -25);
   if (!toCompress.length) return;
   try {
     const k = localStorage.getItem('apiKey');
@@ -3355,7 +3355,7 @@ async function maybeCompress() {
     const d = await r.json();
     if (d.summary) {
       summary = d.summary;
-      history = history.slice(-15);
+      history = history.slice(-25);
       if (d.facts?.length) {
         const existing = new Set(coreMemory.map(f => f.toLowerCase()));
         d.facts.forEach(f => { if (!existing.has(f.toLowerCase())) { coreMemory.push(f); existing.add(f.toLowerCase()); } });
@@ -3397,7 +3397,10 @@ async function sendMessage() {
   const userMsg={role:'user',content:text,time:new Date().toISOString()};
   history.push(userMsg);addMsg('user',text);
   playSound('send'); haptic([10]);
-  addTyping();await maybeCompress();
+  addTyping();
+  // Observe: re-read workbook so the AI always has the latest state
+  try { await readWorkbook(); } catch {}
+  await maybeCompress();
 
   const t0=Date.now();ctrl=new AbortController();
   const isGroq  =selectedModel.startsWith('groq:');
@@ -3548,13 +3551,16 @@ async function sendMessage() {
             if(showCode)streamEl.appendChild(mkCode(code));
             if(r.ok){
               applied=true;
+              // Observe: re-read workbook after successful changes
+              try { await readWorkbook(); } catch {}
               if(r.result){history.push({role:'assistant',content:r.result});addMsg('assistant',r.result,false,null,null);}
               else{if(!finalText)addMsg('assistant','✓ Done.');}
             }else{
               const errSource = r.err?.includes('GeneralException') || r.err?.includes('InvalidArgument') || r.err?.includes('ItemNotFound') ? 'Excel API error' : r.err?.includes('is not defined') || r.err?.includes('is not a function') || r.err?.includes('SyntaxError') ? 'Code error' : r.err?.includes('network') || r.err?.includes('fetch') ? 'Network error' : 'Execution error';
               addMsg('assistant',`⚠ ${errSource}: ${r.err}\n\nRetrying with full context…`,true);
               try{fetch('/api/feedback/auto',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({tier:'hard',prompt:text,response:finalText||'',code,model:autoSelected||modelId})});}catch{}
-              history.push({role:'user',content:'The code you generated failed with this error:\n\n```\n'+r.err+'\n```\n\nHere is the code that failed:\n```js\n'+code+'\n```\n\nAnalyze the error, understand what went wrong, and provide a corrected CODE_JS block. Common issues: wrong range address, missing sheet activation, incorrect API usage, or data type mismatch.',internal:true});
+              try { await readWorkbook(); } catch {} // re-read so retry sees current state
+              history.push({role:'user',content:'The code you generated failed with this error:\n\n```\n'+r.err+'\n```\n\nHere is the code that failed:\n```js\n'+code+'\n```\n\nThe current workbook state has been re-read and is provided. Analyze the error, understand what went wrong, and provide a corrected CODE_JS block. Common issues: wrong range address, missing sheet activation, incorrect API usage, or data type mismatch.',internal:true});
               const rr=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},signal:ctrl.signal,body:JSON.stringify({messages:history,workbookData,activeSheet,summary,model:modelId,useOllama:isOllama,useGroq:isGroq,apiKey,groqKey,providerConfig:pc,options:payload.options})});
               const rd=await rr.json();
               if(rd.error)addMsg('assistant','⚠ Retry failed (AI error): '+rd.error,true);

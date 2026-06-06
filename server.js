@@ -1343,31 +1343,33 @@ app.post('/api/compress', async (req, res) => {
     const { text } = await callAI([
       {
         role: 'system',
-        content: `Compress an Excel AI assistant conversation. Respond with EXACTLY this format:
+        content: `Compress an Excel AI assistant conversation into a detailed summary that preserves all context needed for the AI to continue working. Respond with EXACTLY this format:
 
-SUMMARY: [one paragraph, max 120 words — what was worked on, changes made, sheets/columns involved]
+SUMMARY: [2-3 paragraphs, max 300 words — include: what the user asked for, what was done step by step, which sheets/columns/ranges were modified, what the data looks like now, any calculations or formulas applied, any errors encountered and how they were resolved. Be specific about cell references, column names, and data structures.]
 
 FACTS:
 - [a permanent rule, preference, or data reference worth always remembering]
 - [another fact]
 
-FACTS rules: max 10 items, max 15 words each. Only include:
+FACTS rules: max 15 items, max 20 words each. Include:
 • User rules/preferences ("always X", "never Y", "I prefer Z")
-• Named data that will recur (sheet names, column names, table names, named ranges)
+• Named data: sheet names, column names, table names, named ranges, cell references
+• Data structure: what columns exist, what data types they contain
+• Formulas or patterns that were applied
 • Critical errors to avoid repeating
-Skip obvious things. If nothing worth remembering, write "FACTS: none"`
+If nothing worth remembering, write "FACTS: none"`
       },
       {
         role: 'user',
         content: (previousSummary ? `Previous summary:\n${previousSummary}\n\nNew messages:\n` : '')
-          + messages.map(m => `${m.role}: ${(m.content || '').slice(0, 400)}`).join('\n\n')
+          + messages.map(m => `${m.role}: ${(m.content || '').slice(0, 800)}`).join('\n\n')
       }
-    ], 500, null, false, false, apiKey || null);
+    ], 800, null, false, false, apiKey || null);
 
     const clean = text.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
 
     const summaryMatch = clean.match(/SUMMARY:\s*([\s\S]*?)(?=\n\nFACTS:|$)/i);
-    const summary = summaryMatch ? summaryMatch[1].trim() : clean.slice(0, 200);
+    const summary = summaryMatch ? summaryMatch[1].trim() : clean.slice(0, 500);
 
     const factsBlock = clean.match(/FACTS:\s*([\s\S]*)$/i)?.[1] || '';
     const facts = factsBlock === 'none' ? [] : factsBlock
@@ -1792,8 +1794,8 @@ app.post('/api/chat', async (req, res) => {
   ] : [];
 
   const summaryMessages = summary ? [
-    { role: 'user', content: `Earlier in this session: ${summary}` },
-    { role: 'assistant', content: 'Got it, I have the context of what we did earlier.' }
+    { role: 'user', content: `CONVERSATION HISTORY (what we've done so far in this chat):\n\n${summary}\n\nUse this context to understand what has already been done and what the user is referring to. The workbook data below shows the CURRENT state after all these changes.` },
+    { role: 'assistant', content: 'I have the full context of our conversation — I know what we\'ve done, which sheets and columns were modified, and the current state of the workbook. I\'ll continue from here.' }
   ] : [];
 
   const allMemoryItems = [
@@ -1963,8 +1965,8 @@ app.post('/api/chat/stream', async (req, res) => {
     { role: 'assistant', content: 'I can see the full workbook. What would you like me to do?' }
   ] : [];
   const summaryMessages = summary ? [
-    { role: 'user', content: `Earlier in this session: ${summary}` },
-    { role: 'assistant', content: 'Got it, I have the context of what we did earlier.' }
+    { role: 'user', content: `CONVERSATION HISTORY (what we've done so far in this chat):\n\n${summary}\n\nUse this context to understand what has already been done and what the user is referring to. The workbook data below shows the CURRENT state after all these changes.` },
+    { role: 'assistant', content: 'I have the full context of our conversation — I know what we\'ve done, which sheets and columns were modified, and the current state of the workbook. I\'ll continue from here.' }
   ] : [];
   const allMemoryItems = [...pinnedMemory.map(p => p.text || p), ...coreMemory].filter(Boolean);
   const memorySection = allMemoryItems.length
