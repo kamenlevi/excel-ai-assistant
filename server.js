@@ -590,67 +590,69 @@ If unsure whether Office JS supports something, use CODE_JS first. Only fall bac
 // EVAL-IMPROVEMENTS-START
 **Rules:**
 
-* For filtering, use the 'applyColumnFilter' method with 'filterByValues' and handle missing columns.
-* When clearing filters, specify the column or columns to clear.
-* When counting rows, consider the header row.
-* When creating a new workbook, include actual data creation.
-* When using 'applyColumnFilter', ensure the 'ExcelScriptContext' object is used.
+* Always use 'await' when calling Office JS API methods that return promises.
+* When clearing filters, use 'autoFilter.clearFilters()' with the column(s) to clear.
+* When creating a table, use 'addTable()' to add a table with a single header and no data.
+* When inserting a shape, use 'shapes.add()' with the correct shape type and position.
 
 **Examples:**
 
 '''javascript
-// L1-filter-002
+// L1-filter-003
 const sheet = workbook.worksheets.getActiveWorksheet();
-await applyColumnFilter("Status", "Active", "filterByValues");
-
-// gen-L1-filtering-easy-053
-const sheet = workbook.worksheets.getActiveWorksheet();
-const context = workbook.context;
-await applyColumnFilter("X", "val", "filterByValues", context);
+await sheet.getAutoFilter().clearFilters(["A", "B"]);
 
 // gen-L1-filtering-easy-054
 const sheet = workbook.worksheets.getActiveWorksheet();
-const autoFilter = sheet.getAutoFilter();
-autoFilter.clearFilters(["X", "Y"]);
-await context.sync();
+await sheet.getAutoFilter().clearFilters(["X", "Y"]);
 
-// gen-L1-formatting-easy-310
+// gen-L1-format-002
 const sheet = workbook.worksheets.getActiveWorksheet();
-sheet.getUsedRange().load("font");
+const used = sheet.getUsedRange();
+used.load("rowCount, columnCount");
 await context.sync();
-sheet.getUsedRange().font.bold = true;
+const range = sheet.getRange("A2:C" + (used.rowCount - 1));
+range.borders = {
+  top: { style: "thin" },
+  bottom: { style: "thin" },
+  left: { style: "thin" },
+  right: { style: "thin" }
+};
 await context.sync();
 
-// gen-L1-conditional-formatting-easy-502
+// gen-L1-conditional-001
 const sheet = workbook.worksheets.getActiveWorksheet();
 const used = sheet.getUsedRange();
 used.load("values");
 await context.sync();
 const values = used.values;
-const col = values[0].indexOf("Y");
+const col = values[0].indexOf("Score");
 if (col!== -1) {
   values.forEach(row => {
-    if (row[col] > 2) {
-      row[col] = "yellow";
+    if (row[col] < 50) {
+      sheet.getRangeByIndexes(row.index, col, 1, 1).format.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF0000" } };
     }
   });
-  sheet.getRangeByIndexes(0, col, values.length, 1).values = values.map(r => [r[col]]);
   await context.sync();
 }
 
-// L1-data-001
-const sheet = workbook.worksheets.getActiveWorksheet();
-const src = sheet.getRange("A1:B" + (sheet.getUsedRange().rowCount - 1));
-const dst = sheet.getRange("D1");
-dst.copyFrom(src, Excel.RangeCopyType.all, false, false);
+// gen-L1-sheet-operations-easy-057
+const workbook = context.workbook;
+const sheets = workbook.worksheets;
+const lastSheet = sheets.getItem(sheets.getItem().name);
+lastSheet.delete();
 await context.sync();
 
-// gen-L1-sheet-operations-easy-055
-const workbook = context.workbook;
-const sheet = workbook.worksheets.add("Sheet1");
-const data = [["Name", "Age"], ["John", 25], ["Jane", 30]];
-sheet.getRange("A1").values = data;
+// gen-L1-question-handling-easy-070
+const sheet = workbook.worksheets.getActiveWorksheet();
+const cell = sheet.getRange("A1");
+cell.load("value");
 await context.sync();
+return cell.value;
+
+// gen-L1-edge-cases-easy-058
+const sheet = workbook.worksheets.getActiveWorksheet();
+await applyColumnFilter("X", 0
 // EVAL-IMPROVEMENTS-END
 `
 + (DEFAULT_MODEL.toLowerCase().includes('qwen') ? '\n/no_think' : '');
