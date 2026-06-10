@@ -109,6 +109,71 @@ Done. Now `signInWithOAuth('google')` works.
 
 ---
 
+## Part 4.5 — Allowlist the local OAuth callback (1 min) — REQUIRED for sign-in inside Excel
+
+The add-in's https server uses a self-signed certificate. The OAuth redirect opens in the
+user's **default browser**, which usually does not trust that certificate — the "connection
+is not private" warning then swallows the sign-in tokens. To avoid this, the app serves a
+plain-HTTP callback on port 3001 and uses it as the OAuth redirect target.
+
+1. In Supabase: **Authentication → URL Configuration → Redirect URLs**.
+2. Add **both** of these:
+   ```
+   http://localhost:3001/auth/callback
+   https://localhost:3000/auth/callback
+   ```
+3. Save.
+
+If `http://localhost:3001/auth/callback` is not allowlisted, Supabase falls back to the Site
+URL — sign-in can still complete on machines where the certificate is trusted, but will hang
+on machines where it isn't (this was the cause of "login works on one Windows laptop but not
+another").
+
+---
+
+## Part 4.6 — Create the sync tables (2 min) — REQUIRED for cross-device sync
+
+Signing in only identifies the user; chats and trained skills live in local files on each
+machine unless these tables exist. With them, the app two-way merges chats and skills with
+Supabase on every sign-in, so your data follows your account across devices.
+
+In Supabase: **SQL Editor → New query**, paste and run:
+
+```sql
+create table public.chats (
+  id uuid primary key,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  title text,
+  messages jsonb not null default '[]',
+  summary text,
+  total_tokens integer not null default 0,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+alter table public.chats enable row level security;
+create policy "Users manage own chats" on public.chats
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+create table public.skills (
+  id uuid primary key,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  type text not null default 'knowledge',
+  title text,
+  content text,
+  examples jsonb not null default '[]',
+  tags jsonb not null default '[]',
+  created_at timestamptz not null default now()
+);
+alter table public.skills enable row level security;
+create policy "Users manage own skills" on public.skills
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+```
+
+If the tables don't exist, the app logs a console warning and silently stays local-only —
+nothing breaks, but nothing syncs either.
+
+---
+
 ## Part 5 — Test it
 
 1. `npm start`

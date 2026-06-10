@@ -588,71 +588,6 @@ ALWAYS prefer CODE_JS when both can do the job — it runs automatically without
 If unsure whether Office JS supports something, use CODE_JS first. Only fall back to VBA_MACRO for the specific cases listed above.
 
 // EVAL-IMPROVEMENTS-START
-**Rules:**
-
-* Always use 'await' when calling Office JS API methods that return promises.
-* When clearing filters, use 'autoFilter.clearFilters()' with the column(s) to clear.
-* When creating a table, use 'addTable()' to add a table with a single header and no data.
-* When inserting a shape, use 'shapes.add()' with the correct shape type and position.
-
-**Examples:**
-
-'''javascript
-// L1-filter-003
-const sheet = workbook.worksheets.getActiveWorksheet();
-await sheet.getAutoFilter().clearFilters(["A", "B"]);
-
-// gen-L1-filtering-easy-054
-const sheet = workbook.worksheets.getActiveWorksheet();
-await sheet.getAutoFilter().clearFilters(["X", "Y"]);
-
-// gen-L1-format-002
-const sheet = workbook.worksheets.getActiveWorksheet();
-const used = sheet.getUsedRange();
-used.load("rowCount, columnCount");
-await context.sync();
-const range = sheet.getRange("A2:C" + (used.rowCount - 1));
-range.borders = {
-  top: { style: "thin" },
-  bottom: { style: "thin" },
-  left: { style: "thin" },
-  right: { style: "thin" }
-};
-await context.sync();
-
-// gen-L1-conditional-001
-const sheet = workbook.worksheets.getActiveWorksheet();
-const used = sheet.getUsedRange();
-used.load("values");
-await context.sync();
-const values = used.values;
-const col = values[0].indexOf("Score");
-if (col!== -1) {
-  values.forEach(row => {
-    if (row[col] < 50) {
-      sheet.getRangeByIndexes(row.index, col, 1, 1).format.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF0000" } };
-    }
-  });
-  await context.sync();
-}
-
-// gen-L1-sheet-operations-easy-057
-const workbook = context.workbook;
-const sheets = workbook.worksheets;
-const lastSheet = sheets.getItem(sheets.getItem().name);
-lastSheet.delete();
-await context.sync();
-
-// gen-L1-question-handling-easy-070
-const sheet = workbook.worksheets.getActiveWorksheet();
-const cell = sheet.getRange("A1");
-cell.load("value");
-await context.sync();
-return cell.value;
-
-// gen-L1-edge-cases-easy-058
-const sheet = workbook.worksheets.getActiveWorksheet();
-await applyColumnFilter("X", 0
 // EVAL-IMPROVEMENTS-END
 `
 + (DEFAULT_MODEL.toLowerCase().includes('qwen') ? '\n/no_think' : '');
@@ -665,6 +600,16 @@ function injectNoThink(messages, model) {
       ? { ...m, content: m.content + '\n/no_think' }
       : m
   );
+}
+
+// Hard cap on any single provider request — a stalled provider/network otherwise
+// hangs the chat forever (no timeout = "10+ minutes and nothing happens").
+const PROVIDER_TIMEOUT_MS = 300000;
+
+// Anthropic's Messages API takes the system prompt as a top-level param, not a message
+function splitSystem(messages) {
+  const system = messages.filter(m => m.role === 'system').map(m => m.content).join('\n\n');
+  return { system, messages: messages.filter(m => m.role !== 'system') };
 }
 
 // ── Stream helpers ────────────────────────────────────────────────────────────
@@ -730,10 +675,12 @@ async function* streamAI(messages, maxTokens, model, providerCfg) {
   // ── Anthropic Messages API ──
   if (format === 'anthropic') {
     const url = endpoint || 'https://api.anthropic.com/v1/messages';
+    // Anthropic rejects system-role entries inside messages — hoist them to the top-level param
+    const { system: sysPrompt, messages: userMessages } = splitSystem(messages);
     const res = await fetch(url, {
-      method: 'POST',
+      method: 'POST', timeout: PROVIDER_TIMEOUT_MS,
       headers: { 'Content-Type': 'application/json', 'x-api-key': pKey, 'anthropic-version': '2023-06-01' },
-      body: JSON.stringify({ model: effectiveModel, messages, max_tokens: maxTokens, stream: true })
+      body: JSON.stringify({ model: effectiveModel, system: sysPrompt || undefined, messages: userMessages, max_tokens: maxTokens, stream: true })
     });
     if (!res.ok) {
       let body = ''; try { body = await res.text(); } catch {}
@@ -765,7 +712,7 @@ async function* streamAI(messages, maxTokens, model, providerCfg) {
   const reqBody = { model: effectiveModel, messages: msgsToSend, max_tokens: maxTokens, temperature: 0.15, top_p: 0.9,
     stream: true, stream_options: { include_usage: true } };
 
-  const res = await fetch(url, { method: 'POST', headers, body: JSON.stringify(reqBody) });
+  const res = await fetch(url, { method: 'POST', headers, body: JSON.stringify(reqBody), timeout: PROVIDER_TIMEOUT_MS });
   if (!res.ok) {
     let body = ''; try { body = await res.text(); } catch {}
     let msg = `Provider error ${res.status}`;
@@ -817,10 +764,11 @@ async function callAI(messages, maxTokens = 4096, model = null, useOllama = fals
   // ── Anthropic Messages API ──
   if (format === 'anthropic') {
     const url = endpoint || 'https://api.anthropic.com/v1/messages';
+    const { system: sysPrompt, messages: userMessages } = splitSystem(messages);
     const res = await fetch(url, {
-      method: 'POST',
+      method: 'POST', timeout: PROVIDER_TIMEOUT_MS,
       headers: { 'Content-Type': 'application/json', 'x-api-key': pKey, 'anthropic-version': '2023-06-01' },
-      body: JSON.stringify({ model: effectiveModel, messages, max_tokens: maxTokens })
+      body: JSON.stringify({ model: effectiveModel, system: sysPrompt || undefined, messages: userMessages, max_tokens: maxTokens })
     });
     const data = await res.json();
     if (data.error) throw new Error(data.error.message || JSON.stringify(data.error));
@@ -835,7 +783,7 @@ async function callAI(messages, maxTokens = 4096, model = null, useOllama = fals
   if (provider === 'openrouter') { headers['HTTP-Referer'] = 'https://localhost:3000'; headers['X-Title'] = 'Excel AI Assistant'; }
   const msgsToSend = (provider === 'mlx') ? injectNoThink(messages, effectiveModel) : messages;
   const res = await fetch(url, {
-    method: 'POST', headers,
+    method: 'POST', headers, timeout: PROVIDER_TIMEOUT_MS,
     body: JSON.stringify({ model: effectiveModel, messages: msgsToSend, max_tokens: maxTokens, temperature: 0.15, top_p: 0.9 })
   });
   const data = await res.json();
@@ -960,11 +908,36 @@ app.post('/api/chats', (req, res) => {
   res.json(chats[id]);
 });
 
+// Full chat map (incl. messages) — used by cross-device cloud sync to merge
+app.get('/api/chats/full', (req, res) => {
+  res.json(readChats(uid(req)));
+});
+
 app.get('/api/chats/:id', (req, res) => {
   const chats = readChats(uid(req));
   const chat = chats[req.params.id];
   if (!chat) return res.status(404).json({ error: 'Not found' });
   res.json(chat);
+});
+
+// Upsert a chat under an explicit id — used to pull a chat synced from another device
+app.put('/api/chats/:id', (req, res) => {
+  const chats = readChats(uid(req));
+  const id = req.params.id;
+  const now = new Date().toISOString();
+  const existing = chats[id] || { id, createdAt: req.body.createdAt || now, totalTokens: 0, messageCount: 0, summary: null };
+  const { title, messages, summary, totalTokens, updatedAt } = req.body;
+  chats[id] = {
+    ...existing,
+    title: title !== undefined ? title : existing.title || 'New Chat',
+    messages: messages !== undefined ? messages : existing.messages || [],
+    messageCount: messages !== undefined ? messages.length : existing.messageCount || 0,
+    summary: summary !== undefined ? summary : existing.summary,
+    totalTokens: totalTokens !== undefined ? totalTokens : existing.totalTokens,
+    updatedAt: updatedAt || now,
+  };
+  writeChats(uid(req), chats);
+  res.json(chats[id]);
 });
 
 app.patch('/api/chats/:id', (req, res) => {
@@ -1039,16 +1012,18 @@ app.get('/api/skills', (req, res) => {
 });
 
 app.post('/api/skills', (req, res) => {
-  const skills = readSkills(uid(req));
+  let skills = readSkills(uid(req));
+  // Explicit id = upsert (cloud sync pulling a skill from another device)
+  if (req.body.id) skills = skills.filter(s => s.id !== req.body.id);
   const skill = {
-    id: crypto.randomUUID(),
+    id: req.body.id || crypto.randomUUID(),
     type: req.body.type || 'knowledge',
     title: req.body.title || '',
     content: req.body.content || '',
     examples: req.body.examples || [],
     tags: req.body.tags || [],
     trainingChatId: req.body.trainingChatId || null,
-    createdAt: new Date().toISOString()
+    createdAt: req.body.createdAt || new Date().toISOString()
   };
   skills.push(skill);
   writeSkills(uid(req), skills);
@@ -1135,7 +1110,7 @@ app.get('/api/models/catalog', async (req, res) => {
 // ── Local model detection (Ollama) ────────────────────────────────────────────
 app.get('/api/models/local', async (req, res) => {
   try {
-    const r = await fetch(`http://localhost:${OLLAMA_PORT}/api/tags`, { timeout: 2000 });
+    const r = await fetch(`http://${OLLAMA_HOST}:${OLLAMA_PORT}/api/tags`, { timeout: 2000 });
     const data = await r.json();
     const models = (data.models || []).map(m => ({ id: m.name, name: m.name }));
     res.json(models);
@@ -1365,12 +1340,12 @@ app.get('/api/finetune/stats', (req, res) => {
 
 // ── Title generation endpoint ────────────────────────────────────────────────
 app.post('/api/title', async (req, res) => {
-  const { userMsg, aiReply, apiKey } = req.body;
+  const { userMsg, aiReply, apiKey, model } = req.body;
   try {
     const { text } = await callAI([
       { role: 'system', content: 'Write a chat title: 4-6 words, no quotes, no punctuation at the end. Summarise what the user asked.' },
       { role: 'user', content: `User: ${String(userMsg).slice(0, 200)}\nAssistant: ${String(aiReply).slice(0, 200)}` }
-    ], 30, null, false, false, apiKey || null);
+    ], 30, model || null, false, false, apiKey || null, null, req.body.providerConfig ? resolveProvider(req) : null);
     const title = text.replace(/<think>[\s\S]*?<\/think>/g, '').trim().replace(/^["'`]|["'`]$/g, '').slice(0, 60);
     res.json({ title });
   } catch { res.status(500).json({ error: 'Title generation failed' }); }
@@ -1378,7 +1353,7 @@ app.post('/api/title', async (req, res) => {
 
 // ── Summarize endpoint ───────────────────────────────────────────────────────
 app.post('/api/compress', async (req, res) => {
-  const { messages, previousSummary, apiKey } = req.body;
+  const { messages, previousSummary, apiKey, model } = req.body;
   try {
     const { text } = await callAI([
       {
@@ -1404,7 +1379,7 @@ If nothing worth remembering, write "FACTS: none"`
         content: (previousSummary ? `Previous summary:\n${previousSummary}\n\nNew messages:\n` : '')
           + messages.map(m => `${m.role}: ${(m.content || '').slice(0, 800)}`).join('\n\n')
       }
-    ], 800, null, false, false, apiKey || null);
+    ], 800, model || null, false, false, apiKey || null, null, req.body.providerConfig ? resolveProvider(req) : null);
 
     const clean = text.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
 
@@ -1703,6 +1678,24 @@ function sanitizeMessages(msgs) {
   });
 }
 
+// Trained-skills prompt section, capped so a large skill library can't blow up
+// the prompt (slower + degraded responses that differ machine-to-machine).
+const SKILLS_SECTION_MAX_CHARS = 6000;
+function buildSkillsSection(userId) {
+  const skills = readSkills(userId);
+  if (!skills.length) return '';
+  let out = '\n\nTRAINED SKILLS — the user has taught you the following. Apply them when relevant:';
+  let used = 0, shown = 0;
+  for (const s of skills) {
+    let entry = `\n• [${s.type}] ${s.title}: ${s.content}`;
+    if (s.examples?.length) entry += '\n  Examples:\n' + s.examples.map(ex => `    User: ${ex.input}\n    You: ${ex.output}`).join('\n');
+    if (used + entry.length > SKILLS_SECTION_MAX_CHARS) break;
+    out += entry; used += entry.length; shown++;
+  }
+  if (shown < skills.length) out += `\n• [+${skills.length - shown} more skills omitted to fit context]`;
+  return shown ? out : '';
+}
+
 // ── Main chat route ──────────────────────────────────────────────────────────
 app.post('/api/chat', async (req, res) => {
   const { messages, workbookData, activeSheet, summary, model, useOllama, useGroq, apiKey, groqKey, options } = req.body;
@@ -1742,7 +1735,7 @@ app.post('/api/chat', async (req, res) => {
       const { text: choice } = await callAI([
         { role: 'system', content: 'Select the best AI model for this task. JSON only: {"modelId":"id"}' },
         { role: 'user', content: `Task: "${rawUserMessage.slice(0, 300)}"\nPreferences: ${preferences || 'none'}\nCost limit: $${options.costLimit || 'unlimited'} per prompt\nModels:\n${options.availableModels.map(m=>`${m.id} $${m.in}/$${m.out}`).join('\n')}` }
-      ], 60, null, false, false, apiKey || null, groqKey || null);
+      ], 60, effectiveModel, useOllama || false, useGroq || false, apiKey || null, groqKey || null, pCfg);
       const m = choice.replace(/<think>[\s\S]*?<\/think>/g,'').trim().match(/\{[\s\S]*?\}/);
       if (m) {
         const parsed = JSON.parse(m[0]);
@@ -1760,7 +1753,7 @@ app.post('/api/chat', async (req, res) => {
       const { text: assess } = await callAI([
         { role: 'system', content: 'Rate complexity 1-3: 1=simple, 2=moderate, 3=complex. JSON: {"level":1|2|3}' },
         { role: 'user', content: rawUserMessage.slice(0, 300) }
-      ], 30, effectiveModel, useOllama || false, useGroq || false, apiKey || null, groqKey || null);
+      ], 30, effectiveModel, useOllama || false, useGroq || false, apiKey || null, groqKey || null, pCfg);
       const m = assess.match(/\{[\s\S]*?\}/);
       const level = m ? (JSON.parse(m[0]).level || 2) : 2;
       maxTokens = level >= 3 ? 8192 : level === 1 ? 2048 : 4096;
@@ -1776,7 +1769,7 @@ app.post('/api/chat', async (req, res) => {
         const { text: enhanced } = await callAI([
           { role: 'system', content: 'You are a prompt engineer for an Excel AI assistant. Rewrite the user\'s request to be maximally clear, precise, and complete. Preserve intent exactly. Add explicit handling for edge cases (empty cells, merged cells, missing columns). Reference specific column names if visible in context. Output ONLY the rewritten prompt.' },
           { role: 'user', content: `Workbook context (headers + first rows):\n${(workbookData||'').slice(0,2000)}\n\nOriginal request: ${orig}` }
-        ], 700, effectiveModel, useOllama || false, useGroq || false, apiKey || null, groqKey || null);
+        ], 700, effectiveModel, useOllama || false, useGroq || false, apiKey || null, groqKey || null, pCfg);
         const enhancedText = enhanced.replace(/<think>[\s\S]*?<\/think>/g,'').trim();
         recentMessages[lastUserIdx] = { ...recentMessages[lastUserIdx], content: enhancedText };
         maxTokens = Math.max(maxTokens, 8192);
@@ -1797,7 +1790,7 @@ app.post('/api/chat', async (req, res) => {
         { role: 'system', content: SYSTEM_PROMPT + prefsSection_ + '\n\nIMPORTANT: The user has requested a plan. Do NOT output any CODE_JS block. Instead, write a short numbered plan (3-5 steps max) describing what you will do. Be concise.' },
         ...contextMessages_,
         { role: 'user', content: `Before executing, give me a brief plan for: ${rawUserMessage}` }
-      ], 512, effectiveModel, useOllama || false, useGroq || false, apiKey || null, groqKey || null);
+      ], 512, effectiveModel, useOllama || false, useGroq || false, apiKey || null, groqKey || null, pCfg);
       planText = planReply.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
     } catch {}
   }
@@ -1847,15 +1840,7 @@ app.post('/api/chat', async (req, res) => {
       + allMemoryItems.map(m => `• ${m}`).join('\n')
     : '';
 
-  const _allSkills = readSkills(uid(req));
-  const _skillsSection = _allSkills.length
-    ? '\n\nTRAINED SKILLS — the user has taught you the following. Apply them when relevant:\n'
-      + _allSkills.map(s => {
-        let entry = `• [${s.type}] ${s.title}: ${s.content}`;
-        if (s.examples?.length) entry += '\n  Examples:\n' + s.examples.map(ex => `    User: ${ex.input}\n    You: ${ex.output}`).join('\n');
-        return entry;
-      }).join('\n')
-    : '';
+  const _skillsSection = buildSkillsSection(uid(req));
   let systemContent = systemPromptOverride || (SYSTEM_PROMPT + prefsSection + memorySection + _skillsSection);
   if (!systemPromptOverride) {
     if (planText) systemContent += `\n\nYour plan for this request was:\n${planText}\nFollow this plan exactly.`;
@@ -1877,12 +1862,12 @@ app.post('/api/chat', async (req, res) => {
         ...allMessages,
         { role: 'assistant', content: responseText },
         { role: 'user', content: 'You forgot the CODE_JS block. Output ONLY the CODE_JS block now. Start with CODE_JS:: and end with ::END_CODE.' }
-      ], 2048, effectiveModel, useOllama || false, useGroq || false, apiKey || null, groqKey || null);
+      ], 2048, effectiveModel, useOllama || false, useGroq || false, apiKey || null, groqKey || null, pCfg);
       const retryClean = retryText.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
       const { code: retryCode } = parseResponse(retryClean);
       if (retryCode) {
         const { cleaned } = parseResponse(responseText);
-        return res.json({ response: cleaned, code: retryCode, usage, selectedModel, danger: analyzeDanger(retryCode) });
+        return res.json({ response: cleaned, code: retryCode, vba: null, usage, selectedModel, plan: planText, danger: analyzeDanger(retryCode) });
       }
     }
 
@@ -1934,7 +1919,7 @@ app.post('/api/chat/stream', async (req, res) => {
       const { text: choice } = await callAI([
         { role: 'system', content: 'Select the best AI model for this task. JSON only: {"modelId":"id"}' },
         { role: 'user', content: `Task: "${rawUserMessage.slice(0, 300)}"\nModels:\n${options.availableModels.map(m=>`${m.id} $${m.in}/$${m.out}`).join('\n')}` }
-      ], 60, null, false, false, apiKey || null, groqKey || null);
+      ], 60, effectiveModel, useOllama || false, useGroq || false, apiKey || null, groqKey || null, pCfg);
       const m = choice.replace(/<think>[\s\S]*?<\/think>/g,'').trim().match(/\{[\s\S]*?\}/);
       if (m) {
         const parsed = JSON.parse(m[0]);
@@ -1950,7 +1935,7 @@ app.post('/api/chat/stream', async (req, res) => {
       const { text: assess } = await callAI([
         { role: 'system', content: 'Rate complexity 1-3: 1=simple, 2=moderate, 3=complex. JSON: {"level":1|2|3}' },
         { role: 'user', content: rawUserMessage.slice(0, 300) }
-      ], 30, effectiveModel, useOllama || false, useGroq || false, apiKey || null, groqKey || null);
+      ], 30, effectiveModel, useOllama || false, useGroq || false, apiKey || null, groqKey || null, pCfg);
       const m = assess.match(/\{[\s\S]*?\}/);
       const level = m ? (JSON.parse(m[0]).level || 2) : 2;
       maxTokens = level >= 3 ? 8192 : level === 1 ? 2048 : 4096;
@@ -1975,7 +1960,7 @@ app.post('/api/chat/stream', async (req, res) => {
     if (lastUserIdx !== -1) {
       const orig = recentMessages[lastUserIdx].content;
       const wbSnippet = (workbookData||'').slice(0, 3000);
-      const aiCall = (msgs, tok) => callAI(msgs, tok, effectiveModel, useOllama || false, useGroq || false, apiKey || null, groqKey || null);
+      const aiCall = (msgs, tok) => callAI(msgs, tok, effectiveModel, useOllama || false, useGroq || false, apiKey || null, groqKey || null, pCfg);
       const clean = t => t.replace(/<think>[\s\S]*?<\/think>/g,'').trim();
       const wbContext = workbookData ? [
         { role: 'user', content: `Current workbook state:\n${wbSnippet}` },
@@ -2278,7 +2263,7 @@ RULES:
         ...contextMessages_,
         ...(summary ? [{ role: 'user', content: `Conversation context: ${summary}` }, { role: 'assistant', content: 'Got it.' }] : []),
         { role: 'user', content: `Before executing, give me a brief plan for: ${rawUserMessage}` }
-      ], 512, effectiveModel, useOllama || false, useGroq || false, apiKey || null, groqKey || null);
+      ], 512, effectiveModel, useOllama || false, useGroq || false, apiKey || null, groqKey || null, pCfg);
       planText = planReply.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
     } catch {}
   }
@@ -2306,15 +2291,7 @@ RULES:
   const memorySection = allMemoryItems.length
     ? '\n\nPERMANENT MEMORY — always remember and follow these throughout the conversation:\n' + allMemoryItems.map(m=>`• ${m}`).join('\n')
     : '';
-  const _allSkills = readSkills(uid(req));
-  const _skillsSection = _allSkills.length
-    ? '\n\nTRAINED SKILLS — the user has taught you the following. Apply them when relevant:\n'
-      + _allSkills.map(s => {
-        let entry = `• [${s.type}] ${s.title}: ${s.content}`;
-        if (s.examples?.length) entry += '\n  Examples:\n' + s.examples.map(ex => `    User: ${ex.input}\n    You: ${ex.output}`).join('\n');
-        return entry;
-      }).join('\n')
-    : '';
+  const _skillsSection = buildSkillsSection(uid(req));
   let systemContent = SYSTEM_PROMPT + prefsSection + memorySection + _skillsSection;
   if (planText) systemContent += `\n\nYour plan for this request was:\n${planText}\nFollow this plan exactly.`;
   if (forceNoThink && !systemContent.includes('/no_think')) systemContent += '\n/no_think';
@@ -2370,7 +2347,7 @@ RULES:
           ...allMessages,
           { role: 'assistant', content: answerBuf },
           { role: 'user', content: 'You forgot the CODE_JS block. Output ONLY the CODE_JS block now. Start with CODE_JS:: and end with ::END_CODE.' }
-        ], 2048, effectiveModel, useOllama || false, useGroq || false, apiKey || null, groqKey || null);
+        ], 2048, effectiveModel, useOllama || false, useGroq || false, apiKey || null, groqKey || null, pCfg);
         const { code: rc } = parseResponse(retryText.replace(/<think>[\s\S]*?<\/think>/g,'').trim());
         if (rc) finalCode = rc;
       } catch {}
@@ -2400,8 +2377,7 @@ app.get('/api/auth/config', (req, res) => {
 let _pendingAuthTokens = null;
 let _pendingAuthExpiry = 0;
 
-app.get('/auth/callback', (req, res) => {
-  res.send(`<!DOCTYPE html><html><head><title>Signing in…</title></head><body>
+const AUTH_CALLBACK_HTML = `<!DOCTYPE html><html><head><title>Signing in…</title></head><body>
     <p>Signing in… you can close this window.</p>
     <script>
       var hash = window.location.hash;
@@ -2427,16 +2403,15 @@ app.get('/auth/callback', (req, res) => {
         });
       }
     <\/script>
-    </body></html>`);
-});
+    </body></html>`;
 
-app.post('/api/auth/pending-token', (req, res) => {
+function handleAuthCallback(req, res) { res.send(AUTH_CALLBACK_HTML); }
+function handlePendingTokenPost(req, res) {
   _pendingAuthTokens = req.body.hash || null;
   _pendingAuthExpiry = Date.now() + 120000; // expires in 2 minutes
   res.json({ ok: true });
-});
-
-app.get('/api/auth/pending-token', (req, res) => {
+}
+function handlePendingTokenGet(req, res) {
   if (_pendingAuthTokens && Date.now() < _pendingAuthExpiry) {
     const hash = _pendingAuthTokens;
     _pendingAuthTokens = null; // consume once
@@ -2444,7 +2419,23 @@ app.get('/api/auth/pending-token', (req, res) => {
   } else {
     res.json({ hash: null });
   }
-});
+}
+
+app.get('/auth/callback', handleAuthCallback);
+app.post('/api/auth/pending-token', handlePendingTokenPost);
+app.get('/api/auth/pending-token', handlePendingTokenGet);
+
+// Plain-HTTP copy of the OAuth callback on port 3001. The main server's
+// self-signed HTTPS cert is trusted inside Excel/Electron but often NOT in the
+// user's external browser, where the OAuth redirect actually lands — the cert
+// interstitial then swallows the tokens and sign-in hangs ("works on one
+// Windows machine, not another"). Plain HTTP on localhost has no such problem.
+// Requires http://localhost:3001/auth/callback in Supabase Auth → Redirect URLs.
+const AUTH_HTTP_PORT = 3001;
+const authApp = express();
+authApp.use(express.json({ limit: '64kb' }));
+authApp.get('/auth/callback', handleAuthCallback);
+authApp.post('/api/auth/pending-token', handlePendingTokenPost);
 
 // ── App version endpoint (used by Electron updater UI) ───────────────────────
 app.get('/api/app/version', (req, res) => {
@@ -2463,6 +2454,13 @@ function startServer(opts = {}) {
     console.log(`Mode: ${USE_OPENROUTER ? 'OpenRouter' : USE_MLX ? 'MLX' : USE_GROQ ? 'Groq' : 'Ollama'}`);
     console.log(`Default model: ${DEFAULT_MODEL}`);
   });
+  try {
+    const authServer = require('http').createServer(authApp);
+    authServer.on('error', e => console.warn(`[auth] HTTP callback server failed (port ${AUTH_HTTP_PORT}):`, e.message));
+    authServer.listen(AUTH_HTTP_PORT, '127.0.0.1', () => {
+      console.log(`OAuth callback (HTTP fallback) at http://localhost:${AUTH_HTTP_PORT}/auth/callback`);
+    });
+  } catch (e) { console.warn('[auth] HTTP callback server failed:', e.message); }
   return server;
 }
 

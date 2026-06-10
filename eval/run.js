@@ -228,8 +228,35 @@ Return ONLY the new text to add. No explanation, no preamble.`,
   return resp.trim();
 }
 
+// ── Validate generated prompt text before it goes anywhere near server.js ─────
+// The patch lands inside a template literal that ships to the model on every
+// request — truncated or malformed output here degrades ALL responses.
+function validateImprovements(text) {
+  if (!text || !text.trim()) return 'empty';
+  if (text.length > 2000) return 'too long (>2000 chars)';
+  if (text.includes('${')) return 'contains ${ (would break template literal)';
+  // Balanced delimiters — catches output that was cut off mid-snippet
+  for (const [open, close] of [['(', ')'], ['[', ']'], ['{', '}']]) {
+    let depth = 0;
+    for (const ch of text) {
+      if (ch === open) depth++;
+      else if (ch === close) depth--;
+      if (depth < 0) return `unbalanced ${open}${close}`;
+    }
+    if (depth !== 0) return `unbalanced ${open}${close}`;
+  }
+  const lastLine = text.trim().split('\n').pop().trim();
+  if (/[,(+\-*/=&|]$/.test(lastLine)) return 'ends mid-statement';
+  return null;
+}
+
 // ── Apply improvements directly into server.js between marker comments ────────
 function applyImprovements(newText) {
+  const reason = validateImprovements(newText);
+  if (reason) {
+    console.warn(`  Generated patch rejected (${reason}) — server.js left untouched`);
+    return;
+  }
   const serverFile = path.join(__dirname, '../server.js');
   const src        = fs.readFileSync(serverFile, 'utf8');
   const startMark  = '// EVAL-IMPROVEMENTS-START';

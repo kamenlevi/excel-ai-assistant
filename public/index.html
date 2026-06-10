@@ -811,8 +811,9 @@ function classifyIntent(text) {
 // ── Security state ────────────────────────────────────────────────────────────
 let sessionDangerConfirmed = new Set(); // 'high', 'critical' confirmed this session
 let sessionPasswordVerified = false;    // password entered once this session
-const APP_VERSION = 'v9.1.7';
+const APP_VERSION = 'v9.2.0';
 const CHANGELOG = [
+  { ver: 'v9.2.0', date: '2026-06-10', summary: 'Cross-device sync + reliability overhaul. (1) Chats and trained skills now genuinely sync across devices via Supabase when signed in (two-way merge, newest wins; requires the SQL tables in docs/SETUP_AUTH.md). (2) Switching accounts now actually loads that account\'s chats (was keeping the previous account\'s open chat). (3) OAuth sign-in gets a plain-HTTP callback on port 3001 — fixes Windows machines where the self-signed cert warning in the external browser silently swallowed the login. (4) Removed a corrupted auto-generated block from the system prompt (truncated/wrong example code sent to the model on every request) and the eval auto-patcher now validates its output before touching server.js. (5) All AI provider calls have a hard timeout — no more endless hangs on a stalled provider. (6) Anthropic provider fixed (system prompt was sent as an unsupported message role, so every direct-Anthropic call errored). (7) Deep Think/Dynamic/Plan/title/summary helper calls now use your selected provider instead of silently requiring an OpenRouter key. (8) Trained-skills prompt section capped at 6KB so a big skill library can\'t degrade responses. (9) Ollama detection respects OLLAMA_HOST. (10) package.json version synced (updater was comparing against 7.0.0).' },
   { ver: 'v9.1.7', date: '2026-06-06', summary: 'OAuth: show "click here to complete" button after Google sign-in opens, since Excel webview cannot detect focus/visibility changes.' },
   { ver: 'v9.1.6', date: '2026-06-06', summary: 'Fix OAuth token pickup: poll triggers on window focus and visibility change so tokens are detected immediately when user returns to Excel from Chrome.' },
   { ver: 'v9.1.5', date: '2026-06-06', summary: 'Fix OAuth for Excel add-in: tokens now pass through server (not localStorage/postMessage) so sign-in works even when OAuth opens in Chrome while the app runs in Excel\'s webview. Client polls server for pending tokens after opening OAuth window.' },
@@ -931,6 +932,18 @@ function setActiveProvider(id) {
 function getProviderConfig() {
   const p = PROVIDERS.find(x => x.id === activeProvider) || PROVIDERS[0];
   return { provider: p.id, endpoint: p.id === 'custom' ? (providerKeys._customEndpoint || '') : p.endpoint, apiKey: providerKeys[p.id] || '', format: p.format };
+}
+// Resolved model + provider for the currently selected model (handles the
+// groq:/ollama: prefixed entries). Used by chat, title and summary calls so
+// every AI request goes through the provider the user actually configured.
+function activeModelConfig() {
+  const isGroq   = selectedModel.startsWith('groq:');
+  const isOllama = selectedModel.startsWith('ollama:');
+  const modelId  = isGroq ? selectedModel.slice(5) : isOllama ? selectedModel.slice(7) : selectedModel;
+  const pc = getProviderConfig();
+  if (isGroq)   { pc.provider='groq'; pc.format='openai'; pc.apiKey=providerKeys.groq||localStorage.getItem('groqKey')||''; pc.endpoint='https://api.groq.com/openai/v1/chat/completions'; }
+  if (isOllama) { pc.provider='ollama'; pc.format='ollama'; pc.endpoint=''; }
+  return { isGroq, isOllama, modelId, pc };
 }
 
 // ── Boot ──────────────────────────────────────────────────────────────────────
@@ -1957,16 +1970,23 @@ async function newChat(doSave=true) {
 async function saveChat(title) {
   if(!chatId)return;
   const t=title||history.find(m=>m.role==='user')?.content?.split('\n')[0]?.slice(0,50)||'New Chat';
-  try{await fetch('/api/chats/'+chatId,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({title:t,messages:history,summary,totalTokens:totalTok})});await loadChats();}catch{}
+  try{
+    const r=await fetch('/api/chats/'+chatId,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({title:t,messages:history,summary,totalTokens:totalTok})});
+    const updated=await r.json().catch(()=>null);
+    if(updated?.id)cloudPushChat(updated); // fire-and-forget — cross-device sync
+    await loadChats();
+  }catch{}
 }
 async function delChat(e,id) {
   e.stopPropagation();await fetch('/api/chats/'+id,{method:'DELETE'});
+  addCloudTombstone(id);cloudDeleteChat(id);
   if(chatId===id){chatId=null;history=[];renderEmpty();}await loadChats();
 }
 async function clearAllHistory() {
   if(!confirm('Delete all chat history? This cannot be undone.'))return;
   const r=await fetch('/api/chats');const chats=await r.json();
   await Promise.all(chats.map(c=>fetch('/api/chats/'+c.id,{method:'DELETE'})));
+  chats.forEach(c=>{addCloudTombstone(c.id);cloudDeleteChat(c.id);});
   chatId=null;history=[];renderEmpty();closeSettings();await loadChats();
 }
 async function refreshChatList(){try{const r=await fetch('/api/chats');renderChatList(await r.json());}catch{}}
@@ -2150,11 +2170,13 @@ async function approveSkill(msgIdx) {
   if (!m) return;
   const title = trainHistory.slice(0, msgIdx).reverse().find(x => x.role === 'user')?.content?.slice(0, 80) || 'Untitled Skill';
   try {
-    await fetch('/api/skills', {
+    const r = await fetch('/api/skills', {
       method: 'POST',
       headers: {'Content-Type':'application/json'},
       body: JSON.stringify({ type: 'knowledge', title, content: m.content, trainingChatId: trainChatId })
     });
+    const created = await r.json().catch(() => null);
+    if (created?.id) cloudPushSkill(created);
     m.skillSaved = true;
     await saveTrainingChat();
     renderTrainingView();
@@ -2183,11 +2205,13 @@ async function approveAsExamples(msgIdx) {
     examples.push({ input: userMsg, output: m.content });
   }
   try {
-    await fetch('/api/skills', {
+    const r = await fetch('/api/skills', {
       method: 'POST',
       headers: {'Content-Type':'application/json'},
       body: JSON.stringify({ type: 'examples', title, content: title, examples, trainingChatId: trainChatId })
     });
+    const created = await r.json().catch(() => null);
+    if (created?.id) cloudPushSkill(created);
     m.skillSaved = true;
     await saveTrainingChat();
     renderTrainingView();
@@ -2280,6 +2304,7 @@ async function loadSkills() {
 async function deleteSkill(id) {
   if (!confirm('Remove this skill?')) return;
   await fetch('/api/skills/' + id, { method: 'DELETE' });
+  cloudDeleteSkill(id);
   await loadSkills();
   if (activeSettingsTab === 'training') renderSettingsTab();
   showToast('Skill removed');
@@ -2450,7 +2475,7 @@ function searchChats(q) {
   }, 300);
 }
 async function generateTitle(userMsg,aiReply) {
-  try{const k=localStorage.getItem('apiKey');const r=await fetch('/api/title',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({userMsg,aiReply,apiKey:k||undefined})});const d=await r.json();return d.title||null;}catch{return null;}
+  try{const k=localStorage.getItem('apiKey');const {modelId,pc}=activeModelConfig();const r=await fetch('/api/title',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({userMsg,aiReply,apiKey:k||undefined,model:modelId,providerConfig:pc})});const d=await r.json();return d.title||null;}catch{return null;}
 }
 
 // ── Syntax highlighter (JS) ───────────────────────────────────────────────────
@@ -3573,9 +3598,10 @@ async function maybeCompress() {
   if (!toCompress.length) return;
   try {
     const k = localStorage.getItem('apiKey');
+    const {modelId, pc} = activeModelConfig();
     const r = await fetch('/api/compress', {
       method: 'POST', headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ messages: toCompress, previousSummary: summary||undefined, apiKey: k||undefined })
+      body: JSON.stringify({ messages: toCompress, previousSummary: summary||undefined, apiKey: k||undefined, model: modelId, providerConfig: pc })
     });
     const d = await r.json();
     if (d.summary) {
@@ -3628,14 +3654,9 @@ async function sendMessage() {
   await maybeCompress();
 
   const t0=Date.now();ctrl=new AbortController();
-  const isGroq  =selectedModel.startsWith('groq:');
-  const isOllama=selectedModel.startsWith('ollama:');
-  const modelId =isGroq?selectedModel.slice(5):isOllama?selectedModel.slice(7):selectedModel;
+  const {isGroq,isOllama,modelId,pc}=activeModelConfig();
   const apiKey  =localStorage.getItem('apiKey')||undefined;
   const groqKey =localStorage.getItem('groqKey')||undefined;
-  const pc = getProviderConfig();
-  if (isGroq) { pc.provider='groq'; pc.format='openai'; pc.apiKey=providerKeys.groq||groqKey||''; pc.endpoint='https://api.groq.com/openai/v1/chat/completions'; }
-  if (isOllama) { pc.provider='ollama'; pc.format='ollama'; pc.endpoint=''; }
 
   const payload={
     messages:history.slice(-30),workbookData,activeSheet,summary,
@@ -3955,6 +3976,10 @@ async function initAuth() {
       try { authHash = localStorage.getItem('supabase-auth-hash') || ''; localStorage.removeItem('supabase-auth-hash'); } catch {}
     }
     if (authHash && authHash.includes('access_token')) {
+      // Relay the tokens to the server too: if Supabase fell back to the Site URL,
+      // this page may be open in the user's external browser while the real app is
+      // polling inside Excel — the pending-token store gets them across.
+      try { _origFetch('/api/auth/pending-token', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ hash: authHash }) }); } catch {}
       const params = new URLSearchParams(authHash.replace(/^#/, ''));
       const access_token = params.get('access_token');
       const refresh_token = params.get('refresh_token');
@@ -3970,13 +3995,124 @@ async function initAuth() {
   } catch { showAccountBtn(null); }
 }
 
+let _lastSyncedUid; // undefined = no auth event seen yet
 function onAuthChange(user) {
   currentUser = user;
   showAccountBtn(user);
+  const uid = user?.id || null;
+  if (uid === _lastSyncedUid) return; // duplicate event (e.g. token refresh)
+  const wasKnown = _lastSyncedUid !== undefined;
+  _lastSyncedUid = uid;
   if (user) {
     document.getElementById('authModal')?.classList.remove('open');
+    // Account (re)established — drop whatever chat was open so this account's
+    // data actually loads (previously the open anonymous chat stuck around).
+    chatId = null; history = []; summary = null; totalTok = 0; renderEmpty();
+    cloudSyncAll().finally(() => { Promise.all([loadChats(), loadSkills(), loadUsageLog()]).catch(()=>{}); });
+  } else if (wasKnown) {
+    // Signed out — switch back to anonymous data
+    chatId = null; history = []; summary = null; totalTok = 0; renderEmpty();
     Promise.all([loadChats(), loadSkills(), loadUsageLog()]).catch(()=>{});
   }
+}
+
+// ── Cloud sync (Supabase) — chats & skills follow the account across devices ──
+// Requires the `chats` and `skills` tables from docs/SETUP_AUTH.md. Degrades
+// silently to local-only storage when the tables don't exist.
+let _cloudSyncAvailable = null; // null = unknown, false = tables missing
+let cloudTombstones = JSON.parse(localStorage.getItem('cloudTombstones') || '{}'); // chatId -> deletedAt
+function cloudReady() { return !!(supabaseClient && currentUser) && _cloudSyncAvailable !== false; }
+function addCloudTombstone(id) {
+  cloudTombstones[id] = new Date().toISOString();
+  // keep the tombstone list bounded
+  const ids = Object.keys(cloudTombstones);
+  if (ids.length > 500) ids.sort((a,b)=>cloudTombstones[a]<cloudTombstones[b]?-1:1).slice(0, ids.length-500).forEach(k=>delete cloudTombstones[k]);
+  localStorage.setItem('cloudTombstones', JSON.stringify(cloudTombstones));
+}
+function noteCloudError(e) {
+  const msg = String(e?.message || e);
+  if (/does not exist|could not find the table|schema cache/i.test(msg)) {
+    if (_cloudSyncAvailable !== false) console.warn('[sync] Cloud sync disabled — create the tables from docs/SETUP_AUTH.md to enable cross-device sync.');
+    _cloudSyncAvailable = false;
+  } else {
+    console.warn('[sync]', msg);
+  }
+}
+async function cloudPushChat(chat) {
+  if (!cloudReady() || !chat?.id || cloudTombstones[chat.id]) return;
+  try {
+    const { error } = await supabaseClient.from('chats').upsert({
+      id: chat.id, user_id: currentUser.id, title: chat.title || 'New Chat',
+      messages: chat.messages || [], summary: chat.summary || null,
+      total_tokens: chat.totalTokens || 0,
+      created_at: chat.createdAt || new Date().toISOString(),
+      updated_at: chat.updatedAt || new Date().toISOString(),
+    });
+    if (error) throw error;
+  } catch (e) { noteCloudError(e); }
+}
+async function cloudDeleteChat(id) {
+  if (!cloudReady()) return;
+  try { const { error } = await supabaseClient.from('chats').delete().eq('id', id); if (error) throw error; }
+  catch (e) { noteCloudError(e); }
+}
+async function cloudPushSkill(s) {
+  if (!cloudReady() || !s?.id) return;
+  try {
+    const { error } = await supabaseClient.from('skills').upsert({
+      id: s.id, user_id: currentUser.id, type: s.type || 'knowledge', title: s.title || '',
+      content: s.content || '', examples: s.examples || [], tags: s.tags || [],
+      created_at: s.createdAt || new Date().toISOString(),
+    });
+    if (error) throw error;
+  } catch (e) { noteCloudError(e); }
+}
+async function cloudDeleteSkill(id) {
+  if (!cloudReady()) return;
+  try { const { error } = await supabaseClient.from('skills').delete().eq('id', id); if (error) throw error; }
+  catch (e) { noteCloudError(e); }
+}
+// Two-way merge on sign-in: newest updatedAt wins for chats; skills are a union.
+async function cloudSyncAll() {
+  if (!cloudReady()) return;
+  try {
+    const [{ data: remote, error }, localMap] = await Promise.all([
+      supabaseClient.from('chats').select('*'),
+      fetch('/api/chats/full').then(r => r.json()).catch(() => ({})),
+    ]);
+    if (error) throw error;
+    const remoteMap = {};
+    (remote || []).forEach(r => { remoteMap[r.id] = r; });
+    for (const r of remote || []) {
+      if (cloudTombstones[r.id]) { cloudDeleteChat(r.id); continue; } // deleted on this device
+      const l = localMap[r.id];
+      if (!l || new Date(r.updated_at) > new Date(l.updatedAt)) {
+        await fetch('/api/chats/' + r.id, { method: 'PUT', headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({ title: r.title, messages: r.messages || [], summary: r.summary,
+            totalTokens: r.total_tokens || 0, createdAt: r.created_at, updatedAt: r.updated_at }) });
+      }
+    }
+    for (const l of Object.values(localMap)) {
+      const r = remoteMap[l.id];
+      if (!r || new Date(l.updatedAt) > new Date(r.updated_at)) await cloudPushChat(l);
+    }
+    const [{ data: rSkills, error: e2 }, lSkills] = await Promise.all([
+      supabaseClient.from('skills').select('*'),
+      fetch('/api/skills').then(r => r.json()).catch(() => []),
+    ]);
+    if (e2) throw e2;
+    const lIds = new Set((lSkills || []).map(s => s.id));
+    const rIds = new Set((rSkills || []).map(s => s.id));
+    for (const s of rSkills || []) {
+      if (!lIds.has(s.id)) await fetch('/api/skills', { method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ id: s.id, type: s.type, title: s.title, content: s.content,
+          examples: s.examples || [], tags: s.tags || [], createdAt: s.created_at }) });
+    }
+    for (const s of lSkills || []) {
+      if (!rIds.has(s.id)) await cloudPushSkill(s);
+    }
+    _cloudSyncAvailable = true;
+  } catch (e) { noteCloudError(e); }
 }
 
 function showAccountBtn(user) {
@@ -4071,10 +4207,15 @@ async function signInWithOAuth(provider) {
   const err = document.getElementById('authErr');
   err.style.color = 'var(--err)'; err.textContent = '';
   try {
+    // Plain-HTTP callback (server.js listens on 3001) — the OAuth redirect lands
+    // in the user's default browser, which usually does NOT trust the add-in's
+    // self-signed https cert; the cert warning page would swallow the tokens.
+    // Requires http://localhost:3001/auth/callback in Supabase Auth → Redirect URLs
+    // (falls back to the Site URL flow below if it isn't allowlisted).
     const { data, error } = await supabaseClient.auth.signInWithOAuth({
       provider, // 'google' | 'azure'
       options: {
-        redirectTo: window.location.origin + '/auth/callback',
+        redirectTo: 'http://localhost:3001/auth/callback',
         skipBrowserRedirect: true,
         ...(provider === 'azure' ? { scopes: 'email openid profile' } : {})
       }
