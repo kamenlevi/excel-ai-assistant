@@ -17,7 +17,7 @@ Office Add-in (TaskPaneApp) for Excel with AI-powered read/write access to workb
 - Every provider request has a hard timeout (`PROVIDER_TIMEOUT_MS`); Anthropic requests hoist system messages to the top-level `system` param.
 
 ## Versioning Rules
-- Current version: **v9.2.0** (defined as `APP_VERSION` in index.html; also keep `package.json` version in sync — the Electron updater compares against it).
+- Current version: **v9.2.1** (defined as `APP_VERSION` in index.html; also keep `package.json` version in sync — the Electron updater compares against it).
 - The `CHANGELOG` array in index.html stores all versions with date and summary.
 - **After every commit**: bump `APP_VERSION`, sync `package.json` version, and add a new entry to the top of `CHANGELOG` with the current date and a summary of what changed.
 - Version format: **x.y.z** — x = major feature/breaking change, y = medium feature/improvement, z = small fix/QoL.

@@ -52,13 +52,13 @@
 }
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;font-size:14px;color:var(--text);background:var(--bg);overflow:hidden}
-*{-webkit-overflow-scrolling:touch;scroll-behavior:smooth}
+*{-webkit-overflow-scrolling:touch}
 
 .app{display:flex;height:100vh;position:relative}
 .main{flex:1;display:flex;flex-direction:column;min-width:0;overflow:hidden}
 
 /* ── Sidebar ── */
-.sidebar{position:fixed;inset:0;z-index:300;visibility:hidden;pointer-events:none}
+.sidebar{position:fixed;inset:0;z-index:300;visibility:hidden;pointer-events:none;transition:visibility .35s}
 .sidebar.open{visibility:visible;pointer-events:all}
 .sidebar-backdrop{position:absolute;inset:0;background:rgba(0,0,0,.35);opacity:0;transition:opacity .25s var(--ease)}
 .sidebar.open .sidebar-backdrop{opacity:1}
@@ -110,7 +110,7 @@ body.train-active .input-box:focus-within{border-color:#22c55e;box-shadow:0 0 0 
 
 /* ── Header ── */
 .header{height:44px;display:flex;align-items:center;gap:8px;padding:0 10px;border-bottom:1px solid var(--border);background:var(--bg);flex-shrink:0}
-.btn-icon{background:none;border:none;color:var(--text2);cursor:pointer;padding:5px;border-radius:var(--r2);font-size:16px;line-height:1;transition:background .1s,color .1s;display:flex;align-items:center;justify-content:center}
+.btn-icon{background:none;border:none;color:var(--text2);cursor:pointer;padding:5px;border-radius:var(--r2);font-size:16px;line-height:1;transition:background .1s,color .1s,transform .12s var(--ease);display:flex;align-items:center;justify-content:center}
 .btn-icon:hover{background:var(--surf);color:var(--text)}
 .logo-icon{width:22px;height:22px;background:var(--accent);border-radius:5px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:700;flex-shrink:0}
 .model-btn{flex:1;background:var(--surf);border:1px solid var(--border);border-radius:var(--r2);padding:5px 9px;font-size:12px;color:var(--text);cursor:pointer;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:border-color .15s;min-width:0}
@@ -124,7 +124,6 @@ body.train-active .input-box:focus-within{border-color:#22c55e;box-shadow:0 0 0 
 .sync-icon{font-size:13px;line-height:1;font-weight:700}
 .sync-tip{display:none;position:absolute;top:calc(100% + 6px);right:0;background:var(--bg);border:1px solid var(--border);border-radius:var(--r2);box-shadow:var(--shadow2);padding:8px 10px;font-size:11px;color:var(--text2);white-space:nowrap;z-index:100;line-height:1.6}
 .sync-box:hover .sync-tip{display:block}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
 @keyframes spin{to{transform:rotate(360deg)}}
 
 /* ── Messages ── */
@@ -134,10 +133,16 @@ body.train-active .input-box:focus-within{border-color:#22c55e;box-shadow:0 0 0 
 .empty-title{font-size:15px;font-weight:600;color:var(--text)}
 .empty-sub{font-size:12px;color:var(--text2);line-height:1.5}
 .chips{display:flex;flex-direction:column;gap:6px;width:100%;margin-top:4px}
-.chip{background:var(--surf);border:1px solid var(--border);border-radius:var(--r2);padding:8px 10px;font-size:12px;color:var(--text);cursor:pointer;text-align:left;transition:background .1s,border-color .1s}
+.chip{background:var(--surf);border:1px solid var(--border);border-radius:var(--r2);padding:8px 10px;font-size:12px;color:var(--text);cursor:pointer;text-align:left;transition:background .1s,border-color .1s,transform .12s var(--ease)}
 .chip:hover{background:var(--surf2);border-color:var(--accent)}
 
 @keyframes msgIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+@keyframes popIn{from{opacity:0;transform:translateY(4px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.plus-popup.open,.filter-popup.open,.slash-popup.open,.train-guide-popup.show,.rec-reason-box.open{animation:popIn .16s var(--ease)}
+.sync-box:hover .sync-tip{animation:popIn .16s var(--ease)}
+.cost-dialog.open .cost-dialog-box{animation:popIn .2s var(--ease)}
+.cost-dialog.open .cost-dialog-bd{animation:fadeIn .2s var(--ease)}
 .msg{display:flex;flex-direction:column;gap:4px;animation:msgIn .2s var(--ease) both}
 .msg-head{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 .msg-role{font-size:12px;font-weight:600;color:var(--text2)}
@@ -190,7 +195,7 @@ body.train-active .input-box:focus-within{border-color:#22c55e;box-shadow:0 0 0 
 .agent-row .ar-meta{color:var(--text3);font-size:10px}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
 
-.danger-banner{border-radius:var(--r);margin:8px 0;padding:10px 12px;font-size:13px;line-height:1.5}
+.danger-banner{border-radius:var(--r);margin:8px 0;padding:10px 12px;font-size:13px;line-height:1.5;animation:msgIn .25s var(--ease) both}
 .danger-banner.high{background:rgba(230,160,40,.12);border:1px solid rgba(230,160,40,.35);color:var(--text)}
 .danger-banner.critical{background:rgba(217,79,79,.1);border:1px solid rgba(217,79,79,.35);color:var(--text)}
 .danger-title{font-weight:600;margin-bottom:4px;display:flex;align-items:center;gap:6px}
@@ -250,9 +255,9 @@ body.train-active .input-box:focus-within{border-color:#22c55e;box-shadow:0 0 0 
 #msgInput{flex:1;background:none;border:none;outline:none;color:var(--text);font-size:14px;font-family:inherit;resize:none;min-height:20px;max-height:120px;line-height:1.5}
 #msgInput::placeholder{color:var(--text3)}
 .input-btns{display:flex;align-items:center;gap:3px;flex-shrink:0}
-.act-btn{background:none;border:none;color:var(--text2);cursor:pointer;padding:5px;border-radius:var(--r2);font-size:15px;line-height:1;transition:color .1s,background .1s;display:flex;align-items:center;justify-content:center}
+.act-btn{background:none;border:none;color:var(--text2);cursor:pointer;padding:5px;border-radius:var(--r2);font-size:15px;line-height:1;transition:color .1s,background .1s,transform .12s var(--ease);display:flex;align-items:center;justify-content:center}
 .act-btn:hover{color:var(--accent);background:var(--surf)}
-.send{background:var(--accent);border:none;color:#fff;cursor:pointer;padding:6px 12px;border-radius:var(--r2);font-size:13px;font-weight:600;transition:background .15s,transform .15s var(--spring);transform-origin:center;white-space:nowrap}
+.send{background:var(--accent);border:none;color:#fff;cursor:pointer;padding:6px 12px;border-radius:var(--r2);font-size:13px;font-weight:600;transition:background .15s,transform .15s var(--spring);transform-origin:center;white-space:nowrap;min-width:64px;text-align:center}
 .send:active{transform:scale(0.92)}
 .send:hover:not(:disabled){background:var(--accent2)}
 .send:disabled{opacity:.5;cursor:not-allowed}
@@ -292,7 +297,7 @@ body.train-active .input-box:focus-within{border-color:#22c55e;box-shadow:0 0 0 
 #plusBtn{position:relative}
 
 /* ── Model picker ── */
-.modal{position:fixed;inset:0;z-index:600;visibility:hidden;pointer-events:none}
+.modal{position:fixed;inset:0;z-index:600;visibility:hidden;pointer-events:none;transition:visibility .25s}
 .modal.open{visibility:visible;pointer-events:all}
 .modal-bd{position:absolute;inset:0;background:rgba(0,0,0,.3);opacity:0;transition:opacity .2s var(--ease)}
 .modal.open .modal-bd{opacity:1}
@@ -347,7 +352,7 @@ body.train-active .input-box:focus-within{border-color:#22c55e;box-shadow:0 0 0 
 .model-opt-del:hover{color:var(--err)}
 
 /* ── Settings overlay ── */
-.settings-overlay{position:fixed;inset:0;z-index:500;background:var(--bg);display:flex;flex-direction:column;opacity:0;transform:translateY(12px);pointer-events:none;transition:opacity .25s var(--ease),transform .25s var(--ease);visibility:hidden}
+.settings-overlay{position:fixed;inset:0;z-index:500;background:var(--bg);display:flex;flex-direction:column;opacity:0;transform:translateY(12px);pointer-events:none;transition:opacity .25s var(--ease),transform .25s var(--ease),visibility .25s;visibility:hidden}
 .settings-overlay.open{opacity:1;transform:translateY(0);pointer-events:all;visibility:visible}
 .settings-hdr{height:44px;display:flex;align-items:center;gap:8px;padding:0 10px;border-bottom:1px solid var(--border);flex-shrink:0}
 .settings-hdr .btn-icon{transition:transform .15s var(--ease)}
@@ -501,6 +506,11 @@ mark.search-hl.current{background:rgba(var(--accent-rgb),.6)}
 .tfa-code-inp:focus{border-color:var(--accent)}
 .tfa-err{font-size:12px;color:var(--err);text-align:center;min-height:14px}
 
+:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+input:focus-visible,textarea:focus-visible{outline:none}
+.btn-icon:active,.act-btn:active{transform:scale(.9)}
+.chip:active,.theme-opt:active,.auth-social-btn:active{transform:scale(.98)}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms !important;animation-iteration-count:1 !important;transition-duration:.01ms !important}}
 ::-webkit-scrollbar{width:4px;height:4px}
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
@@ -811,8 +821,9 @@ function classifyIntent(text) {
 // ── Security state ────────────────────────────────────────────────────────────
 let sessionDangerConfirmed = new Set(); // 'high', 'critical' confirmed this session
 let sessionPasswordVerified = false;    // password entered once this session
-const APP_VERSION = 'v9.2.0';
+const APP_VERSION = 'v9.2.1';
 const CHANGELOG = [
+  { ver: 'v9.2.1', date: '2026-06-10', summary: 'UI/animation polish pass. Sidebar, model picker, and settings now animate out on close (visibility used to snap them away mid-slide). Removed global smooth-scrolling that fought the token stream and made the chat rubber-band; streaming now only auto-follows when you are at the bottom, so scrolling up to re-read is no longer hijacked. Popups (+ options, slash commands, filters, sync tooltip, cost dialog, plan approval, danger banner) get a consistent fade/pop entrance. Keyboard focus is visible on buttons; icon buttons and chips get press feedback; Send/Stop no longer shifts layout. prefers-reduced-motion disables animations. Perf: removed a deprecated DOMNodeRemoved listener that forced the browser onto a slow DOM path for every message, and capped model-search results (typing was re-rendering hundreds of rows per keystroke). Fixed unescaped skill titles/content in the Training settings tab and a stray ellipsis on short memory chips.' },
   { ver: 'v9.2.0', date: '2026-06-10', summary: 'Cross-device sync + reliability overhaul. (1) Chats and trained skills now genuinely sync across devices via Supabase when signed in (two-way merge, newest wins; requires the SQL tables in docs/SETUP_AUTH.md). (2) Switching accounts now actually loads that account\'s chats (was keeping the previous account\'s open chat). (3) OAuth sign-in gets a plain-HTTP callback on port 3001 — fixes Windows machines where the self-signed cert warning in the external browser silently swallowed the login. (4) Removed a corrupted auto-generated block from the system prompt (truncated/wrong example code sent to the model on every request) and the eval auto-patcher now validates its output before touching server.js. (5) All AI provider calls have a hard timeout — no more endless hangs on a stalled provider. (6) Anthropic provider fixed (system prompt was sent as an unsupported message role, so every direct-Anthropic call errored). (7) Deep Think/Dynamic/Plan/title/summary helper calls now use your selected provider instead of silently requiring an OpenRouter key. (8) Trained-skills prompt section capped at 6KB so a big skill library can\'t degrade responses. (9) Ollama detection respects OLLAMA_HOST. (10) package.json version synced (updater was comparing against 7.0.0).' },
   { ver: 'v9.1.7', date: '2026-06-06', summary: 'OAuth: show "click here to complete" button after Google sign-in opens, since Excel webview cannot detect focus/visibility changes.' },
   { ver: 'v9.1.6', date: '2026-06-06', summary: 'Fix OAuth token pickup: poll triggers on window focus and visibility change so tokens are detected immediately when user returns to Excel from Chrome.' },
@@ -1292,14 +1303,14 @@ function renderTrainingTab() {
   if (skills.length) {
     html += `<div class="sgrp"><div class="slabel">Skills</div>`;
     skills.forEach(s => {
-      html += `<div style="background:var(--surf);border-radius:var(--r2);padding:10px;margin-bottom:6px"><div style="display:flex;justify-content:space-between;align-items:center"><strong style="font-size:13px;color:var(--text)">${s.title || 'Untitled'}</strong><button class="sdanger" style="font-size:10px;padding:2px 8px" onclick="deleteSkill('${s.id}');renderSettingsTab()">Remove</button></div><div style="font-size:11px;color:var(--text2);margin-top:4px;line-height:1.4">${(s.content || '').slice(0, 200)}${(s.content || '').length > 200 ? '…' : ''}</div></div>`;
+      html += `<div style="background:var(--surf);border-radius:var(--r2);padding:10px;margin-bottom:6px"><div style="display:flex;justify-content:space-between;align-items:center"><strong style="font-size:13px;color:var(--text)">${esc(s.title || 'Untitled')}</strong><button class="sdanger" style="font-size:10px;padding:2px 8px" onclick="deleteSkill('${s.id}');renderSettingsTab()">Remove</button></div><div style="font-size:11px;color:var(--text2);margin-top:4px;line-height:1.4">${esc((s.content || '').slice(0, 200))}${(s.content || '').length > 200 ? '…' : ''}</div></div>`;
     });
     html += `</div>`;
   }
   if (examples.length) {
     html += `<div class="sgrp"><div class="slabel">Example Sets</div>`;
     examples.forEach(s => {
-      html += `<div style="background:var(--surf);border-radius:var(--r2);padding:10px;margin-bottom:6px"><div style="display:flex;justify-content:space-between;align-items:center"><strong style="font-size:13px;color:var(--text)">${s.title || 'Untitled'}</strong><span style="font-size:11px;color:var(--text3)">${s.examples?.length || 0} examples</span><button class="sdanger" style="font-size:10px;padding:2px 8px" onclick="deleteSkill('${s.id}');renderSettingsTab()">Remove</button></div></div>`;
+      html += `<div style="background:var(--surf);border-radius:var(--r2);padding:10px;margin-bottom:6px"><div style="display:flex;justify-content:space-between;align-items:center"><strong style="font-size:13px;color:var(--text)">${esc(s.title || 'Untitled')}</strong><span style="font-size:11px;color:var(--text3)">${s.examples?.length || 0} examples</span><button class="sdanger" style="font-size:10px;padding:2px 8px" onclick="deleteSkill('${s.id}');renderSettingsTab()">Remove</button></div></div>`;
     });
     html += `</div>`;
   }
@@ -1883,7 +1894,8 @@ function renderModelList(query) {
     d.textContent='No models match "'+esc(query)+'".'+(catalogLoaded?'':' (catalog still loading)');
     list.appendChild(d); return;
   }
-  hits.forEach(m=>{
+  const HITS_MAX=60;
+  hits.slice(0,HITS_MAX).forEach(m=>{
     const isPreset=presetIds.has(m.id), isCustom=customIds.has(m.id);
     const el=document.createElement('div');
     el.className='model-opt'+(m.id===selectedModel?' sel':'');
@@ -1899,6 +1911,7 @@ function renderModelList(query) {
     };
     list.appendChild(el);
   });
+  if(hits.length>HITS_MAX){const d=document.createElement('div');d.className='no-local';d.textContent='+'+(hits.length-HITS_MAX)+' more — refine your search';list.appendChild(d);}
   if(!catalogLoaded){const d=document.createElement('div');d.className='no-local';d.textContent='Loading full catalog in background…';list.appendChild(d);}
 }
 function toggleRecReason() {
@@ -2410,9 +2423,10 @@ Always be specific to Excel operations. Include CODE_JS blocks in outputs when t
             streamBody = document.createElement('div'); streamBody.className = 'msg-body';
             streamEl.appendChild(streamBody);
           }
+          const stick = box.scrollHeight - box.scrollTop - box.clientHeight < 80;
           answerText += ev.token;
           streamBody.textContent = answerText;
-          box.scrollTop = box.scrollHeight;
+          if (stick) box.scrollTop = box.scrollHeight;
         } else if (ev.type === 'done') {
           clearInterval(timerInterval); timerInterval = null;
           const ms = Date.now() - t0;
@@ -2610,7 +2624,6 @@ function mkMsg(role,text,isErr,ms,tok,code,savedTime,via,vba) {
   const copyBtn=document.createElement('button'); copyBtn.className='copy-msg-btn'; copyBtn.innerHTML='⎘ Copy';
   const btnId='copy-'+Math.random();clipboardTimeouts[btnId]=null;
   copyBtn.onclick=()=>{clipCopy(text).then(()=>{copyBtn.innerHTML='✓ Copied';copyBtn.classList.add('copied');showToast('Copied to clipboard');if(clipboardTimeouts[btnId])clearTimeout(clipboardTimeouts[btnId]);clipboardTimeouts[btnId]=setTimeout(()=>{if(copyBtn.parentElement){copyBtn.innerHTML='⎘ Copy';copyBtn.classList.remove('copied');}delete clipboardTimeouts[btnId];},1500);}).catch(()=>showToast('Copy failed'));};
-  el.addEventListener('DOMNodeRemoved',()=>{if(clipboardTimeouts[btnId])clearTimeout(clipboardTimeouts[btnId]);delete clipboardTimeouts[btnId];},{once:true});
   actions.appendChild(copyBtn);
   if(role==='user'){
     const editBtn=document.createElement('button'); editBtn.className='copy-msg-btn'; editBtn.innerHTML='✎ Edit'; editBtn.title='Edit and resend';
@@ -2753,9 +2766,9 @@ async function registerListeners() {
 function showPlanConfirmation(planText) {
   return new Promise(resolve => {
     const overlay = document.createElement('div');
-    overlay.style.cssText = 'position:fixed;inset:0;z-index:600;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.45)';
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:600;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.45);animation:fadeIn .2s var(--ease)';
     const box = document.createElement('div');
-    box.style.cssText = 'position:relative;background:var(--bg);border:1px solid var(--border);border-radius:var(--r);box-shadow:var(--shadow2);padding:20px;max-width:360px;width:90%;max-height:70vh;overflow-y:auto;z-index:1';
+    box.style.cssText = 'position:relative;background:var(--bg);border:1px solid var(--border);border-radius:var(--r);box-shadow:var(--shadow2);padding:20px;max-width:360px;width:90%;max-height:70vh;overflow-y:auto;z-index:1;animation:popIn .2s var(--ease)';
     box.innerHTML = `
       <div style="font-size:15px;font-weight:600;color:var(--text);margin-bottom:8px">📋 Proposed Plan</div>
       <div style="font-size:13px;color:var(--text);line-height:1.6;white-space:pre-wrap;margin-bottom:14px">${esc(planText)}</div>
@@ -2820,7 +2833,7 @@ function requestDangerConfirmation(danger) {
 
     const box = document.getElementById('messages');
     box.appendChild(banner);
-    box.scrollTop = box.scrollHeight;
+    banner.scrollIntoView({ behavior: 'smooth', block: 'end' });
 
     const pwdHandler = e => {
       if (e.key === 'Enter') document.getElementById('dangerProceed').click();
@@ -3551,7 +3564,7 @@ function renderMemoryStrip() {
   strip.classList.add('visible');
   strip.innerHTML = '<span style="font-size:10px;color:var(--text3);flex-shrink:0">📌 Memory:</span>'
     + pinnedMemory.map((p,i) =>
-        `<span class="memory-chip" title="${esc(p.text)}">${esc(p.text.slice(0,30))}…<span class="memory-chip-x" onclick="unpinMemory(${i})">✕</span></span>`
+        `<span class="memory-chip" title="${esc(p.text)}">${esc(p.text.slice(0,30))}${p.text.length>30?'…':''}<span class="memory-chip-x" onclick="unpinMemory(${i})">✕</span></span>`
       ).join('')
     + (coreMemory.length ? `<span class="memory-chip" style="cursor:pointer;background:rgba(var(--accent-rgb),.1)" onclick="showAutoFacts()" title="Click to view auto-extracted facts">${coreMemory.length} auto-fact${coreMemory.length!==1?'s':''}</span>` : '');
 }
@@ -3724,23 +3737,25 @@ async function sendMessage() {
 
         if(ev.type==='think'){
           ensureThinkEl();
+          const stick=box.scrollHeight-box.scrollTop-box.clientHeight<80;
           thinkBuf+=ev.token;
           thinkEl.querySelector('.think-full-inner').textContent=thinkBuf;
           const lines=thinkBuf.trim().split('\n').filter(l=>l.trim().length>3);
           const last=lines[lines.length-1]||'Thinking…';
           thinkEl.querySelector('.think-pill-text').textContent=last.length>72?'…'+last.slice(-70):last;
-          box.scrollTop=box.scrollHeight;
+          if(stick)box.scrollTop=box.scrollHeight;
         }else if(ev.type==='think_end'){
           if(thinkEl){const elapsed=((Date.now()-t0)/1000).toFixed(1);thinkEl.querySelector('.think-pill-text').textContent='Thought for '+elapsed+'s — click to expand';}
           collapseThink();
         }else if(ev.type==='token'){
           ensureStreamEl();
           if(thinkEl)collapseThink();
+          const stick=box.scrollHeight-box.scrollTop-box.clientHeight<80;
           answerText+=ev.token;
           // Hide CODE_JS / VBA markers from the live view — the block is rendered
           // separately once streaming completes (matches the cleaned final text).
           streamBody.textContent=answerText.split('CODE_JS::')[0].split('VBA_MACRO::')[0];
-          box.scrollTop=box.scrollHeight;
+          if(stick)box.scrollTop=box.scrollHeight;
         }else if(ev.type==='plan'){
           // Show plan confirmation dialog — pause until user approves
           clearInterval(timerInterval); timerInterval=null;
