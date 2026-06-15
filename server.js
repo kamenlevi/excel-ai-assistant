@@ -590,10 +590,13 @@ If unsure whether Office JS supports something, use CODE_JS first. Only fall bac
 // EVAL-IMPROVEMENTS-START
 **Rules:**
 
-* Always use 'await' when calling Office JS API methods that return promises.
-* When clearing filters, use 'autoFilter.clearFilters()' with the column(s) to clear.
-* When creating a table, use 'addTable()' to add a table with a single header and no data.
-* When inserting a shape, use 'shapes.add()' with the correct shape type and position.
+* Always use 'worksheet.getAutoFilter().clearFilters()' when clearing filters.
+* When sorting, use 'worksheet.getUsedRange().load("values")' to load the values before sorting.
+* When formatting numbers, use 'worksheet.getUsedRange().load("values")' to load the values before formatting.
+* When applying conditional formatting, use 'worksheet.getUsedRange().load("values")' to load the values before formatting.
+* When deleting the last sheet, use 'workbook.worksheets.getItem(workbook.worksheets.getItem().name).delete()' to delete the last sheet.
+* When getting the number of rows, use 'worksheet.getUsedRange().load("rowCount")' to load the row count.
+* When inserting a shape, use 'worksheet.shapes.add()' with the correct shape type and position.
 
 **Examples:**
 
@@ -606,53 +609,38 @@ await sheet.getAutoFilter().clearFilters(["A", "B"]);
 const sheet = workbook.worksheets.getActiveWorksheet();
 await sheet.getAutoFilter().clearFilters(["X", "Y"]);
 
-// gen-L1-format-002
+// gen-L1-sorting-easy-052
 const sheet = workbook.worksheets.getActiveWorksheet();
 const used = sheet.getUsedRange();
-used.load("rowCount, columnCount");
+used.load("values");
 await context.sync();
-const range = sheet.getRange("A2:C" + (used.rowCount - 1));
-range.borders = {
-  top: { style: "thin" },
-  bottom: { style: "thin" },
-  left: { style: "thin" },
-  right: { style: "thin" }
-};
-await context.sync();
+await used.sortByColumn("X", true);
 
-// gen-L1-conditional-001
+// gen-L1-sorting-easy-054
+const sheet = workbook.worksheets.getActiveWorksheet();
+const used = sheet.getUsedRange();
+used.load("values");
+await context.sync();
+await used.sortByColumn("X", true);
+
+// gen-L1-format-003
+const sheet = workbook.worksheets.getActiveWorksheet();
+const used = sheet.getUsedRange();
+used.load("values");
+await context.sync();
+await used.setNumberFormat("B2:B" + used.rowCount, "$#,##0.00");
+
+// gen-L1-conditional-formatting-easy-503
 const sheet = workbook.worksheets.getActiveWorksheet();
 const used = sheet.getUsedRange();
 used.load("values");
 await context.sync();
 const values = used.values;
-const col = values[0].indexOf("Score");
+const col = values[0].indexOf("X");
 if (col!== -1) {
   values.forEach(row => {
-    if (row[col] < 50) {
-      sheet.getRangeByIndexes(row.index, col, 1, 1).format.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF0000" } };
-    }
-  });
-  await context.sync();
-}
-
-// gen-L1-sheet-operations-easy-057
-const workbook = context.workbook;
-const sheets = workbook.worksheets;
-const lastSheet = sheets.getItem(sheets.getItem().name);
-lastSheet.delete();
-await context.sync();
-
-// gen-L1-question-handling-easy-070
-const sheet = workbook.worksheets.getActiveWorksheet();
-const cell = sheet.getRange("A1");
-cell.load("value");
-await context.sync();
-return cell.value;
-
-// gen-L1-edge-cases-easy-058
-const sheet = workbook.worksheets.getActiveWorksheet();
-await applyColumnFilter("X", 0
+    if (row[col] < 2) {
+      sheet.getRangeByIndexes(row.index, col, 1, 1).format.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF00FF
 // EVAL-IMPROVEMENTS-END
 `
 + (DEFAULT_MODEL.toLowerCase().includes('qwen') ? '\n/no_think' : '');
