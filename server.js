@@ -590,38 +590,36 @@ If unsure whether Office JS supports something, use CODE_JS first. Only fall bac
 // EVAL-IMPROVEMENTS-START
 **Rules:**
 
-* Always use 'worksheet.getAutoFilter().clearFilters()' when clearing filters.
-* When sorting, use 'worksheet.getUsedRange().load("values")' to load the values before sorting.
-* When formatting numbers, use 'worksheet.getUsedRange().load("values")' to load the values before formatting.
-* When applying conditional formatting, use 'worksheet.getUsedRange().load("values")' to load the values before formatting.
-* When deleting the last sheet, use 'workbook.worksheets.getItem(workbook.worksheets.getItem().name).delete()' to delete the last sheet.
-* When getting the number of rows, use 'worksheet.getUsedRange().load("rowCount")' to load the row count.
-* When inserting a shape, use 'worksheet.shapes.add()' with the correct shape type and position.
+* When clearing all filters, use 'worksheet.getAutoFilter().clearAllFilters()' instead of 'clearFilters()'.
+* When filtering by value, use 'worksheet.getAutoFilter().applyColumnFilter(column, value)' instead of 'applyColumnFilter()'.
+* When formatting numbers, use 'worksheet.getUsedRange().load("values")' to load the values before formatting, and 'setNumberFormat(range, format)' instead of 'setNumberFormat(range, format, startRow, endRow)'.
+* When deleting a row, use 'worksheet.getUsedRange().deleteRow(row)' instead of asking for user input.
+* When inserting a new row, use 'worksheet.getUsedRange().insertRowsBefore(row, count)' instead of lacking the actual code implementation.
+* When getting the value in a cell, use 'worksheet.getRange(cell).value' instead of asking for the value.
 
 **Examples:**
 
 '''javascript
 // L1-filter-003
 const sheet = workbook.worksheets.getActiveWorksheet();
-await sheet.getAutoFilter().clearFilters(["A", "B"]);
+await sheet.getAutoFilter().clearAllFilters();
 
-// gen-L1-filtering-easy-054
-const sheet = workbook.worksheets.getActiveWorksheet();
-await sheet.getAutoFilter().clearFilters(["X", "Y"]);
-
-// gen-L1-sorting-easy-052
+// gen-L1-filtering-easy-057
 const sheet = workbook.worksheets.getActiveWorksheet();
 const used = sheet.getUsedRange();
 used.load("values");
 await context.sync();
-await used.sortByColumn("X", true);
-
-// gen-L1-sorting-easy-054
-const sheet = workbook.worksheets.getActiveWorksheet();
-const used = sheet.getUsedRange();
-used.load("values");
-await context.sync();
-await used.sortByColumn("X", true);
+const rows = used.values;
+const hdr = rows[0].map(h => String(h).toLowerCase().trim());
+const col = hdr.indexOf("y");
+if (col!== -1) {
+  const toShow = [];
+  for (let i = 1; i < rows.length; i++) {
+    if (String(rows[i][col]).toLowerCase() === "val") toShow.push(i);
+  }
+  const filtered = rows.slice(0, 1).concat(toShow.map(i => rows[i]));
+  sheet.getRangeByIndexes(0, 0, filtered.length, rows[0].length).values = filtered;
+}
 
 // gen-L1-format-003
 const sheet = workbook.worksheets.getActiveWorksheet();
@@ -630,17 +628,14 @@ used.load("values");
 await context.sync();
 await used.setNumberFormat("B2:B" + used.rowCount, "$#,##0.00");
 
-// gen-L1-conditional-formatting-easy-503
+// gen-L1-formulas-003
 const sheet = workbook.worksheets.getActiveWorksheet();
-const used = sheet.getUsedRange();
-used.load("values");
+sheet.getRange("D2").formulas = [["IF(C2>50, \"Pass\", \"Fail\")]];
 await context.sync();
-const values = used.values;
-const col = values[0].indexOf("X");
-if (col!== -1) {
-  values.forEach(row => {
-    if (row[col] < 2) {
-      sheet.getRangeByIndexes(row.index, col, 1, 1).format.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF00FF
+
+// gen-L1-sheet-operations-easy-058
+const sheet = workbook.worksheets.getActiveWorksheet();
+await sheet.getUsed
 // EVAL-IMPROVEMENTS-END
 `
 + (DEFAULT_MODEL.toLowerCase().includes('qwen') ? '\n/no_think' : '');
