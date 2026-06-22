@@ -588,54 +588,6 @@ ALWAYS prefer CODE_JS when both can do the job — it runs automatically without
 If unsure whether Office JS supports something, use CODE_JS first. Only fall back to VBA_MACRO for the specific cases listed above.
 
 // EVAL-IMPROVEMENTS-START
-**Rules:**
-
-* When clearing all filters, use 'worksheet.getAutoFilter().clearAllFilters()' instead of 'clearFilters()'.
-* When filtering by value, use 'worksheet.getAutoFilter().applyColumnFilter(column, value)' instead of 'applyColumnFilter()'.
-* When formatting numbers, use 'worksheet.getUsedRange().load("values")' to load the values before formatting, and 'setNumberFormat(range, format)' instead of 'setNumberFormat(range, format, startRow, endRow)'.
-* When deleting a row, use 'worksheet.getUsedRange().deleteRow(row)' instead of asking for user input.
-* When inserting a new row, use 'worksheet.getUsedRange().insertRowsBefore(row, count)' instead of lacking the actual code implementation.
-* When getting the value in a cell, use 'worksheet.getRange(cell).value' instead of asking for the value.
-
-**Examples:**
-
-'''javascript
-// L1-filter-003
-const sheet = workbook.worksheets.getActiveWorksheet();
-await sheet.getAutoFilter().clearAllFilters();
-
-// gen-L1-filtering-easy-057
-const sheet = workbook.worksheets.getActiveWorksheet();
-const used = sheet.getUsedRange();
-used.load("values");
-await context.sync();
-const rows = used.values;
-const hdr = rows[0].map(h => String(h).toLowerCase().trim());
-const col = hdr.indexOf("y");
-if (col!== -1) {
-  const toShow = [];
-  for (let i = 1; i < rows.length; i++) {
-    if (String(rows[i][col]).toLowerCase() === "val") toShow.push(i);
-  }
-  const filtered = rows.slice(0, 1).concat(toShow.map(i => rows[i]));
-  sheet.getRangeByIndexes(0, 0, filtered.length, rows[0].length).values = filtered;
-}
-
-// gen-L1-format-003
-const sheet = workbook.worksheets.getActiveWorksheet();
-const used = sheet.getUsedRange();
-used.load("values");
-await context.sync();
-await used.setNumberFormat("B2:B" + used.rowCount, "$#,##0.00");
-
-// gen-L1-formulas-003
-const sheet = workbook.worksheets.getActiveWorksheet();
-sheet.getRange("D2").formulas = [["IF(C2>50, \"Pass\", \"Fail\")]];
-await context.sync();
-
-// gen-L1-sheet-operations-easy-058
-const sheet = workbook.worksheets.getActiveWorksheet();
-await sheet.getUsed
 // EVAL-IMPROVEMENTS-END
 `
 + (DEFAULT_MODEL.toLowerCase().includes('qwen') ? '\n/no_think' : '');
@@ -1423,7 +1375,9 @@ const SEARCH_DIRS = [
   path.join(os.homedir(), 'OneDrive - *'),
 ];
 
-function expandGlobs(dirs) {
+const fsp = fs.promises;
+
+async function expandGlobs(dirs) {
   const expanded = [];
   for (const d of dirs) {
     if (d.includes('*')) {
@@ -1431,7 +1385,8 @@ function expandGlobs(dirs) {
         const parent = path.dirname(d);
         const pattern = path.basename(d);
         const re = new RegExp('^' + pattern.replace(/\*/g, '.*') + '$');
-        fs.readdirSync(parent).filter(f => re.test(f)).forEach(f => expanded.push(path.join(parent, f)));
+        const names = await fsp.readdir(parent);
+        names.filter(f => re.test(f)).forEach(f => expanded.push(path.join(parent, f)));
       } catch {}
     } else {
       expanded.push(d);
@@ -1440,59 +1395,57 @@ function expandGlobs(dirs) {
   return expanded;
 }
 
-function isAllowedWorkbookPath(filePath) {
+async function isAllowedWorkbookPath(filePath) {
   if (!filePath || typeof filePath !== 'string') return false;
   if (!/\.(xlsx|xlsm)$/i.test(filePath)) return false;
   let real;
-  try { real = fs.realpathSync(filePath); } catch { real = path.resolve(filePath); }
-  const allowed = expandGlobs(SEARCH_DIRS);
-  return allowed.some(d => {
+  try { real = await fsp.realpath(filePath); } catch { real = path.resolve(filePath); }
+  const allowed = await expandGlobs(SEARCH_DIRS);
+  for (const d of allowed) {
     let realD;
-    try { realD = fs.realpathSync(d); } catch { realD = path.resolve(d); }
-    return real.startsWith(realD + path.sep) || real === realD;
-  });
+    try { realD = await fsp.realpath(d); } catch { realD = path.resolve(d); }
+    if (real.startsWith(realD + path.sep) || real === realD) return true;
+  }
+  return false;
 }
 
-function walkForXlsx(dir, maxDepth, results, visited, nameQuery, contentQuery, limit) {
+// Async so the recursive scan yields the event loop between each fs call —
+// a sync readdir/stat walk over the whole home dir freezes every other request
+// (including in-flight streaming chats) until it finishes.
+async function walkForXlsx(dir, maxDepth, results, visited, nameQuery, contentQuery, limit) {
   if (results.length >= limit || maxDepth < 0) return;
   let real;
-  try { real = fs.realpathSync(dir); } catch { return; }
+  try { real = await fsp.realpath(dir); } catch { return; }
   if (visited.has(real)) return;
   visited.add(real);
   let entries;
-  try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch { return; }
+  try { entries = await fsp.readdir(dir, { withFileTypes: true }); } catch { return; }
   for (const ent of entries) {
     if (results.length >= limit) return;
     const full = path.join(dir, ent.name);
     if (ent.isDirectory()) {
       if (ent.name.startsWith('.') || ent.name === 'node_modules' || ent.name === 'AppData') continue;
-      walkForXlsx(full, maxDepth - 1, results, visited, nameQuery, contentQuery, limit);
+      await walkForXlsx(full, maxDepth - 1, results, visited, nameQuery, contentQuery, limit);
     } else if (/\.(xlsx|xlsm)$/i.test(ent.name) && !ent.name.startsWith('~$')) {
       const nameLower = ent.name.toLowerCase();
-      if (nameQuery && nameLower.includes(nameQuery)) {
-        try {
-          const stat = fs.statSync(full);
-          results.push({ path: full, name: ent.name, size: stat.size, modified: stat.mtime });
-        } catch {}
-      } else if (!nameQuery) {
-        try {
-          const stat = fs.statSync(full);
-          results.push({ path: full, name: ent.name, size: stat.size, modified: stat.mtime });
-        } catch {}
-      }
+      if (nameQuery && !nameLower.includes(nameQuery)) continue;
+      try {
+        const stat = await fsp.stat(full);
+        results.push({ path: full, name: ent.name, size: stat.size, modified: stat.mtime });
+      } catch {}
     }
   }
 }
 
-app.post('/api/workbooks/search', (req, res) => {
+app.post('/api/workbooks/search', async (req, res) => {
   const { query, limit: userLimit } = req.body;
   const limit = Math.min(userLimit || 50, 200);
   const q = (query || '').toLowerCase().trim();
   const results = [];
   const visited = new Set();
-  const dirs = expandGlobs(SEARCH_DIRS);
+  const dirs = await expandGlobs(SEARCH_DIRS);
   for (const d of dirs) {
-    walkForXlsx(d, 5, results, visited, q || null, null, limit);
+    await walkForXlsx(d, 5, results, visited, q || null, null, limit);
     if (results.length >= limit) break;
   }
   res.json(results.slice(0, limit));
@@ -1501,7 +1454,7 @@ app.post('/api/workbooks/search', (req, res) => {
 app.post('/api/workbooks/read', async (req, res) => {
   const { filePath, sheetNames } = req.body;
   if (!filePath) return res.status(400).json({ error: 'filePath required' });
-  if (!isAllowedWorkbookPath(filePath)) return res.status(400).json({ error: 'filePath must be an .xlsx or .xlsm file in an allowed directory' });
+  if (!await isAllowedWorkbookPath(filePath)) return res.status(400).json({ error: 'filePath must be an .xlsx or .xlsm file in an allowed directory' });
   try {
     const wb = new ExcelJS.Workbook();
     await wb.xlsx.readFile(filePath);
@@ -1530,7 +1483,7 @@ app.post('/api/workbooks/read', async (req, res) => {
 app.post('/api/workbooks/write', async (req, res) => {
   const { filePath, operations } = req.body;
   if (!filePath || !operations) return res.status(400).json({ error: 'filePath and operations required' });
-  if (!isAllowedWorkbookPath(filePath)) return res.status(400).json({ error: 'filePath must be an .xlsx or .xlsm file in an allowed directory' });
+  if (!await isAllowedWorkbookPath(filePath)) return res.status(400).json({ error: 'filePath must be an .xlsx or .xlsm file in an allowed directory' });
   try {
     const wb = new ExcelJS.Workbook();
     try { await wb.xlsx.readFile(filePath); } catch { /* new file */ }
@@ -1567,10 +1520,10 @@ app.post('/api/workbooks/write', async (req, res) => {
   }
 });
 
-app.post('/api/workbooks/open', (req, res) => {
+app.post('/api/workbooks/open', async (req, res) => {
   const { filePath } = req.body;
   if (!filePath) return res.status(400).json({ error: 'filePath required' });
-  if (!isAllowedWorkbookPath(filePath)) return res.status(400).json({ error: 'filePath must be an .xlsx or .xlsm file in an allowed directory' });
+  if (!await isAllowedWorkbookPath(filePath)) return res.status(400).json({ error: 'filePath must be an .xlsx or .xlsm file in an allowed directory' });
   const platform = process.platform;
   let cmd, args;
   if (platform === 'win32') {
@@ -1596,9 +1549,9 @@ app.post('/api/workbooks/search-content', async (req, res) => {
   // First find all xlsx files, then search content
   const allFiles = [];
   const visited = new Set();
-  const dirs = expandGlobs(SEARCH_DIRS);
+  const dirs = await expandGlobs(SEARCH_DIRS);
   for (const d of dirs) {
-    walkForXlsx(d, 4, allFiles, visited, null, null, 500);
+    await walkForXlsx(d, 4, allFiles, visited, null, null, 500);
   }
 
   const matches = [];
@@ -1690,6 +1643,30 @@ function sanitizeMessages(msgs) {
     }
     return { role: m.role, content };
   });
+}
+
+// ── Context window resolution ────────────────────────────────────────────────
+// The token budget must match the SELECTED model, not a fixed 200k — padding the
+// workbook dump past a small model's limit causes hard provider errors or silent
+// truncation. Prefer an authoritative hint from the client (it knows the model's
+// context length from the catalog), else infer from the model id, else a safe default.
+function getContextWindow(model, hint) {
+  const h = Number(hint);
+  if (Number.isFinite(h) && h >= 1000) return Math.min(Math.max(Math.floor(h), 8000), 2_000_000);
+  const id = String(model || DEFAULT_MODEL).toLowerCase();
+  // Ordered most-specific first
+  const rules = [
+    [/gemini.*(1\.5|2\.0|2\.5|flash|pro)/, 1_000_000],
+    [/claude/,                              200_000],
+    [/gpt-4\.1|gpt-4o|o1|o3|gpt-4-turbo/,   128_000],
+    [/llama-3\.[123]|llama-4|3\.3-70b/,     128_000],
+    [/qwen.*(2\.5|3)|qwen2|qwen3/,          32_000],
+    [/mixtral|mistral-large|mistral-nemo/,  32_000],
+    [/gpt-3\.5/,                            16_000],
+    [/gpt-4(?![.\-]?(o|turbo|1))/,           8_000],
+  ];
+  for (const [re, ctx] of rules) if (re.test(id)) return ctx;
+  return 32_000; // conservative default — better to under-fill than overflow
 }
 
 // ── Main chat route ──────────────────────────────────────────────────────────
@@ -1803,13 +1780,14 @@ app.post('/api/chat', async (req, res) => {
   const prefsSection = preferences ? `\n\nUSER PREFERENCES (always follow these):\n${preferences}` : '';
 
   // Token budget: estimate tokens from all parts, truncate workbook data if needed
-  const MAX_CONTEXT_TOKENS = 200000;
+  const MAX_CONTEXT_TOKENS = getContextWindow(effectiveModel, options?.contextWindow);
   const CHARS_PER_TOKEN = 3.5;
   const systemTokens = Math.ceil(SYSTEM_PROMPT.length / CHARS_PER_TOKEN);
   const messageTokens = Math.ceil(recentMessages.reduce((s, m) => s + (m.content || '').length, 0) / CHARS_PER_TOKEN);
   const summaryTokens = summary ? Math.ceil(summary.length / CHARS_PER_TOKEN) : 0;
   const overhead = systemTokens + messageTokens + summaryTokens + maxTokens + 2000;
-  const wbBudgetTokens = Math.max(10000, MAX_CONTEXT_TOKENS - overhead);
+  const minWbTokens = Math.min(10000, Math.floor(MAX_CONTEXT_TOKENS * 0.2));
+  const wbBudgetTokens = Math.max(minWbTokens, MAX_CONTEXT_TOKENS - overhead);
   const wbBudgetChars = Math.floor(wbBudgetTokens * CHARS_PER_TOKEN);
 
   let trimmedWbData = workbookData || '';
@@ -2277,9 +2255,10 @@ RULES:
     content: recentMessages[lastIdx].content + '\n\n[REMINDER: If making changes, output a CODE_JS block with Office JS code. Do not skip it.]' };
 
   const prefsSection = preferences ? `\n\nUSER PREFERENCES (always follow these):\n${preferences}` : '';
-  const MAX_CONTEXT_TOKENS = 200000, CHARS_PER_TOKEN = 3.5;
+  const MAX_CONTEXT_TOKENS = getContextWindow(effectiveModel, options?.contextWindow), CHARS_PER_TOKEN = 3.5;
   const overhead = Math.ceil((SYSTEM_PROMPT.length + recentMessages.reduce((s,m)=>s+(m.content||'').length,0) + (summary||'').length) / CHARS_PER_TOKEN) + maxTokens + 2000;
-  const wbBudgetChars = Math.floor(Math.max(10000, MAX_CONTEXT_TOKENS - overhead) * CHARS_PER_TOKEN);
+  const minWbTokens = Math.min(10000, Math.floor(MAX_CONTEXT_TOKENS * 0.2));
+  const wbBudgetChars = Math.floor(Math.max(minWbTokens, MAX_CONTEXT_TOKENS - overhead) * CHARS_PER_TOKEN);
   let trimmedWbData = workbookData || '';
   if (trimmedWbData.length > wbBudgetChars) trimmedWbData = trimmedWbData.slice(0, wbBudgetChars) + '\n\n[...workbook data truncated to fit context window.]';
 

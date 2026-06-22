@@ -811,8 +811,9 @@ function classifyIntent(text) {
 // ── Security state ────────────────────────────────────────────────────────────
 let sessionDangerConfirmed = new Set(); // 'high', 'critical' confirmed this session
 let sessionPasswordVerified = false;    // password entered once this session
-const APP_VERSION = 'v9.2.0';
+const APP_VERSION = 'v9.3.0';
 const CHANGELOG = [
+  { ver: 'v9.3.0', date: '2026-06-22', summary: 'Security password now stored as a SHA-256 hash instead of reversible base64, fixing a comparison bug with legacy values; workbook file search converted to async so it no longer freezes the server (including live chats) during disk scans; token budget is now model-aware (uses the selected model\'s real context window) instead of a fixed 200k; removed broken/invalid example code from the system prompt that taught the model non-existent Office JS APIs.' },
   { ver: 'v9.2.0', date: '2026-06-22', summary: 'Security & safety fixes: danger classifier now flags writeExternalWorkbook (disk overwrite) and openInExcel; Undo deletes only sheets the AI added during the action (no longer wipes sheets the user created afterwards); OAuth pending tokens are bound to a per-attempt nonce so another local client cannot claim the last sign-in.' },
   { ver: 'v9.1.7', date: '2026-06-06', summary: 'OAuth: show "click here to complete" button after Google sign-in opens, since Excel webview cannot detect focus/visibility changes.' },
   { ver: 'v9.1.6', date: '2026-06-06', summary: 'Fix OAuth token pickup: poll triggers on window focus and visibility change so tokens are detected immediately when user returns to Excel from Chrome.' },
@@ -964,21 +965,42 @@ function loadSettings() {
   showCode = localStorage.getItem('showCode') !== 'false';
   migrateProviderKeys();
 }
-function saveSecPwd() {
+// Security password is stored as a SHA-256 hash (not base64, which is trivially
+// reversible and ambiguous to compare). Legacy base64/plain values are still
+// accepted on verify and upgraded to a hash the next time the password is set.
+async function sha256Hex(s) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s));
+  return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('');
+}
+function hasSecurityPassword() {
+  return !!sessionStorage.getItem('securityPasswordHash') || !!sessionStorage.getItem('securityPassword');
+}
+async function verifySecurityPassword(entered) {
+  const h = sessionStorage.getItem('securityPasswordHash');
+  if (h) return (await sha256Hex(entered)) === h;
+  const legacy = sessionStorage.getItem('securityPassword');
+  if (legacy != null) {
+    let plain = legacy;
+    try { plain = atob(legacy); } catch {}
+    // tolerate both base64-encoded (normal) and accidentally plain-text legacy values
+    return entered === plain || entered === legacy;
+  }
+  return false;
+}
+async function saveSecPwd() {
   const cur    = document.getElementById('secCurPwd')?.value || '';
   const newPwd = document.getElementById('secNewPwd')?.value || '';
-  const stored = sessionStorage.getItem('securityPassword');
-  if (stored) {
-    let storedPlain = stored;
-    try { storedPlain = atob(stored); } catch {}
-    if (cur !== storedPlain) { showToast('Incorrect current password'); return; }
+  if (hasSecurityPassword()) {
+    if (!(await verifySecurityPassword(cur))) { showToast('Incorrect current password'); return; }
   }
   const note = document.getElementById('secPwdNote');
   if (newPwd) {
-    sessionStorage.setItem('securityPassword', btoa(newPwd));
+    sessionStorage.setItem('securityPasswordHash', await sha256Hex(newPwd));
+    sessionStorage.removeItem('securityPassword'); // drop any legacy reversible value
     if (note) note.textContent = 'Password set — required for critical operations.';
     showToast('Security password saved');
   } else {
+    sessionStorage.removeItem('securityPasswordHash');
     sessionStorage.removeItem('securityPassword');
     if (note) note.textContent = 'Not set — critical operations need only confirmation.';
     showToast('Security password removed');
@@ -1259,7 +1281,7 @@ function renderPreferencesTab() {
   `<div class="sgrp"><div class="slabel">Session Cost</div><div style="font-size:13px;color:var(--text)">This session: <strong id="sessionCostDisplay">$${sessionCost.toFixed(3)}</strong></div><button class="sdanger" style="margin-top:6px" onclick="resetSessionCost()">Reset session cost</button></div>`;
 }
 function renderPrivacyTab() {
-  const hasPwd = !!sessionStorage.getItem('securityPassword');
+  const hasPwd = hasSecurityPassword();
   return `<div class="sgrp"><div class="slabel">Security Password</div><div style="font-size:12px;color:var(--text2);margin-bottom:6px">Password required for critical operations (file deletion, shell commands). Leave blank to disable.</div><input class="sinput" type="password" id="secCurPwd" placeholder="Current password (leave blank if not set)" style="margin-bottom:6px"><input class="sinput" type="password" id="secNewPwd" placeholder="New password (leave blank to disable)"><button class="add-model-btn" onclick="saveSecPwd()" style="margin-top:6px">Save password</button><span class="sinote" id="secPwdNote">${hasPwd?'Password set — required for critical operations.':'Not set — critical operations need only confirmation.'}</span></div>`+
   `<div class="sgrp"><div class="slabel">Danger Confirmations</div><div style="font-size:12px;color:var(--text2)">High-risk and critical operations always require confirmation before execution. This cannot be disabled.</div></div>`;
 }
@@ -2771,7 +2793,7 @@ function requestDangerConfirmation(danger) {
 
   return new Promise(resolve => {
     const isCritical = danger.level === 'critical';
-    const hasPwd = !!sessionStorage.getItem('securityPassword');
+    const hasPwd = hasSecurityPassword();
 
     const banner = document.createElement('div');
     banner.className = `danger-banner ${danger.level}`;
@@ -2810,17 +2832,12 @@ function requestDangerConfirmation(danger) {
 
     document.getElementById('dangerCancel').onclick = () => { cleanup(); resolve(false); };
 
-    document.getElementById('dangerProceed').onclick = () => {
+    document.getElementById('dangerProceed').onclick = async () => {
       // Password check for critical ops
       if (isCritical && hasPwd && !sessionPasswordVerified) {
         const inp = document.getElementById('dangerPwdInp');
         if (!inp) { cleanup(); resolve(false); return; }
-        const entered = inp.value;
-        const rawStored = sessionStorage.getItem('securityPassword');
-        // Support both plain-text (legacy) and btoa-encoded (new) passwords
-        let stored = rawStored;
-        try { stored = atob(rawStored); } catch {}
-        if (entered !== stored) {
+        if (!(await verifySecurityPassword(inp.value))) {
           inp.classList.add('err');
           inp.placeholder = 'Wrong password — try again';
           inp.value = '';
@@ -3656,6 +3673,7 @@ async function sendMessage() {
       deepThink:opts.deep,dynamicDepth:opts.dynamic,autoModel:opts.auto,plan:opts.plan,
       noThink:slashNoThink==='on',allowThink:slashNoThink==='off',
       pinnedMemory,coreMemory,preferences:userPreferences,costLimit:getCostLimit(),
+      contextWindow:(catalogModels.find(m=>m.id===modelId)||allModelsFlat().find(m=>m.id===modelId)||{}).context||undefined,
       availableModels:opts.auto?allModelsFlat().filter(m=>!m.id.startsWith('ollama:')).map(m=>({id:m.id,name:m.name,in:m.in,out:m.out,tags:m.tags})):undefined
     }
   };
