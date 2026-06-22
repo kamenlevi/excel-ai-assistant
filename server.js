@@ -867,6 +867,12 @@ function analyzeDanger(code) {
     [/\bmove\s*\(.*\.(xlsx|xlsm)\b/i,                                    'workbook file move'],
     // Bulk: loop that calls a write/modify endpoint for each file
     [/(for\b|forEach|\.map\s*\()[\s\S]{1,600}\/api\/workbooks\/write/is, 'bulk workbook modification loop'],
+    // External-workbook helpers exposed to generated CODE_JS — these are the real
+    // filesystem reach of the sandboxed browser code: writeExternalWorkbook
+    // overwrites a file on disk, openInExcel launches the desktop app server-side.
+    [/(for\b|forEach|\.map\s*\()[\s\S]{1,600}\bwriteExternalWorkbook\s*\(/is, 'bulk external-workbook write loop'],
+    [/\bwriteExternalWorkbook\s*\(/i,                                    'writing/overwriting a workbook file on disk'],
+    [/\bopenInExcel\s*\(/i,                                              'opening a file in the desktop Excel app'],
     // Searching from drive roots
     [/['"](C:\\\\|D:\\\\|E:\\\\|[A-Z]:\\\\|\/home\/|\/Users\/|\/root\/)['"]/i, 'whole-drive file search'],
     // Recursive file walk outside known patterns
@@ -2378,16 +2384,28 @@ app.get('/api/auth/config', (req, res) => {
 });
 
 
-// OAuth callback — Supabase redirects here after social sign-in
-// Store tokens server-side so the add-in (different webview) can poll for them
-let _pendingAuthTokens = null;
-let _pendingAuthExpiry = 0;
+// OAuth callback — Supabase redirects here after social sign-in.
+// Tokens are stored server-side (cross-context flows like the Excel add-in can't
+// receive a postMessage) keyed by a per-attempt nonce the initiating client
+// generates and passes through redirectTo. Without the nonce, another local
+// client polling this endpoint could otherwise grab whoever signed in last.
+const _pendingAuth = new Map(); // nonce -> { hash, expiry }
+const PENDING_AUTH_TTL = 120000; // 2 minutes
+
+function _sweepPendingAuth() {
+  const now = Date.now();
+  for (const [k, v] of _pendingAuth) if (v.expiry < now) _pendingAuth.delete(k);
+}
 
 app.get('/auth/callback', (req, res) => {
+  // Reflect the nonce from the redirect query into the page so it can be POSTed
+  // back alongside the token hash. JSON-encode to keep it safe inside the script.
+  const nonce = typeof req.query.n === 'string' ? req.query.n : '';
   res.send(`<!DOCTYPE html><html><head><title>Signing in…</title></head><body>
     <p>Signing in… you can close this window.</p>
     <script>
       var hash = window.location.hash;
+      var nonce = ${JSON.stringify(nonce)};
       // Try postMessage to opener first (same-context popup flow)
       var sent = false;
       try {
@@ -2402,7 +2420,7 @@ app.get('/auth/callback', (req, res) => {
         fetch('/api/auth/pending-token', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ hash: hash })
+          body: JSON.stringify({ hash: hash, nonce: nonce })
         }).then(function() {
           if (!sent) {
             document.body.innerHTML = '<p style="font-family:sans-serif;text-align:center;margin-top:40px">Signed in! You can close this tab and return to Excel.</p>';
@@ -2414,19 +2432,24 @@ app.get('/auth/callback', (req, res) => {
 });
 
 app.post('/api/auth/pending-token', (req, res) => {
-  _pendingAuthTokens = req.body.hash || null;
-  _pendingAuthExpiry = Date.now() + 120000; // expires in 2 minutes
+  const hash = req.body?.hash || null;
+  if (!hash) return res.status(400).json({ ok: false });
+  _sweepPendingAuth();
+  // Fall back to a shared bucket only if no nonce is supplied (legacy clients).
+  const key = (typeof req.body?.nonce === 'string' && req.body.nonce) || '__legacy__';
+  _pendingAuth.set(key, { hash, expiry: Date.now() + PENDING_AUTH_TTL });
   res.json({ ok: true });
 });
 
 app.get('/api/auth/pending-token', (req, res) => {
-  if (_pendingAuthTokens && Date.now() < _pendingAuthExpiry) {
-    const hash = _pendingAuthTokens;
-    _pendingAuthTokens = null; // consume once
-    res.json({ hash });
-  } else {
-    res.json({ hash: null });
+  _sweepPendingAuth();
+  const key = (typeof req.query.n === 'string' && req.query.n) || '__legacy__';
+  const entry = _pendingAuth.get(key);
+  if (entry && Date.now() < entry.expiry) {
+    _pendingAuth.delete(key); // consume once
+    return res.json({ hash: entry.hash });
   }
+  res.json({ hash: null });
 });
 
 // ── App version endpoint (used by Electron updater UI) ───────────────────────
