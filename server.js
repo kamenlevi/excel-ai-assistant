@@ -590,52 +590,50 @@ If unsure whether Office JS supports something, use CODE_JS first. Only fall bac
 // EVAL-IMPROVEMENTS-START
 **Rules:**
 
-* When clearing all filters, use 'worksheet.getAutoFilter().clearAllFilters()' instead of 'clearFilters()'.
-* When filtering by value, use 'worksheet.getAutoFilter().applyColumnFilter(column, value)' instead of 'applyColumnFilter()'.
-* When formatting numbers, use 'worksheet.getUsedRange().load("values")' to load the values before formatting, and 'setNumberFormat(range, format)' instead of 'setNumberFormat(range, format, startRow, endRow)'.
-* When deleting a row, use 'worksheet.getUsedRange().deleteRow(row)' instead of asking for user input.
-* When inserting a new row, use 'worksheet.getUsedRange().insertRowsBefore(row, count)' instead of lacking the actual code implementation.
-* When getting the value in a cell, use 'worksheet.getRange(cell).value' instead of asking for the value.
+* When using 'getUsedRange()', use 'getRange()' instead to get a specific range.
+* When deleting a row, use 'deleteRow(row)' instead of 'delete(Excel.DeleteShiftDirection.up)'.
+* When inserting a shape, account for the header row.
+* When inserting a shape, use 'addExcelShape(shapeType)' instead of 'shapes.add()'.
+* When getting the value in a cell, use 'getRange(cell).value' instead of asking for the value.
+* When applying data validation, use 'applyDataValidation()' instead of 'dataValidation ='.
+* When applying data validation, use 'addList(values)' instead of 'Excel.DataValidation.addList()'.
+* When creating a table, specify the table's data range and headers.
 
 **Examples:**
 
 '''javascript
-// L1-filter-003
+// gen-L1-filtering-easy-055
 const sheet = workbook.worksheets.getActiveWorksheet();
-await sheet.getAutoFilter().clearAllFilters();
-
-// gen-L1-filtering-easy-057
-const sheet = workbook.worksheets.getActiveWorksheet();
-const used = sheet.getUsedRange();
-used.load("values");
+const range = sheet.getRange("A1");
+range.load("values");
 await context.sync();
-const rows = used.values;
+const rows = range.values;
 const hdr = rows[0].map(h => String(h).toLowerCase().trim());
-const col = hdr.indexOf("y");
-if (col!== -1) {
-  const toShow = [];
-  for (let i = 1; i < rows.length; i++) {
-    if (String(rows[i][col]).toLowerCase() === "val") toShow.push(i);
-  }
-  const filtered = rows.slice(0, 1).concat(toShow.map(i => rows[i]));
-  sheet.getRangeByIndexes(0, 0, filtered.length, rows[0].length).values = filtered;
+const col = hdr.indexOf("x");
+if (col === -1) throw new Error("Column 'X' not found.");
+const toShow = [];
+for (let i = 1; i < rows.length; i++) {
+  if (String(rows[i][col]) === "val") toShow.push(i);
 }
+const filtered = rows.slice(0, 1).concat(toShow.map(i => rows[i]));
+sheet.getRangeByIndexes(0, 0, filtered.length, rows[0].length).values = filtered;
+
+// gen-L1-format-002
+const sheet = workbook.worksheets.getActiveWorksheet();
+const range = sheet.getRange("A2:C" + sheet.getUsedRange().rowCount);
+range.borders = Excel.Border.all;
+range.borders.top = { style: "thin", color: "black" };
+range.borders.bottom = { style: "thin", color: "black" };
+range.borders.left = { style: "thin", color: "black" };
+range.borders.right = { style: "thin", color: "black" };
+await context.sync();
 
 // gen-L1-format-003
 const sheet = workbook.worksheets.getActiveWorksheet();
-const used = sheet.getUsedRange();
-used.load("values");
+const range = sheet.getRange("B2:B" + sheet.getUsedRange().rowCount);
+range.load("values");
 await context.sync();
-await used.setNumberFormat("B2:B" + used.rowCount, "$#,##0.00");
-
-// gen-L1-formulas-003
-const sheet = workbook.worksheets.getActiveWorksheet();
-sheet.getRange("D2").formulas = [["IF(C2>50, \"Pass\", \"Fail\")]];
-await context.sync();
-
-// gen-L1-sheet-operations-easy-058
-const sheet = workbook.worksheets.getActiveWorksheet();
-await sheet.getUsed
+range.setNumberFormat("$#,##0.00
 // EVAL-IMPROVEMENTS-END
 `
 + (DEFAULT_MODEL.toLowerCase().includes('qwen') ? '\n/no_think' : '');
