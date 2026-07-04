@@ -811,8 +811,9 @@ function classifyIntent(text) {
 // ── Security state ────────────────────────────────────────────────────────────
 let sessionDangerConfirmed = new Set(); // 'high', 'critical' confirmed this session
 let sessionPasswordVerified = false;    // password entered once this session
-const APP_VERSION = 'v9.1.7';
+const APP_VERSION = 'v9.2.0';
 const CHANGELOG = [
+  { ver: 'v9.2.0', date: '2026-07-04', summary: 'Cross-device chat history: when signed in, chats now read/write directly to Supabase (new `chats` table with row-level security) so history syncs across every device you sign in on. Signed-out/guest users keep using local server storage unchanged. Signing out swaps the list back to local. See docs/supabase-schema.sql for the one-time table setup.' },
   { ver: 'v9.1.7', date: '2026-06-06', summary: 'OAuth: show "click here to complete" button after Google sign-in opens, since Excel webview cannot detect focus/visibility changes.' },
   { ver: 'v9.1.6', date: '2026-06-06', summary: 'Fix OAuth token pickup: poll triggers on window focus and visibility change so tokens are detected immediately when user returns to Excel from Chrome.' },
   { ver: 'v9.1.5', date: '2026-06-06', summary: 'Fix OAuth for Excel add-in: tokens now pass through server (not localStorage/postMessage) so sign-in works even when OAuth opens in Chrome while the app runs in Excel\'s webview. Client polls server for pending tokens after opening OAuth window.' },
@@ -1931,8 +1932,29 @@ function closeModelPicker() {
 // ── Sidebar / Chat history ────────────────────────────────────────────────────
 function openSidebar()  { document.getElementById('sidebar').classList.add('open'); }
 function closeSidebar() { document.getElementById('sidebar').classList.remove('open'); }
+// ── Chat storage ────────────────────────────────────────────────────────────
+// Signed in  → chats live in Supabase (the `chats` table) and sync across every
+//              device you sign in on. RLS ensures you only ever see your own.
+// Signed out → chats fall back to the local server (/api/chats), same as before.
+function cloudOn(){ return !!(supabaseClient && currentUser); }
+async function cloudListChats(){
+  const { data, error } = await supabaseClient
+    .from('chats')
+    .select('id,title,messages,summary,total_tokens,updated_at')
+    .order('updated_at',{ ascending:false });
+  if(error) throw error;
+  return (data||[]).map(r=>({
+    id:r.id, title:r.title, updatedAt:r.updated_at,
+    messageCount: Array.isArray(r.messages) ? r.messages.length : 0,
+    messages:r.messages, summary:r.summary, totalTokens:r.total_tokens
+  }));
+}
 async function loadChats() {
-  try{const r=await fetch('/api/chats');const chats=await r.json();renderChatList(chats);if(chats.length&&!chatId)await loadChat(chats[0].id);}catch{}
+  try{
+    const chats = cloudOn() ? await cloudListChats() : await (await fetch('/api/chats')).json();
+    renderChatList(chats);
+    if(chats.length&&!chatId)await loadChat(chats[0].id);
+  }catch(e){ console.error('[chats] loadChats failed', e); }
 }
 function renderChatList(chats) {
   const el=document.getElementById('chatList');
@@ -1948,28 +1970,72 @@ function renderChatList(chats) {
 }
 async function chatClick(e,id){if(!e.target.classList.contains('chat-del'))await loadChat(id);}
 async function loadChat(id) {
-  try{const r=await fetch('/api/chats/'+id);const c=await r.json();chatId=id;history=c.messages||[];summary=c.summary||null;totalTok=c.totalTokens||0;renderMsgs();updateTok();closeSidebar();refreshChatList();}catch{}
+  try{
+    let c;
+    if(cloudOn()){
+      const { data, error } = await supabaseClient.from('chats').select('*').eq('id',id).single();
+      if(error) throw error;
+      c = { messages:data.messages, summary:data.summary, totalTokens:data.total_tokens };
+    } else {
+      c = await (await fetch('/api/chats/'+id)).json();
+    }
+    chatId=id;history=c.messages||[];summary=c.summary||null;totalTok=c.totalTokens||0;
+    renderMsgs();updateTok();closeSidebar();refreshChatList();
+  }catch(e){ console.error('[chats] loadChat failed', e); }
 }
 async function newChat(doSave=true) {
   if(doSave&&chatId)await saveChat();
-  try{const r=await fetch('/api/chats',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({title:'New Chat',messages:[]})});const c=await r.json();chatId=c.id;history=[];summary=null;totalTok=0;renderEmpty();updateTok();closeSidebar();await loadChats();}catch{}
+  try{
+    let id;
+    if(cloudOn()){
+      const { data, error } = await supabaseClient.from('chats')
+        .insert({ user_id: currentUser.id, title:'New Chat', messages:[] })
+        .select('id').single();
+      if(error) throw error; id=data.id;
+    } else {
+      const c = await (await fetch('/api/chats',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({title:'New Chat',messages:[]})})).json();
+      id=c.id;
+    }
+    chatId=id;history=[];summary=null;totalTok=0;renderEmpty();updateTok();closeSidebar();await loadChats();
+  }catch(e){ console.error('[chats] newChat failed', e); }
 }
 async function saveChat(title) {
   if(!chatId)return;
   const t=title||history.find(m=>m.role==='user')?.content?.split('\n')[0]?.slice(0,50)||'New Chat';
-  try{await fetch('/api/chats/'+chatId,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({title:t,messages:history,summary,totalTokens:totalTok})});await loadChats();}catch{}
+  try{
+    if(cloudOn()){
+      const { error } = await supabaseClient.from('chats')
+        .update({ title:t, messages:history, summary, total_tokens:totalTok, updated_at:new Date().toISOString() })
+        .eq('id',chatId);
+      if(error) throw error;
+    } else {
+      await fetch('/api/chats/'+chatId,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({title:t,messages:history,summary,totalTokens:totalTok})});
+    }
+    await loadChats();
+  }catch(e){ console.error('[chats] saveChat failed', e); }
 }
 async function delChat(e,id) {
-  e.stopPropagation();await fetch('/api/chats/'+id,{method:'DELETE'});
+  e.stopPropagation();
+  try{
+    if(cloudOn()){ const { error } = await supabaseClient.from('chats').delete().eq('id',id); if(error) throw error; }
+    else await fetch('/api/chats/'+id,{method:'DELETE'});
+  }catch(err){ console.error('[chats] delChat failed', err); }
   if(chatId===id){chatId=null;history=[];renderEmpty();}await loadChats();
 }
 async function clearAllHistory() {
   if(!confirm('Delete all chat history? This cannot be undone.'))return;
-  const r=await fetch('/api/chats');const chats=await r.json();
-  await Promise.all(chats.map(c=>fetch('/api/chats/'+c.id,{method:'DELETE'})));
+  try{
+    if(cloudOn()){
+      const { error } = await supabaseClient.from('chats').delete().eq('user_id',currentUser.id);
+      if(error) throw error;
+    } else {
+      const chats=await (await fetch('/api/chats')).json();
+      await Promise.all(chats.map(c=>fetch('/api/chats/'+c.id,{method:'DELETE'})));
+    }
+  }catch(e){ console.error('[chats] clearAllHistory failed', e); }
   chatId=null;history=[];renderEmpty();closeSettings();await loadChats();
 }
-async function refreshChatList(){try{const r=await fetch('/api/chats');renderChatList(await r.json());}catch{}}
+async function refreshChatList(){try{const chats = cloudOn() ? await cloudListChats() : await (await fetch('/api/chats')).json();renderChatList(chats);}catch{}}
 
 // ── Training Mode ────────────────────────────────────────────────────────────
 let trainMode = false;
@@ -3971,11 +4037,17 @@ async function initAuth() {
 }
 
 function onAuthChange(user) {
+  const prev = currentUser;
   currentUser = user;
   showAccountBtn(user);
   if (user) {
     document.getElementById('authModal')?.classList.remove('open');
+    chatId = null; history = [];               // drop guest view, load this account's cloud chats
     Promise.all([loadChats(), loadSkills(), loadUsageLog()]).catch(()=>{});
+  } else if (prev) {
+    // Signed out — swap back to local/guest chats
+    chatId = null; history = []; renderEmpty();
+    loadChats().catch(()=>{});
   }
 }
 
