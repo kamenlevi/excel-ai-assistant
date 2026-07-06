@@ -2442,11 +2442,31 @@ app.get('/api/app/version', (req, res) => {
 });
 
 function startServer(opts = {}) {
-  const certDir = opts.certDir || DEV_CERTS_DIR;
-  const serverPems = {
-    key:  fs.readFileSync(path.join(certDir, 'localhost.key'), 'utf8'),
-    cert: fs.readFileSync(path.join(certDir, 'localhost.crt'), 'utf8'),
-  };
+  const certDir  = opts.certDir || DEV_CERTS_DIR;
+  const keyPath  = path.join(certDir, 'localhost.key');
+  const certPath = path.join(certDir, 'localhost.crt');
+  let serverPems;
+  try {
+    serverPems = { key: fs.readFileSync(keyPath, 'utf8'), cert: fs.readFileSync(certPath, 'utf8') };
+  } catch {
+    // No cert found — generate a self-signed one so `npm start` works out of the box
+    // instead of crashing. Excel still needs a TRUSTED cert to load the pane (see message below).
+    console.log('No localhost cert found — generating a self-signed one at ' + certDir);
+    const pems = require('selfsigned').generate(
+      [{ name: 'commonName', value: 'localhost' }],
+      { keySize: 2048, days: 365, algorithm: 'sha256',
+        extensions: [{ name: 'subjectAltName', altNames: [
+          { type: 2, value: 'localhost' }, { type: 7, ip: '127.0.0.1' }] }] }
+    );
+    try {
+      fs.mkdirSync(certDir, { recursive: true });
+      fs.writeFileSync(keyPath, pems.private);
+      fs.writeFileSync(certPath, pems.cert);
+    } catch (e) { console.warn('Could not save generated cert (' + e.message + ') — using it in memory only.'); }
+    serverPems = { key: pems.private, cert: pems.cert };
+    console.log('⚠  This cert is self-signed and NOT trusted by your OS/Excel yet.');
+    console.log('   For Excel to load the add-in, run:  npx office-addin-dev-certs install');
+  }
   const server = https.createServer(serverPems, app);
   server.listen(3000, () => {
     console.log('Excel AI Assistant running at https://localhost:3000');

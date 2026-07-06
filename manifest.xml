@@ -5,7 +5,7 @@
   xmlns:bt="http://schemas.microsoft.com/office/officeappbasictypes/1.0"
   xsi:type="TaskPaneApp">
 
-  <Id>6b29fc40-ca47-1067-b31d-00dd010662da</Id>
+  <Id>8c27884d-f6e8-4e9c-8fa9-36329432f9e9</Id>
   <Version>2.0.0.0</Version>
   <ProviderName>Excel AI</ProviderName>
   <DefaultLocale>en-US</DefaultLocale>
