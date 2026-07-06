@@ -697,6 +697,14 @@ async function* streamAI(messages, maxTokens, model, providerCfg) {
   const effectiveModel = model || DEFAULT_MODEL;
   const { provider, endpoint, apiKey: pKey, format } = providerCfg;
 
+  // Friendly guard: cloud providers need a key. Fail with a clear, actionable
+  // message instead of leaking the provider's cryptic auth error.
+  const isLocal = provider === 'ollama' || provider === 'mlx' || format === 'ollama';
+  if (!isLocal && !pKey) {
+    const label = provider ? provider.charAt(0).toUpperCase() + provider.slice(1) : 'this provider';
+    throw new Error(`No API key set for ${label}. Open Settings → Providers and paste your ${label} key (or add it to your .env), then try again. Free options: OpenRouter and Groq have free tiers, or run a local model with Ollama — no key needed.`);
+  }
+
   // ── Ollama native format ──
   if (format === 'ollama') {
     const ollamaUrl = endpoint || `http://${OLLAMA_HOST}:${OLLAMA_PORT}/api/chat`;
@@ -789,6 +797,14 @@ async function callAI(messages, maxTokens = 4096, model = null, useOllama = fals
   }
   const effectiveModel = model || DEFAULT_MODEL;
   const { provider, endpoint, apiKey: pKey, format } = providerCfg;
+
+  // Friendly guard: cloud providers need a key. Fail with a clear, actionable
+  // message instead of leaking the provider's cryptic auth error.
+  const isLocal = provider === 'ollama' || provider === 'mlx' || format === 'ollama';
+  if (!isLocal && !pKey) {
+    const label = provider ? provider.charAt(0).toUpperCase() + provider.slice(1) : 'this provider';
+    throw new Error(`No API key set for ${label}. Open Settings → Providers and paste your ${label} key (or add it to your .env), then try again. Free options: OpenRouter and Groq have free tiers, or run a local model with Ollama — no key needed.`);
+  }
 
   // ── Ollama native format ──
   if (format === 'ollama') {

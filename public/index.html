@@ -518,6 +518,15 @@ mark.search-hl.current{background:rgba(var(--accent-rgb),.6)}
 .msg-body hr{border:none;border-top:1px solid var(--border);margin:8px 0}
 
 #fileInput{display:none}
+
+/* ── Accessibility ──────────────────────────────────────────────────────── */
+/* Visible keyboard-focus ring (most buttons here use border:none, so without
+   this, keyboard/tab users get no focus indicator). Mouse clicks stay clean. */
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+/* Respect users who ask the OS to reduce motion — disables the spins/slides. */
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important}
+}
 </style>
 </head>
 <body>
@@ -811,8 +820,9 @@ function classifyIntent(text) {
 // ── Security state ────────────────────────────────────────────────────────────
 let sessionDangerConfirmed = new Set(); // 'high', 'critical' confirmed this session
 let sessionPasswordVerified = false;    // password entered once this session
-const APP_VERSION = 'v9.2.0';
+const APP_VERSION = 'v9.3.0';
 const CHANGELOG = [
+  { ver: 'v9.3.0', date: '2026-07-06', summary: 'Privacy + polish: sign-in/sync is now OFF by default (SUPABASE_CONFIG blank) so the app is safe to share — everyone runs fully local (guest mode) unless they add their OWN Supabase keys via .env or the config. UI degrades gracefully when sign-in is off (no dead buttons). Friendlier "no API key set" error that names the provider and points to Settings instead of leaking a cryptic provider message. Accessibility: visible keyboard-focus rings and prefers-reduced-motion support.' },
   { ver: 'v9.2.0', date: '2026-07-04', summary: 'Cross-device chat history: when signed in, chats now read/write directly to Supabase (new `chats` table with row-level security) so history syncs across every device you sign in on. Signed-out/guest users keep using local server storage unchanged. Signing out swaps the list back to local. See docs/supabase-schema.sql for the one-time table setup.' },
   { ver: 'v9.1.7', date: '2026-06-06', summary: 'OAuth: show "click here to complete" button after Google sign-in opens, since Excel webview cannot detect focus/visibility changes.' },
   { ver: 'v9.1.6', date: '2026-06-06', summary: 'Fix OAuth token pickup: poll triggers on window focus and visibility change so tokens are detected immediately when user returns to Excel from Chrome.' },
@@ -3959,12 +3969,17 @@ function clipCopyFallback(text) {
 //    1. Create a free project at https://supabase.com/dashboard
 //    2. Project Settings → API → copy "Project URL" and "anon public" key
 //    3. Paste them below. See docs/SETUP_AUTH.md for the full walkthrough.
+// Sign-in + cross-device sync are OFF by default so the app is safe to share:
+// left blank, everyone runs fully local (guest mode) — chats save to your own
+// machine and no account is needed. To enable sign-in/sync for YOUR install,
+// either set SUPABASE_URL + SUPABASE_ANON_KEY in the server .env, or paste your
+// own Supabase project's URL + anon key below. Setup guide: docs/SETUP_AUTH.md.
 const SUPABASE_CONFIG = {
-  url:     'https://lkawnsjynczzsixkfivy.supabase.co',
-  anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxrYXduc2p5bmN6enNpeGtmaXZ5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA1OTA0NzQsImV4cCI6MjA5NjE2NjQ3NH0.9DcZ-PXRRamAjw6eHAXlCYNa7WJwOrgL_0xlumgDU2E'
+  url:     '',
+  anonKey: ''
 };
 
-let supabaseClient = null, currentUser = null, authMode = 'signin';
+let supabaseClient = null, currentUser = null, authMode = 'signin', authAvailable = false;
 const _origFetch = window.fetch;
 window.fetch = function(url, opts) {
   if (currentUser?.id && typeof url === 'string' && url.startsWith('/api/')) {
@@ -4012,7 +4027,12 @@ async function initAuth() {
     const cfg = await fetch('/api/auth/config').then(r => r.json()).catch(() => ({}));
     const url     = cfg.supabaseUrl     || SUPABASE_CONFIG.url;
     const anonKey = cfg.supabaseAnonKey || SUPABASE_CONFIG.anonKey;
-    if (!url || url.startsWith('YOUR_') || !anonKey || anonKey.startsWith('YOUR_')) return;
+    if (!url || url.startsWith('YOUR_') || !anonKey || anonKey.startsWith('YOUR_')) {
+      // Sign-in not configured — run fully local (guest mode). Hide the sign-in affordance.
+      authAvailable = false; showAccountBtn(null);
+      return;
+    }
+    authAvailable = true;
     supabaseClient = window.supabase.createClient(url, anonKey);
 
     // Check for OAuth tokens in URL hash or localStorage (redirect flow fallback)
@@ -4054,14 +4074,18 @@ function onAuthChange(user) {
 function showAccountBtn(user) {
   const btn = document.getElementById('accountBtn');
   if (!btn) return;
-  btn.style.display = '';
   if (user) {
+    btn.style.display = '';
     const initials = (user.email || '?').slice(0, 2).toUpperCase();
     btn.textContent = initials;
     btn.title = user.email;
-  } else {
+  } else if (authAvailable) {
+    btn.style.display = '';
     btn.textContent = '→';
     btn.title = 'Sign in';
+  } else {
+    // Sign-in not set up on this install — no account affordance; app stays local.
+    btn.style.display = 'none';
   }
 }
 
@@ -4072,6 +4096,10 @@ function handleAccountClick() {
 function openAuthModal() {
   if (currentUser) {
     openSettings('profile');
+    return;
+  }
+  if (!authAvailable) {
+    showToast('Sign-in isn\'t set up on this install. Your chats are saved locally. To enable cross-device sync, add your Supabase keys — see docs/SETUP_AUTH.md.');
     return;
   }
   document.getElementById('authModal').classList.add('open');
