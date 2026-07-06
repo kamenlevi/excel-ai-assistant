@@ -541,7 +541,7 @@ mark.search-hl.current{background:rgba(var(--accent-rgb),.6)}
         <span class="sync-icon" id="syncIcon">✓</span>
         <div class="sync-tip" id="syncTip">Ready</div>
       </div>
-      <button class="auth-avatar" id="accountBtn" onclick="handleAccountClick()" title="Account">?</button>
+      <button class="auth-avatar" id="accountBtn" onclick="handleAccountClick()" title="Settings">⚙</button>
     </header>
 
     <div class="memory-strip" id="memoryStrip"></div>
@@ -820,8 +820,9 @@ function classifyIntent(text) {
 // ── Security state ────────────────────────────────────────────────────────────
 let sessionDangerConfirmed = new Set(); // 'high', 'critical' confirmed this session
 let sessionPasswordVerified = false;    // password entered once this session
-const APP_VERSION = 'v9.3.0';
+const APP_VERSION = 'v9.3.1';
 const CHANGELOG = [
+  { ver: 'v9.3.1', date: '2026-07-06', summary: 'Fix: Settings became unreachable when sign-in was off (v9.3.0 hid the account button, which is also the Settings gateway). The button is now always visible — shows a ⚙ gear that opens Settings when signed-out, an initials avatar when signed in.' },
   { ver: 'v9.3.0', date: '2026-07-06', summary: 'Privacy + polish: sign-in/sync is now OFF by default (SUPABASE_CONFIG blank) so the app is safe to share — everyone runs fully local (guest mode) unless they add their OWN Supabase keys via .env or the config. UI degrades gracefully when sign-in is off (no dead buttons). Friendlier "no API key set" error that names the provider and points to Settings instead of leaking a cryptic provider message. Accessibility: visible keyboard-focus rings and prefers-reduced-motion support.' },
   { ver: 'v9.2.0', date: '2026-07-04', summary: 'Cross-device chat history: when signed in, chats now read/write directly to Supabase (new `chats` table with row-level security) so history syncs across every device you sign in on. Signed-out/guest users keep using local server storage unchanged. Signing out swaps the list back to local. See docs/supabase-schema.sql for the one-time table setup.' },
   { ver: 'v9.1.7', date: '2026-06-06', summary: 'OAuth: show "click here to complete" button after Google sign-in opens, since Excel webview cannot detect focus/visibility changes.' },
@@ -4074,18 +4075,18 @@ function onAuthChange(user) {
 function showAccountBtn(user) {
   const btn = document.getElementById('accountBtn');
   if (!btn) return;
+  btn.style.display = '';   // ALWAYS visible — this button is also the Settings gateway
   if (user) {
-    btn.style.display = '';
     const initials = (user.email || '?').slice(0, 2).toUpperCase();
     btn.textContent = initials;
     btn.title = user.email;
   } else if (authAvailable) {
-    btn.style.display = '';
     btn.textContent = '→';
     btn.title = 'Sign in';
   } else {
-    // Sign-in not set up on this install — no account affordance; app stays local.
-    btn.style.display = 'none';
+    // Sign-in not configured — no account, but keep Settings reachable via a gear.
+    btn.textContent = '⚙';
+    btn.title = 'Settings';
   }
 }
 
