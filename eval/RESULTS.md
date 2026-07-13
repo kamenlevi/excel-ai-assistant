@@ -1,180 +1,164 @@
 # Eval Results
-**Last run:** 2026-07-06 03:55:33  
-**Overall: 68.9/100**  (prev: 74.8)  
+**Last run:** 2026-07-13 03:08:53  
+**Overall: 68.8/100**  (prev: 68.9)  
 **Model:** meta-llama/llama-3.1-8b-instruct
 
 ## Scores by category
 
 | Category | Score | Trend | Cases |
 |---|---|---|---|
-| filtering | 51.6/100 | ↓ -26.0 | 5 |
-| sorting | 83.8/100 | → | 5 |
-| formatting | 84.4/100 | ↑ +13.2 | 5 |
-| formulas | 89.2/100 | ↑ +6.2 | 5 |
-| conditional formatting | 66.5/100 | ↓ -19.0 | 4 |
-| data manipulation | 79.2/100 | → | 5 |
-| sheet operations | 75.4/100 | ↓ -6.8 | 5 |
-| question handling | 25.8/100 | ↓ -31.2 | 5 |
-| edge cases | 53.5/100 | ↓ -16.0 | 4 |
-| data validation | 77.6/100 | ↑ +4.2 | 5 |
-| Hyperlinks | 81.0/100 | ↓ -3.3 | 3 |
-| Page Layout | 40.0/100 | ↓ -32.0 | 3 |
-| tables | 62.0/100 | ↓ -8.7 | 3 |
-| Shapes | 69.0/100 | ↑ +29.7 | 3 |
-| named ranges | 89.0/100 | ↑ +4.0 | 3 |
+| filtering | 36.8/100 | ↓ -12.4 | 5 |
+| sorting | 77.6/100 | ↓ -6.8 | 5 |
+| formatting | 75.2/100 | ↓ -8.6 | 5 |
+| formulas | 81.6/100 | → | 5 |
+| conditional formatting | 86.5/100 | ↑ +11.0 | 4 |
+| data manipulation | 76.8/100 | ↑ +4.6 | 5 |
+| sheet operations | 68.0/100 | → | 5 |
+| question handling | 29.4/100 | ↑ +3.6 | 5 |
+| edge cases | 72.3/100 | ↓ -5.0 | 4 |
+| data validation | 71.8/100 | ↓ -3.6 | 5 |
+| Hyperlinks | 85.0/100 | → | 3 |
+| Page Layout | 69.3/100 | → | 3 |
+| tables | 71.3/100 | → | 3 |
+| Shapes | 59.7/100 | → | 3 |
+| named ranges | 86.0/100 | → | 3 |
 
 ## All test cases
 
 | ID | Score | Pass | Reason |
 |---|---|---|---|
-| L1-filter-002 | 85 (+10) | ✗ | The code correctly uses Office JS APIs, fully addresses the request, and would execute without runtime errors, but it doesn't use best practices and available helpers, instead re-implementing filtering manually. |
-| L1-filter-003 | 22 (-72) ⚠️ | ✓ | The code is incomplete and does not address the request to clear all filters, and it also uses a non-existent method `clearFilters()` that is not a part of the Office JS API. |
-| gen-L1-filtering-easy-055 | 88 (+28) | ✗ | The code uses the correct Office JS APIs, fully addresses the request, and would execute without runtime errors, but it doesn't use best practices and available helpers, instead re-implementing filtering manually. |
-| gen-L1-filtering-easy-056 | 18 (-71) ⚠️ | ✓ | The code does not use real Office JS APIs, and it does not fully address the request or use best practices. |
-| gen-L1-filtering-easy-057 | 45 (-25) ⚠️ | ✗ | A: 20
-The code uses the correct Office JS API, `applyColumnFilter`, but incorrectly assumes it's an async function, wher |
-| L1-sort-001 | 89 | ✗ | The code correctly uses Office JS APIs, fully addresses the request, and would execute without runtime errors, but it doesn't use best practices and available helpers, instead re-implementing the sorting logic manually. |
-| L1-sort-002 | 88 (-1) | ✗ | The code correctly uses Office JS APIs, fully addresses the request, and would execute without runtime errors, but its approach is suboptimal as it re-implements sorting manually instead of using the available sortByColumn helper. |
-| gen-L1-sorting-easy-055 | 65 (-24) | ✗ | A: 22
-The code uses the correct Office JS APIs, but incorrectly assumes the column index is 0, which may not be the case |
-| gen-L1-sorting-easy-056 | 88 (+17) | ✗ | The code uses the correct Office JS APIs, but it re-implements the sorting logic manually instead of using the available sortByColumn helper. |
-| gen-L1-sorting-easy-057 | 89 (+15) | ✗ | The code is mostly correct, |
-| L1-format-002 | 89 (+44) | ✗ | The code correctly uses Office JS APIs, fully addresses the request, and would execute without runtime errors, but it doesn't use best practices and helpers, instead manually setting borders for each side. |
-| L1-format-003 | 94 (+34) | ✗ | The code is mostly correct, fully addresses the request, would work as expected, and uses a good approach, but it could be improved by using the `setNumberFormat` method with the `worksheet` object directly instead of getting the active worksheet. |
-| gen-L1-formatting-easy-313 | 89 (-1) | ✓ | The code is mostly correct, but it lacks a check for the worksheet being active before attempting to get its active worksheet, which could lead to runtime errors. |
-| gen-L1-formatting-easy-314 | 85 (+13) | ✗ | The code lacks proper workbook object initialization, which is a fundamental flaw in Office JS API usage. |
-| gen-L1-formatting-easy-315 | 65 (-24) | ✗ | A: 22
-The code uses the correct Office JS API, `setNumberFormat`, but incorrectly assumes the range is always "B2:B" + s |
-| L1-formulas-002 | 94 (+15) | ✓ | The code correctly uses the Office JS API to add an AVERAGE formula in cell C2 for the range B2:B8, but it does not address any potential errors that might occur if the worksheet is not active or if the range is not valid. |
-| L1-formulas-003 | 89 (+10) | ✓ | The code uses the correct Office JS APIs, fully addresses the request, and would execute without runtime errors, but it doesn't use best practices and helpers, instead re-implementing the IF formula manually. |
-| gen-L1-formulas-easy-073 | 89 (+3) | ✗ | The code correctly uses Office JS APIs, fully addresses the request, and would execute without runtime errors, but it doesn't use best practices and helpers, instead re-implementing the formula assignment manually. |
-| gen-L1-formulas-easy-074 | 89 (+12) | ✗ | A: 22
-The code uses the correct Office JS API, `workbook.worksheets.getActiveWorksheet()` and `sheet.getRange("B2").form |
-| gen-L1-formulas-easy-075 | 85 (-9) | ✗ | A: 22
-The code uses the correct Office JS API methods, but it incorrectly assumes that `formulas` is a property of the ` |
-| L1-conditional-001 | 45 (-44) ⚠️ | ✗ | The code does not address the request at all, and the provided code is empty, while the explanation is a description of a hypothetical solution. |
-| gen-L1-conditional-formatting-easy-601 | 77 (-12) | ✗ | A: 22
-The code uses the correct Office JS API methods, but incorrectly assumes the column header is "x" instead of "X".
- |
-| gen-L1-conditional-formatting-easy-602 | 72 (-17) | ✗ | A: 22
-The code uses real Office JS APIs, but it's missing the `await context.sync()` call after loading the range values |
-| gen-L1-conditional-formatting-easy-603 | 72 (-3) | ✗ | A: 22
-The code uses real Office JS APIs, but it's overly complex and uses `getUsedRange().rowCount` which is not the rec |
-| L1-data-001 | 74 (-11) | ✓ | A: 22
-The code uses real Office JS APIs, but it assumes the active worksheet is the one with the data, which might not b |
-| L1-data-002 | 65 (-24) | ✓ | A: 22
-The code uses the correct Office JS API methods, but incorrectly assumes the `used` range includes the header row, |
-| gen-L1-data-manipulation-easy-055 | 88 (-1) | ✗ | The code correctly uses Office JS APIs, fully addresses the request, and would execute without runtime errors, but it doesn't use best practices and helpers available in the Office JS API. |
-| gen-L1-data-manipulation-easy-056 | 80 (-14) | ✓ | A: 23
-The code uses the correct Office JS API methods, but it lacks the `value` property to specify the range to copy, w |
-| gen-L1-data-manipulation-easy-057 | 89 (+44) | ✗ | The code uses the correct Office JS API to autofit the column, but it doesn't use the available helpers and has a minor issue with the range selection. |
-| L1-sheet-001 | 94 (+9) | ✓ | The code correctly uses the Office JS API to freeze the top row, fully addresses the request, executes without runtime errors, and uses a straightforward approach, but could benefit from using the `freezePanes` object with a more robust method signature. |
-| L1-sheet-002 | 86 (-5) | ✗ | The code correctly uses Office JS APIs, fully addresses the request, and would execute without runtime errors, but it doesn't use best practices and available helpers, instead re-implementing the column auto-fitting logic manually. |
-| gen-L1-sheet-operations-easy-058 | 47 (-32) ⚠️ | ✗ | The code attempts to insert a new row but does not actually add a new row, it only shifts the existing data up, leaving an empty row at the top. |
-| gen-L1-sheet-operations-easy-059 | 85 (-4) | ✗ | A: 22
-The code uses the correct Office JS API methods, but incorrectly assumes the active worksheet is the only workshee |
-| gen-L1-sheet-operations-easy-060 | 65 (-2) | ✗ | The main flaw is the assumption that the worksheet is active, which could lead to unexpected behavior. |
-| L1-questions-001 | 47 (-18) ⚠️ | ✓ | A: 22
-The response accurately describes the VLOOKUP function, its syntax, and its usage, but it could be more concise an |
-| L1-questions-002 | 60 | ✓ | A: 22
-The response is factually correct, but it doesn't account for the header row, which is also a row of data.
+| L1-filter-002 | 0 (-85) ⚠️ | ✗ | The code does not use any real Office JS APIs, and instead relies on a non-existent `applyColumnFilter` helper function. |
+| L1-filter-003 | 45 (+23) ⚠️ | ✓ | The code is incomplete as it does not address the request to clear all filters, and it lacks the actual implementation of the clearFilters() method. |
+| gen-L1-filtering-easy-058 | 67 | ✗ | The code uses real Office JS APIs, but it's not the most efficient way to filter data, and it re |
+| gen-L1-filtering-easy-059 | 0 ⚠️ | ✗ | The code uses a non-existent method `applyColumnFilter` that is not a part of the Office JavaScript API for Excel Online. |
+| gen-L1-filtering-easy-060 | 72 | ✗ | A: 22
+The code uses real Office JS APIs, but it's missing the `load` method call for the `hdr` variable, which could lea |
+| L1-sort-001 | 71 (-18) | ✗ | The code correctly uses real Office JS APIs, fully addresses the request, and would execute without runtime errors, but it does not use best practices and available helpers, instead re-implementing the sorting logic manually. |
+| L1-sort-002 | 72 (-16) | ✗ | A: 22
+The code uses real Office JS APIs, but it's missing the `context.sync()` call after setting the range values, whic |
+| gen-L1-sorting-easy-058 | 77 | ✗ | A: 23
+The code uses real Office JS APIs, but it does not handle the case where the column 'X' is not found in the header |
+| gen-L1-sorting-easy-059 | 79 | ✗ | A: 22
+The code uses the correct Office JS API methods, but incorrectly assumes the column index is 0 for column "Y", whi |
+| gen-L1-sorting-easy-060 | 89 | ✗ | The code uses the correct Office JS APIs, fully addresses the request, and would execute without runtime errors, but it doesn't use best practices and available helpers, instead re-implementing the sorting logic manually. |
+| L1-format-002 | 73 (-16) | ✗ | The code |
+| L1-format-003 | 67 (-27) | ✗ | A: 20
+The code uses the correct Office JS API, `setNumberFormat`, but incorrectly assumes the `used` range is the entire |
+| gen-L1-formatting-easy-316 | 89 | ✗ | The code correctly uses Office JS APIs, fully addresses the request, and would execute without runtime errors, but it doesn't use best practices and helpers, instead re-implementing the solution manually. |
+| gen-L1-formatting-easy-317 | 72 | ✗ | A: 22
+The code uses the correct Office JS API to change the background color of a cell, but it doesn't handle any potent |
+| gen-L1-formatting-easy-318 | 75 | ✗ | A: 22
+The code uses real Office JS APIs, but it's missing the `await context.sync()` call after loading the `rowCount` p |
+| L1-formulas-002 | 89 (-5) | ✓ | The code is mostly correct, but it doesn't handle potential errors that might occur when getting the active worksheet or syncing the context, and it doesn't use the available helpers for filtering or sorting. |
+| L1-formulas-003 | 89 | ✓ | The code is mostly correct, but it doesn't use the available helpers for filtering and sorting, which would be a more idiomatic approach. |
+| gen-L1-formulas-easy-076 | 79 | ✗ | The code has minor |
+| gen-L1-formulas-easy-077 | 72 | ✗ | The code uses the correct Office JS API to set the formula in cell B2, fully addresses the request, and would execute without runtime errors, but it does not use best practices or available helpers. |
+| gen-L1-formulas-easy-078 | 79 | ✗ | A: 22
+The code uses the correct Office JS API methods, but it incorrectly assumes the formula will be applied to the ent |
+| L1-conditional-001 | 89 (+44) | ✗ | The code correctly uses Office JS APIs, fully addresses the request, and would execute without runtime errors, but its approach is suboptimal due to manual implementation of filtering logic. |
+| gen-L1-conditional-formatting-easy-604 | 79 | ✗ | A: 22
+The code uses real Office JS APIs, but incorrectly assumes that `getUsedRange()` will always return the correct ra |
+| gen-L1-conditional-formatting-easy-605 | 89 | ✗ | The code uses real Office JS APIs, fully addresses the request, and would likely execute without runtime errors, but it doesn't use best practices and available helpers, instead manually re-implementing the filtering logic. |
+| gen-L1-conditional-formatting-easy-606 | 89 | ✗ | The code is mostly correct, but it doesn't handle the case where the column 'X' is not found, and it doesn't use the available helpers for filtering. |
+| L1-data-001 | 73 (-1) | ✓ | A: 23
+The code uses real Office JS APIs, but incorrectly assumes the destination range is a single cell, which will caus |
+| L1-data-002 | 89 (+24) | ✓ | The code uses the correct Office JS APIs, fully addresses the request, and would execute without runtime errors, but it doesn't use best practices and available helpers, instead re-implementing the clear functionality manually. |
+| gen-L1-data-manipulation-easy-058 | 85 | ✗ | A: 22
+The code uses the correct Office JS API methods, but it's missing the `pasteOptions` parameter, which is required  |
+| gen-L1-data-manipulation-easy-059 | 89 | ✗ | The code uses the correct Office JS API to clear the content in cell B1, but it doesn't take advantage of the available helpers and uses a manual approach. |
+| gen-L1-data-manipulation-easy-060 | 48 ⚠️ | ✗ | A: 23
+The code uses real Office JS APIs, but it's missing the `insertRows` method to insert a new row, which is necessar |
+| L1-sheet-001 | 89 (-5) | ✓ | The code correctly uses the Office JS API to freeze the top row, but it doesn't take advantage of the available helpers and uses a manual approach to achieve the desired result. |
+| L1-sheet-002 | 89 (+3) | ✗ | The code correctly uses Office JS APIs, fully addresses the request, and would execute without runtime errors, but it doesn't use best practices and available helpers, instead re-implementing the column auto-fitting manually. |
+| gen-L1-sheet-operations-easy-061 | 91 | ✗ | The code correctly uses the Office JS API to insert a new row at the end of the sheet, but it doesn't take advantage of the available helpers and uses a manual approach. |
+| gen-L1-sheet-operations-easy-062 | 0 ⚠️ | ✗ | The AI response failed to generate any code, which is a fundamental requirement for addressing the user's request. |
+| gen-L1-sheet-operations-easy-063 | 71 | ✗ | A: 24
+The code uses real Office JS APIs, but it's missing the `freezePanes` method which is the correct method to freeze |
+| L1-questions-001 | 65 (+18) | ✓ | A: 22
+The response accurately describes the VLOOKUP function, its syntax, and provides a clear example, but it doesn't m |
+| L1-questions-002 | 60 | ✗ | A: 22
+The response accurately counts the rows of data, but it doesn't account for the header row, resulting in an incorr |
+| gen-L1-question-handling-easy-076 | 0 ⚠️ | ✗ | The AI response does not provide any code, so it fails to address all four dimensions. |
+| gen-L1-question-handling-easy-077 | 22 ⚠️ | ✗ | The code does not use any Office JS APIs, and the response is incorrect, but it does not contain any syntax errors that would prevent it from executing. |
+| gen-L1-question-handling-easy-078 | 0 ⚠️ | ✗ | The AI response does not provide any code, so it fails to address the request, does not use real Office JS APIs, would not execute without errors, and does not demonstrate best practices. |
+| L1-edge-001 | 22 (-20) ⚠️ | ✓ | A: 0
+The code uses a non-existent method `applyColumnFilter` and incorrectly assumes the column name is "City" instead o |
+| gen-L1-edge-cases-easy-064 | 89 | ✗ | The code uses the correct Office JS APIs, fully addresses the request, and would execute without runtime errors, but it doesn't use best practices and available helpers, instead re-implementing the filtering logic manually. |
+| gen-L1-edge-cases-easy-065 | 89 | ✗ | The code correctly uses Office JS APIs, fully addresses the request, and would execute without runtime errors, but it doesn't use best practices and available helpers, instead re-implementing the sorting logic manually. |
+| gen-L1-edge-cases-easy-066 | 89 | ✓ | The code uses the correct Office JS APIs, fully addresses the request, and would execute without runtime errors, but it doesn't use best practices and helpers, instead manually implementing the clearFilters method. |
+| L1-validation-001 | 68 (-12) | ✓ | A: 23
+The code uses real Office JS APIs, but it's missing the `formula1` and `formula2` properties in the `dataValidatio |
+| L1-validation-002 | 65 (-6) | ✗ | A: 22
+The code uses real Office JS APIs, but it's missing the `load` method for the range, which is necessary for the `s |
+| gen-L1-data-validation-easy-076 | 89 | ✓ | The code uses real Office JS APIs, fully addresses the request, and would execute without runtime errors, but it doesn't use best practices and available helpers, instead re-implementing the data validation logic manually. |
+| gen-L1-data-validation-easy-077 | 72 | ✗ | A: 22
+The code uses the correct Office JS APIs, but incorrectly assumes the column index is always 1, which may not be t |
+| gen-L1-data-validation-easy-078 | 65 | ✓ | A: 22
+The code uses real Office JS APIs, but incorrectly uses `dataRange.values` which is not a valid method for getting |
+| gen-L1-Hyperlinks-easy-058 | 85 | ✓ | A: 22
+The code uses the correct Office JS API, `hyperlinks.add`, but incorrectly assumes the worksheet is active.
 
-B: 18
- |
-| gen-L1-question-handling-easy-073 | 0 ⚠️ | ✗ | The response does not contain any code, making it impossible to evaluate any of the dimensions. |
-| gen-L1-question-handling-easy-074 | 0 (-71) ⚠️ | ✗ | The AI response does not provide any code, which is a fundamental requirement for an Office JS API evaluation. |
-| gen-L1-question-handling-easy-075 | 22 (-67) ⚠️ | ✗ | The code does not use any Office JS APIs, and the response is a simple text answer that does not attempt to execute any code, so it's not possible to evaluate its correctness or approach. |
-| L1-edge-001 | 42 (-3) ⚠️ | ✗ | A: 20
-The code uses real Office JS APIs, but it's missing the `applyColumnFilter` helper, which is a best practice for f |
-| gen-L1-edge-cases-easy-061 | 60 (-5) | ✗ | A: 22
-The code uses the `getActiveWorksheet()` method, `getRange()`, `load()`, `sync()`, `values`, `indexOf()`, `slice() |
-| gen-L1-edge-cases-easy-062 | 45 (-44) ⚠️ | ✓ | A: 20
-The code uses the `clearFilters` method, which is a real Office JS API, but it's missing the column specification, |
-| gen-L1-edge-cases-easy-063 | 67 (-12) | ✗ | The code is overly complex and doesn't take advantage of the available helpers, making it less efficient and harder to maintain. |
-| L1-validation-001 | 80 (-6) | ✓ | A: 23
-The code uses real Office JS APIs, but it's missing the `range.load("dataValidation")` call before setting the dat |
-| L1-validation-002 | 71 (+4) | ✓ | A: 22
-The code uses real Office JS APIs, but it doesn't handle the case where the worksheet is not active, which could l |
-| gen-L1-data-validation-easy-073 | 85 (+18) | ✗ | The code has minor issues with API usage and approach, but overall meets the requirements. |
-| gen-L1-data-validation-easy-074 | 67 (+7) | ✓ | A: 20
-The code uses real Office JS APIs, but incorrectly uses `Excel.DataValidationType.wholeNumber` instead of `Excel.D |
-| gen-L1-data-validation-easy-075 | 85 (-2) | ✗ | A: 22
-The code uses real Office JS APIs, but it incorrectly sets `showErrorMessage` twice, which is unnecessary and migh |
-| gen-L1-Hyperlinks-easy-055 | 86 (+7) | ✗ | A: 23
-The code uses real Office JS APIs, but it's missing the `load` method for `hyperlinks` which is necessary for Exce |
-| gen-L1-Hyperlinks-easy-056 | 85 (-4) | ✗ | A: 22
-The code uses the correct Office JS API methods, but it's missing the workbook object, which should be retrieved f |
-| gen-L1-Hyperlinks-easy-057 | 72 (-13) | ✗ | A: 22
-The code uses the correct Office JS API methods, but it's missing the workbook object initialization.
-
-B: 25
-The c |
-| gen-L2-Page-Layout-easy-071 | 40 (-49) ⚠️ | ✗ | A: 18
-The code uses the correct `Excel.PaperSizeType.letter` enum value, but it incorrectly assumes the newly added work |
-| gen-L2-Page-Layout-easy-072 | 40 (-20) ⚠️ | ✗ | The code is partially correct but does not fully address the request, and it uses a manual approach instead of best practices. |
-| gen-L2-Page-Layout-easy-073 | 40 (-27) ⚠️ | ✗ | The code does not address the request to display the page number for a short list of numbers, and it does not use best practices or available helpers. |
-| gen-L2-tables-easy-240 | 71 (+1) | ✗ | A: 22
-The code uses the correct `createTable` method, but it doesn't specify the table's properties, such as headers or  |
-| gen-L2-tables-easy-241 | 40 (-27) ⚠️ | ✗ | The code is incomplete as it does not add the table to the worksheet, and it does not address the request to add data to the table. |
-| gen-L2-tables-easy-242 | 75 | ✗ | A: 22
-The code uses the `createTable` method, which is a real Office JS API, but it doesn't specify the table's header r |
-| gen-L1-Shapes-easy-070 | 45 (-1) ⚠️ | ✗ | A: 22
-The code uses the correct Office JS API to add a square shape, but it doesn't handle the worksheet context correct |
-| gen-L1-Shapes-easy-071 | 85 (+13) | ✓ | A: 22
-The code uses the correct Office JS API to add a shape to the worksheet, but it doesn't handle potential errors th |
-| gen-L1-Shapes-easy-072 | 77 (+77) | ✓ | The code assumes the ` |
-| gen-L2-named-ranges-easy-055 | 88 (+3) | ✓ | The code uses the correct Office JS APIs, fully addresses the request, and would execute without runtime errors, but it doesn't use best practices and helpers, instead re-implementing the logic manually. |
-| gen-L2-named-ranges-easy-056 | 94 (+9) | ✓ | The code correctly uses Office JS APIs, fully addresses the request, and would execute without runtime errors, but it doesn't use best practices and helpers, instead re-implementing the logic manually. |
-| gen-L2-named-ranges-easy-057 | 85 | ✓ | The code could be improved by removing the unnecessary load operation and using the available helpers for better performance and maintainability. |
+B: 25 |
+| gen-L1-Hyperlinks-easy-059 | 85 | ✓ | A: 22
+The code uses the correct Office JS API, `hyperlinks.add`, but I deduct 3 points because it doesn't handle potenti |
+| gen-L1-Hyperlinks-easy-060 | 85 | ✗ | A: 22
+The code uses the correct Office JS API, `workbook.worksheets.getActiveWorksheet()` and `getRange("A1").hyperlinks |
+| gen-L2-Page-Layout-easy-074 | 47 ⚠️ | ✗ | A: 22
+The code uses the correct Office JS API, but it incorrectly assumes that `sheet.getWorksheet()` will return the wo |
+| gen-L2-Page-Layout-easy-075 | 67 | ✗ | A: 18
+The code uses the correct Office JS API, `workbook.worksheets.getActiveWorksheet()`, but incorrectly sets the valu |
+| gen-L2-Page-Layout-easy-076 | 94 | ✗ | The code is mostly correct and complete, but it lacks a check for the active worksheet, which might lead to runtime errors if the user has multiple worksheets open. |
+| gen-L2-tables-easy-243 | 89 | ✗ | The code uses the correct Office JS API to create a table, but it doesn't address the request to populate the table with data, and it doesn't use best practices for creating a table in Excel Online. |
+| gen-L2-tables-easy-244 | 65 | ✗ | A: 20
+The code uses the `createTable` method, which is a real Office JS API, but it's not clear if it's the correct meth |
+| gen-L2-tables-easy-245 | 60 | ✗ | A: 22
+The code uses real Office JS APIs, but incorrectly assumes that `createTable` is a valid method, which is not a st |
+| gen-L1-Shapes-easy-073 | 85 | ✓ | A: 22
+The code uses the correct Office JS API, `Excel.ShapeType.square`, but it's missing the `Excel` namespace import,  |
+| gen-L1-Shapes-easy-074 | 47 ⚠️ | ✓ | A: 22
+The code uses real Office JS APIs, but it's missing the crucial step of specifying the header row's coordinates to |
+| gen-L1-Shapes-easy-075 | 47 ⚠️ | ✓ | A: 22
+The code uses real Office JS APIs, but it doesn't specify the cell where the shape should be inserted, which is a  |
+| gen-L2-named-ranges-easy-058 | 85 | ✓ | The code assumes the range address is the same as the cell reference |
+| gen-L2-named-ranges-easy-059 | 85 | ✓ | A: 22
+The code uses the correct Office JS API methods, but it's missing the `load` method for the `workbook.names` objec |
+| gen-L2-named-ranges-easy-060 | 88 | ✗ | The code correctly uses the Office JS API to create a named range, fully addresses the request, and would execute without runtime errors, but it doesn't use best practices as it manually loads the range's name and uses `await context.sync()` twice. |
 
 ## ⚠️ Needs attention
 
-**[L1-filter-003]** score=22 — The code is incomplete and does not address the request to clear all filters, and it also uses a non-existent method `clearFilters()` that is not a part of the Office JS API.
+**[L1-filter-002]** score=0 — The code does not use any real Office JS APIs, and instead relies on a non-existent `applyColumnFilter` helper function.
+- missing patterns: `applyColumnFilter`, `Status`, `Active`
 
-**[gen-L1-filtering-easy-056]** score=18 — The code does not use real Office JS APIs, and it does not fully address the request or use best practices.
+**[L1-filter-003]** score=45 — The code is incomplete as it does not address the request to clear all filters, and it lacks the actual implementation of the clearFilters() method.
 
-**[gen-L1-filtering-easy-057]** score=45 — A: 20
-The code uses the correct Office JS API, `applyColumnFilter`, but incorrectly assumes it's an async function, wher
+**[gen-L1-filtering-easy-059]** score=0 — The code uses a non-existent method `applyColumnFilter` that is not a part of the Office JavaScript API for Excel Online.
 - missing patterns: `applyColumnFilter(columnName, value)`
 
-**[L1-conditional-001]** score=45 — The code does not address the request at all, and the provided code is empty, while the explanation is a description of a hypothetical solution.
-- missing patterns: `conditionalFormats`
+**[gen-L1-data-manipulation-easy-060]** score=48 — A: 23
+The code uses real Office JS APIs, but it's missing the `insertRows` method to insert a new row, which is necessar
+- missing patterns: `tables.insertRow`
 
-**[gen-L1-sheet-operations-easy-058]** score=47 — The code attempts to insert a new row but does not actually add a new row, it only shifts the existing data up, leaving an empty row at the top.
-- missing patterns: `insertRow(0, 1)`
+**[gen-L1-sheet-operations-easy-062]** score=0 — The AI response failed to generate any code, which is a fundamental requirement for addressing the user's request.
+- missing patterns: `deleteColumn`
 
-**[L1-questions-001]** score=47 — A: 22
-The response accurately describes the VLOOKUP function, its syntax, and its usage, but it could be more concise an
+**[gen-L1-question-handling-easy-076]** score=0 — The AI response does not provide any code, so it fails to address all four dimensions.
+- missing patterns: `names.add`, `dataValidation`
 
-**[gen-L1-question-handling-easy-073]** score=0 — The response does not contain any code, making it impossible to evaluate any of the dimensions.
-- missing patterns: `names.add`, `names.get`
+**[gen-L1-question-handling-easy-077]** score=22 — The code does not use any Office JS APIs, and the response is incorrect, but it does not contain any syntax errors that would prevent it from executing.
+- missing patterns: `dataValidation`
 
-**[gen-L1-question-handling-easy-074]** score=0 — The AI response does not provide any code, which is a fundamental requirement for an Office JS API evaluation.
-- missing patterns: `dataValidation.add`
+**[gen-L1-question-handling-easy-078]** score=0 — The AI response does not provide any code, so it fails to address the request, does not use real Office JS APIs, would not execute without errors, and does not demonstrate best practices.
+- missing patterns: `tables.add`, `autofitColumns`
 
-**[gen-L1-question-handling-easy-075]** score=22 — The code does not use any Office JS APIs, and the response is a simple text answer that does not attempt to execute any code, so it's not possible to evaluate its correctness or approach.
-- missing patterns: `tables.getRange`
+**[L1-edge-001]** score=22 — A: 0
+The code uses a non-existent method `applyColumnFilter` and incorrectly assumes the column name is "City" instead o
 
-**[L1-edge-001]** score=42 — A: 20
-The code uses real Office JS APIs, but it's missing the `applyColumnFilter` helper, which is a best practice for f
-- missing patterns: `applyColumnFilter`
+**[gen-L2-Page-Layout-easy-074]** score=47 — A: 22
+The code uses the correct Office JS API, but it incorrectly assumes that `sheet.getWorksheet()` will return the wo
+- missing patterns: `workbook.pagesetup.setPaperSize('Letter')`
 
-**[gen-L1-edge-cases-easy-062]** score=45 — A: 20
-The code uses the `clearFilters` method, which is a real Office JS API, but it's missing the column specification,
+**[gen-L1-Shapes-easy-074]** score=47 — A: 22
+The code uses real Office JS APIs, but it's missing the crucial step of specifying the header row's coordinates to
 
-**[gen-L2-Page-Layout-easy-071]** score=40 — A: 18
-The code uses the correct `Excel.PaperSizeType.letter` enum value, but it incorrectly assumes the newly added work
-- missing patterns: `workbook.pagesetting.setPageSize`
-
-**[gen-L2-Page-Layout-easy-072]** score=40 — The code is partially correct but does not fully address the request, and it uses a manual approach instead of best practices.
-- missing patterns: `workbook.headerFooter.setSheetName`
-
-**[gen-L2-Page-Layout-easy-073]** score=40 — The code does not address the request to display the page number for a short list of numbers, and it does not use best practices or available helpers.
-- missing patterns: `workbook.headerFooter.setPageNumber`
-
-**[gen-L2-tables-easy-241]** score=40 — The code is incomplete as it does not add the table to the worksheet, and it does not address the request to add data to the table.
-- missing patterns: `tables.add`
-
-**[gen-L1-Shapes-easy-070]** score=45 — A: 22
-The code uses the correct Office JS API to add a square shape, but it doesn't handle the worksheet context correct
-- missing patterns: `shapes.add`
+**[gen-L1-Shapes-easy-075]** score=47 — A: 22
+The code uses real Office JS APIs, but it doesn't specify the cell where the shape should be inserted, which is a 

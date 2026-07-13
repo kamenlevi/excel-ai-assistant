@@ -590,59 +590,52 @@ If unsure whether Office JS supports something, use CODE_JS first. Only fall bac
 // EVAL-IMPROVEMENTS-START
 **Rules:**
 
+* When filtering by value, use 'getUsedRange().load("values")' and 'context.sync()' to load the values before filtering.
+* When filtering by column name, use 'getUsedRange().columns' to get the column index.
 * When clearing all filters, use 'clearFilters()' with the correct column specification.
-* When assuming a column index, use 'getUsedRange().columns' to get the column index.
-* When clearing content in a column, use 'clear(Excel.ClearApplyTo.contents)' with the correct range.
 * When inserting a new row, use 'insertRows()' instead of shifting existing data.
 * When deleting a row, use 'deleteRow(row)' instead of 'delete(Excel.DeleteShiftDirection.up)'.
+* When setting number format, use 'setNumberFormat()' with the correct range and format string.
+* When inserting a shape, specify the cell where the shape should be inserted.
+* When creating a table, use 'createTable()' with the correct range and options.
 
 **Examples:**
 
 '''javascript
-// L1-filter-003
+// gen-L1-filter-002
 const sheet = workbook.worksheets.getActiveWorksheet();
-sheet.getRange("A1").clearFilters();
-
-// gen-L1-filtering-easy-056
-const sheet = workbook.worksheets.getActiveWorksheet();
-sheet.getRange("A1").clearFilters();
-
-// gen-L1-filtering-easy-057
-const sheet = workbook.worksheets.getActiveWorksheet();
-const range = sheet.getRange("B2:B" + sheet.getUsedRange().rowCount);
-range.applyColumnFilter("Y", "val");
-
-// gen-L1-sorting-easy-055
-const sheet = workbook.worksheets.getActiveWorksheet();
-const used = sheet.getUsedRange();
-used.load("values");
+const range = sheet.getUsedRange();
+range.load("values");
 await context.sync();
-const rows = used.values;
+const rows = range.values;
 const hdr = rows[0].map(h => String(h).toLowerCase().trim());
-const col = hdr.indexOf("A");
-if (col === -1) throw new Error("Column 'A' not found.");
-rows.sort((a, b) => a[col] - b[col]);
-sheet.getRangeByIndexes(0, 0, rows.length, rows[0].length).values = rows;
+const col = hdr.indexOf("x");
+if (col === -1) throw new Error("Column 'X' not found.");
+const toShow = rows.filter(function(r) { return String(r[col]).toLowerCase() === "val"; });
+sheet.getRangeByIndexes(0, 0, toShow.length, rows[0].length).values = toShow;
 
-// gen-L1-formatting-easy-315
+// gen-L1-filter-003
+const sheet = workbook.worksheets.getActiveWorksheet();
+sheet.clearFilters();
+
+// gen-L1-filter-059
 const sheet = workbook.worksheets.getActiveWorksheet();
 const range = sheet.getRange("B2:B" + sheet.getUsedRange().rowCount);
-range.setNumberFormat("$#,##0.00");
-
-// L1-conditional-001
-const sheet = workbook.worksheets.getActiveWorksheet();
-sheet.getRange("A1").format.fill.color = "red";
-sheet.getRange("A1").format.font.color = "white";
-
-// L1-data-002
-const sheet = workbook.worksheets.getActiveWorksheet();
-const used = sheet.getUsedRange();
-used.load("rowCount");
+range.load("values");
 await context.sync();
-sheet.getRange("C1:C" + used.rowCount).clear(Excel.ClearApplyTo.contents);
+const rows = range.values;
+const hdr = rows[0].map(h => String(h).toLowerCase().trim());
+const col = hdr.indexOf("y");
+if (col === -1) throw new Error("Column 'Y' not found.");
+const toShow = rows.filter(function(r) { return String(r[col]).toLowerCase() === "val"; });
+sheet.getRangeByIndexes(0, col, toShow.length, 1).values = toShow;
 
-// gen-L1-sheet-operations-easy-058
-const sheet = workbook.worksheets.getActive
+// L1-format-003
+const sheet = workbook.worksheets.getActiveWorksheet();
+const range = sheet.getRange("B2:B" + sheet.getUsedRange().rowCount);
+range.load("values");
+await context.sync();
+range.setNumberFormat
 // EVAL-IMPROVEMENTS-END
 `
 + (DEFAULT_MODEL.toLowerCase().includes('qwen') ? '\n/no_think' : '');
