@@ -590,52 +590,49 @@ If unsure whether Office JS supports something, use CODE_JS first. Only fall bac
 // EVAL-IMPROVEMENTS-START
 **Rules:**
 
-* When filtering by value, use 'getUsedRange().load("values")' and 'context.sync()' to load the values before filtering.
-* When filtering by column name, use 'getUsedRange().columns' to get the column index.
-* When clearing all filters, use 'clearFilters()' with the correct column specification.
-* When inserting a new row, use 'insertRows()' instead of shifting existing data.
-* When deleting a row, use 'deleteRow(row)' instead of 'delete(Excel.DeleteShiftDirection.up)'.
-* When setting number format, use 'setNumberFormat()' with the correct range and format string.
-* When inserting a shape, specify the cell where the shape should be inserted.
-* When creating a table, use 'createTable()' with the correct range and options.
+* When sorting a column, use 'getUsedRange().load("values")' and 'context.sync()' to load the values before sorting.
+* When inserting a new row at the end of the sheet, use 'insertRows()' instead of shifting existing data.
+* When deleting a column, use 'deleteColumn(columnIndex)' instead of 'delete(Excel.DeleteShiftDirection.up)'.
 
 **Examples:**
 
 '''javascript
-// gen-L1-filter-002
+// L1-sort-001
 const sheet = workbook.worksheets.getActiveWorksheet();
-const range = sheet.getUsedRange();
-range.load("values");
+const used = sheet.getUsedRange();
+used.load("values");
 await context.sync();
-const rows = range.values;
+const rows = used.values;
 const hdr = rows[0].map(h => String(h).toLowerCase().trim());
-const col = hdr.indexOf("x");
-if (col === -1) throw new Error("Column 'X' not found.");
-const toShow = rows.filter(function(r) { return String(r[col]).toLowerCase() === "val"; });
-sheet.getRangeByIndexes(0, 0, toShow.length, rows[0].length).values = toShow;
+const ci = hdr.indexOf("name");
+if (ci === -1) throw new Error("Column 'Name' not found.");
+const out = rows.map((r, i) => i === 0 ? rows[0] : r.slice(0, 1).sort().concat(r.slice(1)));
+sheet.getRangeByIndexes(0, 0, out.length, rows[0].length).values = out;
 
-// gen-L1-filter-003
+// gen-L1-data-manipulation-easy-060
 const sheet = workbook.worksheets.getActiveWorksheet();
-sheet.clearFilters();
-
-// gen-L1-filter-059
-const sheet = workbook.worksheets.getActiveWorksheet();
-const range = sheet.getRange("B2:B" + sheet.getUsedRange().rowCount);
-range.load("values");
+sheet.insertRows(1);
 await context.sync();
-const rows = range.values;
+
+// gen-L2-sheet-operations-easy-061
+const sheet = workbook.worksheets.getActiveWorksheet();
+sheet.getUsedRange().deleteColumn(used.columnCount - 1);
+await context.sync();
+'''
+
+'''javascript
+// gen-L1-sort-002
+const sheet = workbook.worksheets.getActiveWorksheet();
+const used = sheet.getUsedRange();
+used.load("values");
+await context.sync();
+const rows = used.values;
 const hdr = rows[0].map(h => String(h).toLowerCase().trim());
-const col = hdr.indexOf("y");
-if (col === -1) throw new Error("Column 'Y' not found.");
-const toShow = rows.filter(function(r) { return String(r[col]).toLowerCase() === "val"; });
-sheet.getRangeByIndexes(0, col, toShow.length, 1).values = toShow;
-
-// L1-format-003
-const sheet = workbook.worksheets.getActiveWorksheet();
-const range = sheet.getRange("B2:B" + sheet.getUsedRange().rowCount);
-range.load("values");
-await context.sync();
-range.setNumberFormat
+const ci = hdr.indexOf("name");
+if (ci === -1) throw new Error("Column 'Name' not found.");
+const out = rows.map((r, i) => i === 0 ? rows[0] : r.slice(0, 1).sort().concat(r.slice(1)));
+sheet.getRangeByIndexes(0, 0, out.length, rows[0].length).values = out;
+'''
 // EVAL-IMPROVEMENTS-END
 `
 + (DEFAULT_MODEL.toLowerCase().includes('qwen') ? '\n/no_think' : '');
