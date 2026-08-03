@@ -590,46 +590,66 @@ If unsure whether Office JS supports something, use CODE_JS first. Only fall bac
 // EVAL-IMPROVEMENTS-START
 **Rules:**
 
-* When clearing all filters, use 'clearFilters()' instead of 'clear(Excel.ClearApplyTo.all)' to ensure all filters are cleared.
-* When filtering a column, use 'filter()' instead of manual implementation to simplify the code.
-* When sorting a column, use 'sortByColumn()' instead of manual sorting to take advantage of the built-in sorting functionality.
-* When clearing all content in a column, use 'clearContents()' instead of 'clear(Excel.ClearApplyTo.contents)' to ensure the entire column is cleared.
-* When copying a value, use 'copy()' instead of manual implementation to simplify the code.
-* When deleting a column, use 'deleteColumn(columnIndex)' instead of 'delete(Excel.DeleteShiftDirection.up)' to ensure the correct column is deleted.
-* When inserting a new row, use 'insertRows()' instead of shifting existing data to maintain the correct row count.
-* When creating a table, use 'createTable()' instead of manual implementation to take advantage of the built-in table creation functionality.
-* When inserting a shape, use 'add()' instead of manual implementation to simplify the code.
+* When using 'applyColumnFilter', ensure to pass the 'context' object as an argument.
+* When using 'clearFilters', ensure to pass the 'context' object as an argument.
+* When using 'sortByColumn', ensure to pass the 'context' object as an argument.
+* When using 'clearFilters', ensure to pass the 'context' object as an argument and use 'clearFilters()' instead of 'clear(Excel.ClearApplyTo.all)'.
 
 **Examples:**
 
 '''javascript
+// L1-filter-002
+const sheet = workbook.worksheets.getActiveWorksheet();
+await applyColumnFilter("Status", "Active", context);
+
 // L1-filter-003
 const sheet = workbook.worksheets.getActiveWorksheet();
-sheet.getUsedRange().load("values");
+await clearFilters(context);
+
+// gen-L1-sort-002
+const sheet = workbook.worksheets.getActiveWorksheet();
+await sortByColumn("Amount", false, context);
+
+// gen-L1-sorting-easy-061
+const sheet = workbook.worksheets.getActiveWorksheet();
+await sortByColumn("X", true, context);
+
+// gen-L1-sorting-easy-062
+const sheet = workbook.worksheets.getActiveWorksheet();
+await sortByColumn("Y", true, context);
+
+// gen-L1-format-002
+const sheet = workbook.worksheets.getActiveWorksheet();
+const used = sheet.getUsedRange();
+used.load("values,rowCount");
 await context.sync();
-const rows = sheet.getUsedRange().values;
+const range = used.getRangeByIndexes(1, 0, used.rowCount - 1, used.columnCount);
+range.borders = Excel.BorderType.thick;
+await context.sync();
+
+// gen-L1-format-004
+const sheet = workbook.worksheets.getActiveWorksheet();
+const range = sheet.getRange("A1");
+await range.format.font.bold = true;
+await context.sync();
+
+// gen-L1-format-006
+const sheet = workbook.worksheets.getActiveWorksheet();
+const used = sheet.getUsedRange();
+used.load("values");
+await context.sync();
+const rows = used.values;
 const hdr = rows[0].map(h => String(h).toLowerCase().trim());
 const ci = hdr.indexOf("y");
 if (ci === -1) throw new Error("Column 'Y' not found.");
-const out = rows.filter(r => r[ci] === "val");
-sheet.getRangeByIndexes(0, 0, out.length, rows[0].length).values = out;
-
-// gen-L1-sorting-easy-058
-const sheet = workbook.worksheets.getActiveWorksheet();
-sheet.getUsedRange().load("values");
+for (let i = 1; i < rows.length; i++) {
+  rows[i][ci] = Math.floor(rows[i][ci]);
+}
+sheet.getRangeByIndexes(0, 0, rows.length, rows[0].length).values = rows;
 await context.sync();
-const rows = sheet.getUsedRange().values;
-const hdr = rows[0].map(h => String(h).toLowerCase().trim());
-const ci = hdr.indexOf("a");
-if (ci === -1) throw new Error("Column 'A' not found.");
-sheet.getUsedRange().sortByColumn(ci, Excel.SortOrder.ascending);
 
-// gen-L1-sorting-easy-059
-const sheet = workbook.worksheets.getActiveWorksheet();
-sheet.getUsedRange().load("values");
-await context.sync();
-const rows = sheet.getUsedRange().values;
-const hdr = rows[0].map(h =>
+// gen-L1-formulas-easy-081
+const sheet = workbook
 // EVAL-IMPROVEMENTS-END
 `
 + (DEFAULT_MODEL.toLowerCase().includes('qwen') ? '\n/no_think' : '');
