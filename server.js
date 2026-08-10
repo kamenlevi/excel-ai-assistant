@@ -590,66 +590,52 @@ If unsure whether Office JS supports something, use CODE_JS first. Only fall bac
 // EVAL-IMPROVEMENTS-START
 **Rules:**
 
-* When using 'applyColumnFilter', ensure to pass the 'context' object as an argument.
-* When using 'clearFilters', ensure to pass the 'context' object as an argument.
-* When using 'sortByColumn', ensure to pass the 'context' object as an argument.
-* When using 'clearFilters', ensure to pass the 'context' object as an argument and use 'clearFilters()' instead of 'clear(Excel.ClearApplyTo.all)'.
+* When using 'clearFilters', ensure to specify the column index using 'applyColumnFilter' helper.
+* When using 'applyColumnFilter', ensure to pass the column index as an argument.
+* When using 'sortByColumn', ensure to pass the column index as an argument.
+* When using 'getRangeByIndexes', ensure to specify the column count when loading the used range.
+* When using 'copyFrom', ensure to specify the range type as 'values' and set 'pasteValuesOnly' to 'true'.
 
 **Examples:**
 
 '''javascript
-// L1-filter-002
-const sheet = workbook.worksheets.getActiveWorksheet();
-await applyColumnFilter("Status", "Active", context);
-
 // L1-filter-003
 const sheet = workbook.worksheets.getActiveWorksheet();
-await clearFilters(context);
+await applyColumnFilter("A", "clear", context);
 
-// gen-L1-sort-002
-const sheet = workbook.worksheets.getActiveWorksheet();
-await sortByColumn("Amount", false, context);
-
-// gen-L1-sorting-easy-061
-const sheet = workbook.worksheets.getActiveWorksheet();
-await sortByColumn("X", true, context);
-
-// gen-L1-sorting-easy-062
-const sheet = workbook.worksheets.getActiveWorksheet();
-await sortByColumn("Y", true, context);
-
-// gen-L1-format-002
+// gen-L1-filtering-easy-062
 const sheet = workbook.worksheets.getActiveWorksheet();
 const used = sheet.getUsedRange();
-used.load("values,rowCount");
-await context.sync();
-const range = used.getRangeByIndexes(1, 0, used.rowCount - 1, used.columnCount);
-range.borders = Excel.BorderType.thick;
-await context.sync();
-
-// gen-L1-format-004
-const sheet = workbook.worksheets.getActiveWorksheet();
-const range = sheet.getRange("A1");
-await range.format.font.bold = true;
-await context.sync();
-
-// gen-L1-format-006
-const sheet = workbook.worksheets.getActiveWorksheet();
-const used = sheet.getUsedRange();
-used.load("values");
+used.load("values,rowCount,columnCount");
 await context.sync();
 const rows = used.values;
 const hdr = rows[0].map(h => String(h).toLowerCase().trim());
 const ci = hdr.indexOf("y");
 if (ci === -1) throw new Error("Column 'Y' not found.");
 for (let i = 1; i < rows.length; i++) {
-  rows[i][ci] = Math.floor(rows[i][ci]);
+  if (String(rows[i][ci]) !== "val") toKeep.push(i);
 }
-sheet.getRangeByIndexes(0, 0, rows.length, rows[0].length).values = rows;
+for (const ri of toKeep) {
+  sheet.getRangeByIndexes(ri, 0, 1, rows[0].length).copyFrom(sheet.getRangeByIndexes(ri, 0, 1, rows[0].length), Excel.RangeCopyType.values, true, false);
+}
 await context.sync();
 
-// gen-L1-formulas-easy-081
-const sheet = workbook
+// gen-L1-sorting-easy-063
+const sheet = workbook.worksheets.getActiveWorksheet();
+const used = sheet.getUsedRange();
+used.load("values,rowCount,columnCount");
+await context.sync();
+const rows = used.values;
+const hdr = rows[0].map(h => String(h).toLowerCase().trim());
+const ci = hdr.indexOf("x");
+if (ci === -1) throw new Error("Column 'X' not found.");
+for (let i = rows.length - 1; i >= 1; i--) {
+  if (rows[i][ci] > rows[i - 1][ci]) {
+    [rows[i], rows[i - 1]] = [rows[i - 1], rows[i]];
+  }
+}
+sheet.getRangeByIndexes(0, ci, rows.length, 1).values = rows;
+await context.sync();
 // EVAL-IMPROVEMENTS-END
 `
 + (DEFAULT_MODEL.toLowerCase().includes('qwen') ? '\n/no_think' : '');
