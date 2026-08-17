@@ -590,37 +590,27 @@ If unsure whether Office JS supports something, use CODE_JS first. Only fall bac
 // EVAL-IMPROVEMENTS-START
 **Rules:**
 
-* When using 'clearFilters', ensure to specify the column index using 'applyColumnFilter' helper.
-* When using 'applyColumnFilter', ensure to pass the column index as an argument.
-* When using 'sortByColumn', ensure to pass the column index as an argument.
+* When using 'applyColumnFilter', ensure to specify the filter type using 'filterBy' option.
+* When using 'applyColumnFilter' or 'clearFilters', ensure to specify the column index using 'applyColumnFilter' helper.
+* When using 'sort', ensure to specify the column index and sort order (ascending or descending).
+* When using 'insert', ensure to specify the column index and direction (left or right).
+* When using 'clearFilters', ensure to specify the column index.
+* When using 'createTable', ensure to specify the data range and header row.
 * When using 'getRangeByIndexes', ensure to specify the column count when loading the used range.
 * When using 'copyFrom', ensure to specify the range type as 'values' and set 'pasteValuesOnly' to 'true'.
 
 **Examples:**
 
 '''javascript
-// L1-filter-003
+// L1-filter-002
 const sheet = workbook.worksheets.getActiveWorksheet();
-await applyColumnFilter("A", "clear", context);
+await applyColumnFilter("Status", "Active", "filterBy", "equals");
 
-// gen-L1-filtering-easy-062
+// gen-L1-filter-003
 const sheet = workbook.worksheets.getActiveWorksheet();
-const used = sheet.getUsedRange();
-used.load("values,rowCount,columnCount");
-await context.sync();
-const rows = used.values;
-const hdr = rows[0].map(h => String(h).toLowerCase().trim());
-const ci = hdr.indexOf("y");
-if (ci === -1) throw new Error("Column 'Y' not found.");
-for (let i = 1; i < rows.length; i++) {
-  if (String(rows[i][ci]) !== "val") toKeep.push(i);
-}
-for (const ri of toKeep) {
-  sheet.getRangeByIndexes(ri, 0, 1, rows[0].length).copyFrom(sheet.getRangeByIndexes(ri, 0, 1, rows[0].length), Excel.RangeCopyType.values, true, false);
-}
-await context.sync();
+await applyColumnFilter("A", "clear", context, "filterBy", "clear");
 
-// gen-L1-sorting-easy-063
+// gen-L1-sorting-easy-061
 const sheet = workbook.worksheets.getActiveWorksheet();
 const used = sheet.getUsedRange();
 used.load("values,rowCount,columnCount");
@@ -629,13 +619,24 @@ const rows = used.values;
 const hdr = rows[0].map(h => String(h).toLowerCase().trim());
 const ci = hdr.indexOf("x");
 if (ci === -1) throw new Error("Column 'X' not found.");
-for (let i = rows.length - 1; i >= 1; i--) {
-  if (rows[i][ci] > rows[i - 1][ci]) {
-    [rows[i], rows[i - 1]] = [rows[i - 1], rows[i]];
-  }
-}
-sheet.getRangeByIndexes(0, ci, rows.length, 1).values = rows;
+sheet.getRangeByIndexes(0, ci, rows.length, 1).sort(Excel.SortOrder.ascending, Excel.SortOrder.ascending);
 await context.sync();
+
+// gen-L1-insert-easy-063
+const sheet = workbook.worksheets.getActiveWorksheet();
+const used = sheet.getUsedRange();
+used.load("values,rowCount,columnCount");
+await context.sync();
+const rows = used.values;
+const hdr = rows[0].map(h => String(h).toLowerCase().trim());
+const ci = hdr.indexOf("x");
+if (ci === -1) throw new Error("Column 'X' not found.");
+sheet.getRange("C1").insert(Excel.InsertMode.shiftCells, Excel.InsertShiftDirection.right, ci);
+await context.sync();
+
+// gen-L1-sheet-operations-easy-065
+const sheet = workbook.worksheets.getActiveWorksheet();
+sheet.getRange("
 // EVAL-IMPROVEMENTS-END
 `
 + (DEFAULT_MODEL.toLowerCase().includes('qwen') ? '\n/no_think' : '');
