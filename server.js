@@ -590,9 +590,10 @@ If unsure whether Office JS supports something, use CODE_JS first. Only fall bac
 // EVAL-IMPROVEMENTS-START
 **Rules:**
 
+* When using 'clearFilters', ensure to specify the range to clear.
 * When using 'applyColumnFilter', ensure to specify the filter type using 'filterBy' option and the filter value.
 * When using 'sort', ensure to specify the column index and sort order (ascending or descending).
-* When using 'getRangeByIndexes', ensure to specify the column count when loading the used range.
+* When using 'getUsedRange', ensure to load the 'values' property to access the data.
 * When using 'copyFrom', ensure to specify the range type as 'values' and set 'pasteValuesOnly' to 'true'.
 * When using 'clear', ensure to specify the range to clear.
 * When using 'insert', ensure to specify the column index and direction (left or right).
@@ -603,40 +604,35 @@ If unsure whether Office JS supports something, use CODE_JS first. Only fall bac
 **Examples:**
 
 '''javascript
-// L1-filter-002
+// L1-filter-003
 const sheet = workbook.worksheets.getActiveWorksheet();
-await applyColumnFilter("Status", "Active", "filterBy", "equals");
+await clearFilters("A1:B" + sheet.getUsedRange().rowCount);
 
-// L1-sort-001
+// gen-L1-sorting-easy-068
 const sheet = workbook.worksheets.getActiveWorksheet();
 const used = sheet.getUsedRange();
 used.load("values,rowCount,columnCount");
 await context.sync();
 const rows = used.values;
 const hdr = rows[0].map(h => String(h).toLowerCase().trim());
-const ci = hdr.indexOf("name");
-if (ci === -1) throw new Error("Column 'Name' not found.");
-sheet.getRangeByIndexes(0, ci, rows.length, 1).sort(Excel.SortOrder.ascending, Excel.SortOrder.ascending);
+const ci = hdr.indexOf("y");
+if (ci === -1) throw new Error("Column 'Y' not found.");
+sheet.getRangeByIndexes(1, ci, sorted.length, 1).sort(Excel.SortOrder.ascending);
 await context.sync();
 
-// gen-L1-sorting-easy-066
+// gen-L1-data-validation-easy-086
 const sheet = workbook.worksheets.getActiveWorksheet();
 const used = sheet.getUsedRange();
 used.load("values,rowCount,columnCount");
 await context.sync();
 const rows = used.values;
 const hdr = rows[0].map(h => String(h).toLowerCase().trim());
-const ci = hdr.indexOf("name");
-if (ci === -1) throw new Error("Column 'Name' not found.");
-sheet.getRangeByIndexes(0, ci, rows.length, 1).sort(Excel.SortOrder.ascending);
-await context.sync();
-
-// gen-L1-data-manipulation-easy-066
-const sheet = workbook.worksheets.getActiveWorksheet();
-const used = sheet.getUsedRange();
-used.load("rowCount");
-await context.sync();
-const new
+const ci = hdr.indexOf("x");
+if (ci === -1) throw new Error("Column 'X' not found.");
+const data = rows.slice(1);
+for (let i = 0; i < data.length; i++) {
+  if (data[i][ci] < 1 || data[i][ci] > 5 || !Number.isInteger(data[i][ci])) {
+    data
 // EVAL-IMPROVEMENTS-END
 `
 + (DEFAULT_MODEL.toLowerCase().includes('qwen') ? '\n/no_think' : '');
