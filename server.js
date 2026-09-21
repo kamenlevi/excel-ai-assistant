@@ -590,49 +590,32 @@ If unsure whether Office JS supports something, use CODE_JS first. Only fall bac
 // EVAL-IMPROVEMENTS-START
 **Rules:**
 
-* When using 'clearFilters', ensure to specify the range to clear.
-* When using 'applyColumnFilter', ensure to specify the filter type using 'filterBy' option and the filter value.
-* When using 'sort', ensure to specify the column index and sort order (ascending or descending).
-* When using 'getUsedRange', ensure to load the 'values' property to access the data.
-* When using 'copyFrom', ensure to specify the range type as 'values' and set 'pasteValuesOnly' to 'true'.
-* When using 'clear', ensure to specify the range to clear.
-* When using 'insert', ensure to specify the column index and direction (left or right).
-* When using 'dataValidation.add', ensure to specify the validation type and list of allowed values.
-* When using 'createTable', ensure to specify the table's properties (e.g. header row, data range).
-* When using 'shapes.add', ensure to specify the shape type and target cell reference.
+* When using 'clearFilters', ensure to specify the range to clear using 'clearFilters(range)'.
+* When using 'applyColumnFilter', ensure to specify the filter type using 'filterBy' option and the filter value, e.g. 'applyColumnFilter("X", "val", Excel.FilterType.exact)'.
+* When using 'sort', ensure to specify the column index and sort order (ascending or descending) using 'sort(columnIndex, Excel.SortOrder.ascending)' or 'sort(columnIndex, Excel.SortOrder.descending)'.
+* When using 'getUsedRange', ensure to load the 'values' property to access the data using 'used.load("values")'.
+* When using 'copyFrom', ensure to specify the range type as 'values' and set 'pasteValuesOnly' to 'true' using 'copyFrom(range, Excel.RangeCopyType.values, true)'.
+* When using 'clear', ensure to specify the range to clear using 'clear(range)'.
+* When using 'insert', ensure to specify the column index and direction (left or right) using 'insert(columnIndex, Excel.InsertDirection.left)' or 'insert(columnIndex, Excel.InsertDirection.right)'.
+* When using 'dataValidation.add', ensure to specify the validation type and list of allowed values using 'dataValidation.add(range, Excel.DataValidationType.list, "Low,Medium,High")'.
+* When using 'createTable', ensure to specify the table's properties (e.g. header row, data range) using 'createTable(range, { headerRow: true })'.
+* When using 'shapes.add', ensure to specify the shape type and target cell reference using 'shapes.add(Excel.ShapeType.square, range)'.
+* When using 'await', ensure to use it with the correct Office JS API method, e.g. 'await clearFilters()'.
+* When using 'applyColumnFilter' or 'applyRowFilter', ensure to specify the filter type using 'filterBy' option and the filter value.
 
 **Examples:**
 
 '''javascript
-// L1-filter-003
-const sheet = workbook.worksheets.getActiveWorksheet();
-await clearFilters("A1:B" + sheet.getUsedRange().rowCount);
-
-// gen-L1-sorting-easy-068
+// gen-L1-filtering-easy-067
 const sheet = workbook.worksheets.getActiveWorksheet();
 const used = sheet.getUsedRange();
-used.load("values,rowCount,columnCount");
-await context.sync();
-const rows = used.values;
-const hdr = rows[0].map(h => String(h).toLowerCase().trim());
-const ci = hdr.indexOf("y");
-if (ci === -1) throw new Error("Column 'Y' not found.");
-sheet.getRangeByIndexes(1, ci, sorted.length, 1).sort(Excel.SortOrder.ascending);
-await context.sync();
-
-// gen-L1-data-validation-easy-086
-const sheet = workbook.worksheets.getActiveWorksheet();
-const used = sheet.getUsedRange();
-used.load("values,rowCount,columnCount");
+used.load("values");
 await context.sync();
 const rows = used.values;
 const hdr = rows[0].map(h => String(h).toLowerCase().trim());
 const ci = hdr.indexOf("x");
 if (ci === -1) throw new Error("Column 'X' not found.");
-const data = rows.slice(1);
-for (let i = 0; i < data.length; i++) {
-  if (data[i][ci] < 1 || data[i][ci] > 5 || !Number.isInteger(data[i][ci])) {
-    data
+const filterValues = ["val"];
 // EVAL-IMPROVEMENTS-END
 `
 + (DEFAULT_MODEL.toLowerCase().includes('qwen') ? '\n/no_think' : '');
