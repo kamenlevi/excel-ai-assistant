@@ -591,9 +591,9 @@ If unsure whether Office JS supports something, use CODE_JS first. Only fall bac
 **Rules:**
 
 * When using 'clearFilters', ensure to specify the range to clear using 'clearFilters(range)'.
-* When using 'applyColumnFilter', ensure to specify the filter type using 'filterBy' option and the filter value, e.g. 'applyColumnFilter("X", "val", Excel.FilterType.exact)'.
-* When using 'sort', ensure to specify the column index and sort order (ascending or descending) using 'sort(columnIndex, Excel.SortOrder.ascending)' or 'sort(columnIndex, Excel.SortOrder.descending)'.
-* When using 'getUsedRange', ensure to load the 'values' property to access the data using 'used.load("values")'.
+* When using 'getActiveWorksheet', ensure to store the result in a variable for later use.
+* When using 'sortByColumn', ensure to specify the column index and sort order (ascending or descending) using 'sortByColumn(columnIndex, Excel.SortOrder.ascending)' or 'sortByColumn(columnIndex, Excel.SortOrder.descending)'.
+* When using 'getUsedRange', ensure to load the 'columnCount' property to access the column count using 'used.load("columnCount")'.
 * When using 'copyFrom', ensure to specify the range type as 'values' and set 'pasteValuesOnly' to 'true' using 'copyFrom(range, Excel.RangeCopyType.values, true)'.
 * When using 'clear', ensure to specify the range to clear using 'clear(range)'.
 * When using 'insert', ensure to specify the column index and direction (left or right) using 'insert(columnIndex, Excel.InsertDirection.left)' or 'insert(columnIndex, Excel.InsertDirection.right)'.
@@ -606,7 +606,11 @@ If unsure whether Office JS supports something, use CODE_JS first. Only fall bac
 **Examples:**
 
 '''javascript
-// gen-L1-filtering-easy-067
+// L1-filter-003
+const sheet = workbook.worksheets.getActiveWorksheet();
+await clearFilters(sheet.getUsedRange());
+
+// gen-L1-filtering-easy-069
 const sheet = workbook.worksheets.getActiveWorksheet();
 const used = sheet.getUsedRange();
 used.load("values");
@@ -615,7 +619,7 @@ const rows = used.values;
 const hdr = rows[0].map(h => String(h).toLowerCase().trim());
 const ci = hdr.indexOf("x");
 if (ci === -1) throw new Error("Column 'X' not found.");
-const filterValues = ["val"];
+await apply
 // EVAL-IMPROVEMENTS-END
 `
 + (DEFAULT_MODEL.toLowerCase().includes('qwen') ? '\n/no_think' : '');

@@ -60,11 +60,11 @@
     "forbiddenPatterns": []
   },
   {
-    "id": "gen-L1-filtering-easy-067",
+    "id": "gen-L1-filtering-easy-070",
     "level": 1,
     "category": "filtering",
     "prompt": "Show only rows where X is 'val'",
-    "workbook": "Headers: A1=X | B1=Y\nData:\nA2:val | B2:other\nA3:val | B3:other\nA4:other | B4:other",
+    "workbook": "Headers: A1=X | B1=Y\nData:\nA2:val | B2:val\nA3:val | B3:val",
     "mustHaveCode": true,
     "requiredPatterns": [
       "applyColumnFilter('X', 'val')"
@@ -72,23 +72,23 @@
     "forbiddenPatterns": []
   },
   {
-    "id": "gen-L1-filtering-easy-068",
+    "id": "gen-L1-filtering-easy-071",
     "level": 1,
     "category": "filtering",
-    "prompt": "Show only rows where Y is 'other'",
-    "workbook": "Headers: A1=X | B1=Y\nData:\nA2:val | B2:val\nA3:val | B3:other\nA4:other | B4:other",
+    "prompt": "Show only rows where Y is 'val'",
+    "workbook": "Headers: A1=X | B1=Y\nData:\nA2:val | B2:val\nA3:val | B3:val",
     "mustHaveCode": true,
     "requiredPatterns": [
-      "applyColumnFilter('Y', 'other')"
+      "applyColumnFilter('Y', 'val')"
     ],
     "forbiddenPatterns": []
   },
   {
-    "id": "gen-L1-filtering-easy-069",
+    "id": "gen-L1-filtering-easy-072",
     "level": 1,
     "category": "filtering",
     "prompt": "Clear all filters",
-    "workbook": "Headers: A1=X | B1=Y\nData:\nA2:val | B2:val\nA3:val | B3:other\nA4:other | B4:other",
+    "workbook": "Headers: A1=X | B1=Y\nData:\nA2:val | B2:val\nA3:val | B3:val",
     "mustHaveCode": true,
     "requiredPatterns": [
       "clearFilters()"
@@ -96,11 +96,11 @@
     "forbiddenPatterns": []
   },
   {
-    "id": "gen-L1-sorting-easy-067",
+    "id": "gen-L1-sorting-easy-070",
     "level": 1,
     "category": "sorting",
     "prompt": "sort the values in column A in alphabetical order",
-    "workbook": "Headers: A1=X | B1=Y\nData:\nA2:cat | B2:dog\nA3:dog | B3:cat",
+    "workbook": "Headers: A1=X | B1=Y\nData:\nA2:foo | B2:bar\nA3:baz | B3:qux",
     "mustHaveCode": true,
     "requiredPatterns": [
       "sortByColumn('A', true)"
@@ -108,11 +108,11 @@
     "forbiddenPatterns": []
   },
   {
-    "id": "gen-L1-sorting-easy-068",
+    "id": "gen-L1-sorting-easy-071",
     "level": 1,
     "category": "sorting",
     "prompt": "sort the values in column B in ascending order",
-    "workbook": "Headers: A1=X | B1=Y\nData:\nA2:val | B2:3\nA3:val | B3:1",
+    "workbook": "Headers: A1=X | B1=Y\nData:\nA2:1 | B2:3\nA3:2 | B3:4",
     "mustHaveCode": true,
     "requiredPatterns": [
       "sortByColumn('B', true)"
@@ -120,11 +120,11 @@
     "forbiddenPatterns": []
   },
   {
-    "id": "gen-L1-sorting-easy-069",
+    "id": "gen-L1-sorting-easy-072",
     "level": 1,
     "category": "sorting",
-    "prompt": "sort the values in column A in alphabetical order (only 1 row)",
-    "workbook": "Headers: A1=X | B1=Y\nData:\nA2:cat | B2:dog",
+    "prompt": "sort the values in column A in alphabetical order (only 2 rows)",
+    "workbook": "Headers: A1=X | B1=Y\nData:\nA2:cat | B2:dog\nA3:ele | B3:ant",
     "mustHaveCode": true,
     "requiredPatterns": [
       "sortByColumn('A', true)"
@@ -132,35 +132,35 @@
     "forbiddenPatterns": []
   },
   {
-    "id": "gen-L1-formatting-easy-004",
+    "id": "gen-L1-format-007",
     "level": 1,
     "category": "formatting",
     "prompt": "make the numbers in cell A1 show as integers",
-    "workbook": "Headers: A1=val | B1=val\nData:\nA2:10.5 | B2:20.8",
+    "workbook": "Headers: A1=X | B1=Y\nData:\nA1: 123.45 | B1:val",
     "mustHaveCode": true,
     "requiredPatterns": [
-      "dataValidation.add"
+      "numbersToIntegerFormat"
     ],
     "forbiddenPatterns": []
   },
   {
-    "id": "gen-L1-formatting-easy-005",
+    "id": "gen-L1-format-008",
     "level": 1,
     "category": "formatting",
     "prompt": "make the text in cell B1 bold",
-    "workbook": "Headers: A1=val | B1=val\nData:\nA2:10.5 | B2:20.8",
+    "workbook": "Headers: A1=X | B1=Y\nData:\nA1:val | B1:Hello World",
     "mustHaveCode": true,
     "requiredPatterns": [
-      "conditionalFormats.add"
+      "bold"
     ],
     "forbiddenPatterns": []
   },
   {
-    "id": "gen-L1-formatting-easy-006",
+    "id": "gen-L1-format-009",
     "level": 1,
     "category": "formatting",
     "prompt": "make the background color of cell A2 red",
-    "workbook": "Headers: A1=val | B1=val\nData:\nA2:10.5 | B2:20.8",
+    "workbook": "Headers: A1=X | B1=Y\nData:\nA1:val | B1:val\nA2:val | B2:val",
     "mustHaveCode": true,
     "requiredPatterns": [
       "conditionalFormats.add"
@@ -168,43 +168,43 @@
     "forbiddenPatterns": []
   },
   {
-    "id": "gen-L1-formulas-easy-085",
+    "id": "gen-L1-formulas-easy-088",
     "level": 1,
     "category": "formulas",
     "prompt": "in cell C2 write a formula that shows the value of A2",
-    "workbook": "Headers: A1=X | B1=Y\nData:\nA2:val | B2:val",
+    "workbook": "Headers: A1=X | B1=Y\nData:\nA2:10 | B2:20",
     "mustHaveCode": true,
     "requiredPatterns": [
-      "cells.getCell(2, 2).value = cells.getCell(1, 1).value"
+      "cells.getCell(2, 2).value = worksheet.getCell(2, 0).value"
     ],
     "forbiddenPatterns": []
   },
   {
-    "id": "gen-L1-formulas-easy-086",
+    "id": "gen-L1-formulas-easy-089",
     "level": 1,
     "category": "formulas",
-    "prompt": "in cell D2 write a formula that shows the sum of A2 and 5",
-    "workbook": "Headers: A1=X | B1=Y\nData:\nA2:val | B2:val",
+    "prompt": "in cell D2 write a formula that shows the value of B2",
+    "workbook": "Headers: A1=X | B1=Y\nData:\nA2:30 | B2:40",
     "mustHaveCode": true,
     "requiredPatterns": [
-      "cells.getCell(2, 3).value = cells.getCell(1, 1).value + 5"
+      "cells.getCell(2, 3).value = worksheet.getCell(2, 1).value"
     ],
     "forbiddenPatterns": []
   },
   {
-    "id": "gen-L1-formulas-easy-087",
+    "id": "gen-L1-formulas-easy-090",
     "level": 1,
     "category": "formulas",
-    "prompt": "in cell E2 write a formula that shows the value of B2",
-    "workbook": "Headers: A1=X | B1=Y\nData:\nA2:val | B2:val",
+    "prompt": "in cell E2 write a formula that shows the sum of A2 and 5",
+    "workbook": "Headers: A1=X | B1=Y\nData:\nA2:10 | B2:20",
     "mustHaveCode": true,
     "requiredPatterns": [
-      "cells.getCell(2, 4).value = cells.getCell(1, 2).value"
+      "cells.getCell(2, 4).value = worksheet.getCell(2, 0).value + 5"
     ],
     "forbiddenPatterns": []
   },
   {
-    "id": "gen-L1-conditional-formatting-easy-613",
+    "id": "gen-L1-conditional-formatting-easy-616",
     "level": 1,
     "category": "conditional formatting",
     "prompt": "Highlight cells in the X column green if equal to 1",
@@ -216,11 +216,11 @@
     "forbiddenPatterns": []
   },
   {
-    "id": "gen-L1-conditional-formatting-easy-614",
+    "id": "gen-L1-conditional-formatting-easy-617",
     "level": 1,
     "category": "conditional formatting",
-    "prompt": "Highlight cells in the Y column red if greater than 0",
-    "workbook": "Headers: A1=X | B1=Y\nData:\nA2:val | B2:0\nA3:val | B3:1\nA4:val | B4:2",
+    "prompt": "Highlight cells in the Y column red if equal to 0",
+    "workbook": "Headers: A1=X | B1=Y\nData:\nA2:val | B2:0\nA3:val | B3:0\nA4:val | B4:1",
     "mustHaveCode": true,
     "requiredPatterns": [
       "conditionalFormats.add"
@@ -228,11 +228,11 @@
     "forbiddenPatterns": []
   },
   {
-    "id": "gen-L1-conditional-formatting-easy-615",
+    "id": "gen-L1-conditional-formatting-easy-618",
     "level": 1,
     "category": "conditional formatting",
-    "prompt": "Highlight cells in the X column yellow if less than 3",
-    "workbook": "Headers: A1=X | B1=Y\nData:\nA2:1 | B2:val\nA3:2 | B3:val\nA4:3 | B4:val",
+    "prompt": "Highlight cells in the X column yellow if greater than 0",
+    "workbook": "Headers: A1=X | B1=Y\nData:\nA2:1 | B2:val\nA3:0 | B3:val\nA4:2 | B4:val",
     "mustHaveCode": true,
     "requiredPatterns": [
       "conditionalFormats.add"
@@ -240,124 +240,83 @@
     "forbiddenPatterns": []
   },
   {
-    "id": "gen-L1-data-manipulation-easy-067",
+    "id": "gen-L1-data-manipulation-easy-070",
     "level": 1,
     "category": "data manipulation",
-    "prompt": "Copy the value in cell A1 and paste it into cell B2",
-    "workbook": "Headers: A1=X | B1=Y\nData:\nA2:val | B2:val",
+    "prompt": "Copy the value in cell A1 and paste it into cell B1",
+    "workbook": "Headers: A1=X | B1=Y\nData:\nA1:val | B1: \nA2:val | B2:val",
     "mustHaveCode": true,
     "requiredPatterns": [
-      "copyValue",
-      "pasteValue"
+      "copyValuesFromTo"
     ],
     "forbiddenPatterns": []
   },
   {
-    "id": "gen-L1-data-manipulation-easy-068",
+    "id": "gen-L1-data-manipulation-easy-071",
     "level": 1,
     "category": "data manipulation",
     "prompt": "Clear the content in cell A2",
-    "workbook": "Headers: A1=X | B1=Y\nData:\nA2:val | B2:val",
+    "workbook": "Headers: A1=X | B1=Y\nData:\nA1:val | B1:val\nA2:val | B2:val",
     "mustHaveCode": true,
     "requiredPatterns": [
-      "clearContent"
+      "clearContents"
     ],
     "forbiddenPatterns": []
   },
   {
-    "id": "gen-L1-data-manipulation-easy-069",
+    "id": "gen-L1-data-manipulation-easy-072",
     "level": 1,
     "category": "data manipulation",
     "prompt": "Copy the value in cell B1 and paste it into cell A1",
+    "workbook": "Headers: A1=X | B1=Y\nData:\nA1: \nB1:val\nA2:val | B2:val",
+    "mustHaveCode": true,
+    "requiredPatterns": [
+      "copyValuesFromTo"
+    ],
+    "forbiddenPatterns": []
+  },
+  {
+    "id": "gen-L1-sheet-operations-easy-001",
+    "level": 1,
+    "category": "sheet operations",
+    "prompt": "Hide the first row so it doesn't take up space",
     "workbook": "Headers: A1=X | B1=Y\nData:\nA2:val | B2:val",
     "mustHaveCode": true,
     "requiredPatterns": [
-      "copyValue",
-      "pasteValue"
+      "freezePanes"
     ],
     "forbiddenPatterns": []
   },
   {
-    "id": "gen-L1-sheet-operations-easy-070",
+    "id": "gen-L1-sheet-operations-easy-002",
     "level": 1,
     "category": "sheet operations",
-    "prompt": "Hide the first column so it doesn't take up space",
-    "workbook": "Headers: A1=X | B1=Y\nData:\nA2:val | B2:val",
+    "prompt": "Show only the values greater than 5 in column A",
+    "workbook": "Headers: A1=X | B1=Y\nData:\nA2:10 | A3:15 | A4:5",
     "mustHaveCode": true,
     "requiredPatterns": [
-      "hideColumn('A')"
+      "applyColumnFilter"
     ],
     "forbiddenPatterns": []
   },
   {
-    "id": "gen-L1-sheet-operations-easy-071",
-    "level": 1,
-    "category": "sheet operations",
-    "prompt": "Show only the values greater than 10 in column B",
-    "workbook": "Headers: A1=X | B1=Y\nData:\nA2:val | B2:10\nA3:val | B3:20",
-    "mustHaveCode": true,
-    "requiredPatterns": [
-      "applyColumnFilter('B', 10)"
-    ],
-    "forbiddenPatterns": []
-  },
-  {
-    "id": "gen-L1-sheet-operations-easy-072",
+    "id": "gen-L1-sheet-operations-easy-003",
     "level": 1,
     "category": "sheet operations",
     "prompt": "Sort the data in column A in ascending order",
-    "workbook": "Headers: A1=X | B1=Y\nData:\nA2:val | B2:val\nA3:val | B3:val\nA4:val | B4:val",
+    "workbook": "Headers: A1=X | B1=Y\nData:\nA2:10 | A3:15 | A4:5",
     "mustHaveCode": true,
     "requiredPatterns": [
-      "sortByColumn('A', true)"
+      "sortByColumn"
     ],
     "forbiddenPatterns": []
   },
   {
-    "id": "gen-L1-question-handling-easy-085",
+    "id": "gen-L1-question-handling-easy-088",
     "level": 1,
     "category": "question handling",
-    "prompt": "What is the value in cell A2?",
-    "workbook": "Headers: A1=X | B1=Y\nData:\nA2:hello | B2:world",
-    "mustHaveCode": true,
-    "requiredPatterns": [
-      "names.add",
-      "names.get"
-    ],
-    "forbiddenPatterns": []
-  },
-  {
-    "id": "gen-L1-question-handling-easy-086",
-    "level": 1,
-    "category": "question handling",
-    "prompt": "How many rows of data do I have?",
-    "workbook": "Headers: A1=X | B1=Y\nData:\nA2:val | B3:val | B4:val",
-    "mustHaveCode": true,
-    "requiredPatterns": [
-      "tables.add",
-      "tables.getRowCount"
-    ],
-    "forbiddenPatterns": []
-  },
-  {
-    "id": "gen-L1-question-handling-easy-087",
-    "level": 1,
-    "category": "question handling",
-    "prompt": "Is cell B1 empty?",
-    "workbook": "Headers: A1=X | B1=\nData:\nA2:val | B2:val",
-    "mustHaveCode": true,
-    "requiredPatterns": [
-      "dataValidation.add",
-      "dataValidation.isFormulaError"
-    ],
-    "forbiddenPatterns": []
-  },
-  {
-    "id": "gen-L1-edge-cases-easy-073",
-    "level": 1,
-    "category": "edge cases",
-    "prompt": "filter the X column to show only values equal to 'val'",
-    "workbook": "Headers: A1=X | B1=Y\nData:\nA2:val | B2:val\nA3:val | B3:val",
+    "prompt": "What is the value in cell A1?",
+    "workbook": "Headers: A1=X | B1=Y\nData:\nA1:val | B1:",
     "mustHaveCode": true,
     "requiredPatterns": [
       "applyColumnFilter('X', 'val')"
@@ -365,23 +324,60 @@
     "forbiddenPatterns": []
   },
   {
-    "id": "gen-L1-edge-cases-easy-074",
+    "id": "gen-L1-question-handling-easy-089",
     "level": 1,
-    "category": "edge cases",
-    "prompt": "sort the Y column in descending order",
-    "workbook": "Headers: A1=X | B1=Y\nData:\nA2:val | B2:5\nA3:val | B3:3",
+    "category": "question handling",
+    "prompt": "Is cell B1 empty?",
+    "workbook": "Headers: A1=X | B1=Y\nData:\nA1:val | B1:",
     "mustHaveCode": true,
     "requiredPatterns": [
-      "sortByColumn('Y', false)"
+      "applyColumnFilter('Y', '')"
     ],
     "forbiddenPatterns": []
   },
   {
-    "id": "gen-L1-edge-cases-easy-075",
+    "id": "gen-L1-question-handling-easy-090",
+    "level": 1,
+    "category": "question handling",
+    "prompt": "How many rows of data do I have?",
+    "workbook": "Headers: A1=X | B1=Y\nData:\nA1:val | B1:val\nA2:val | B2:val",
+    "mustHaveCode": true,
+    "requiredPatterns": [
+      "clearFilters()",
+      "sortByColumn('X', true)"
+    ],
+    "forbiddenPatterns": []
+  },
+  {
+    "id": "gen-L1-edge-cases-easy-076",
+    "level": 1,
+    "category": "edge cases",
+    "prompt": "filter the X column to show only values equal to 'val'",
+    "workbook": "Headers: A1=X | B1=Y\nData:\nA2:val | B2:val",
+    "mustHaveCode": true,
+    "requiredPatterns": [
+      "applyColumnFilter('X', 'val')"
+    ],
+    "forbiddenPatterns": []
+  },
+  {
+    "id": "gen-L1-edge-cases-easy-077",
+    "level": 1,
+    "category": "edge cases",
+    "prompt": "sort the Y column in ascending order",
+    "workbook": "Headers: A1=X | B1=Y\nData:\nA2:val | B2:val",
+    "mustHaveCode": true,
+    "requiredPatterns": [
+      "sortByColumn('Y', true)"
+    ],
+    "forbiddenPatterns": []
+  },
+  {
+    "id": "gen-L1-edge-cases-easy-078",
     "level": 1,
     "category": "edge cases",
     "prompt": "clear all filters from the X column",
-    "workbook": "Headers: A1=X | B1=Y\nData:\nA2:val | B2:val\nA3:val | B3:val\nA4:val | B4:val",
+    "workbook": "Headers: A1=X | B1=Y\nData:\nA2:val | B2:val",
     "mustHaveCode": true,
     "requiredPatterns": [
       "clearFilters()"
@@ -389,11 +385,11 @@
     "forbiddenPatterns": []
   },
   {
-    "id": "gen-L1-data-validation-easy-085",
+    "id": "gen-L1-data-validation-easy-088",
     "level": 1,
     "category": "data validation",
-    "prompt": "add a dropdown list to column B that only allows 'yes' or 'no'",
-    "workbook": "Headers: A1=X | B1=Y\nData:\nA2:val | B2:yes",
+    "prompt": "add a dropdown list to column A that only allows 'red' or 'blue'",
+    "workbook": "Headers: A1=Color | B1=Number\nData:\nA2:val | B2:val",
     "mustHaveCode": true,
     "requiredPatterns": [
       "dataValidation.add"
@@ -401,11 +397,11 @@
     "forbiddenPatterns": []
   },
   {
-    "id": "gen-L1-data-validation-easy-086",
+    "id": "gen-L1-data-validation-easy-089",
     "level": 1,
     "category": "data validation",
-    "prompt": "make sure column A only accepts whole numbers between 1 and 5",
-    "workbook": "Headers: A1=X | B1=Y\nData:\nA2:1 | B2:val",
+    "prompt": "make sure column B only accepts whole numbers between 1 and 5",
+    "workbook": "Headers: A1=X | B1=Y\nData:\nA2:val | B2:1\nA3:val | B3:3",
     "mustHaveCode": true,
     "requiredPatterns": [
       "dataValidation.add"
@@ -413,11 +409,11 @@
     "forbiddenPatterns": []
   },
   {
-    "id": "gen-L1-data-validation-easy-087",
+    "id": "gen-L1-data-validation-easy-090",
     "level": 1,
     "category": "data validation",
-    "prompt": "add a dropdown list to column A that only allows 'apple' or 'banana'",
-    "workbook": "Headers: A1=X | B1=Y\nData:\nA2:apple | B2:val",
+    "prompt": "add a dropdown list to column B that only allows 'yes' or 'no' (no data)",
+    "workbook": "Headers: A1=X | B1=Y\nData:\nA2:val | B2:val",
     "mustHaveCode": true,
     "requiredPatterns": [
       "dataValidation.add"
@@ -425,70 +421,58 @@
     "forbiddenPatterns": []
   },
   {
-    "id": "gen-L1-Hyperlinks-easy-067",
+    "id": "gen-L1-Hyperlinks-easy-070",
     "level": 1,
     "category": "Hyperlinks",
     "prompt": "Add a hyperlink to cell A1 with the text 'Link' that links to https://www.example.com",
-    "workbook": "Headers: A1=X | B1=Y\nData:\nA1:Link | B1:val",
+    "workbook": "Headers: A1=X | B1=Y\nData:\nA2=val | B2=val",
     "mustHaveCode": true,
     "requiredPatterns": [
-      "hyperlinks.add"
+      "tables.add"
     ],
     "forbiddenPatterns": []
   },
   {
-    "id": "gen-L1-Hyperlinks-easy-068",
+    "id": "gen-L1-Hyperlinks-easy-071",
     "level": 1,
     "category": "Hyperlinks",
     "prompt": "Create a hyperlink in cell B1 to https://www.example.org with the display text 'Click here'",
-    "workbook": "Headers: A1=X | B1=Y\nData:\nA1:val | B1:Click here",
+    "workbook": "Headers: A1=X | B1=Y\nData:\nA2=val | B2=val",
     "mustHaveCode": true,
     "requiredPatterns": [
-      "hyperlinks.add"
+      "tables.add"
     ],
     "forbiddenPatterns": []
   },
   {
-    "id": "gen-L1-Hyperlinks-easy-069",
+    "id": "gen-L1-Hyperlinks-easy-072",
     "level": 1,
     "category": "Hyperlinks",
     "prompt": "Add a hyperlink to cell A1 that links to https://www.example.net",
-    "workbook": "Headers: A1=X | B1=Y\nData:\nA1:val | B1:val",
+    "workbook": "Headers: A1=X | B1=Y\nData:\nA2=val | B2=val",
     "mustHaveCode": true,
     "requiredPatterns": [
-      "hyperlinks.add"
+      "tables.add"
     ],
     "forbiddenPatterns": []
   },
   {
-    "id": "gen-L2-Page-Layout-easy-083",
+    "id": "gen-L2-Page-Layout-easy-086",
     "level": 2,
     "category": "Page Layout",
-    "prompt": "Set the page orientation to Portrait for a blank worksheet.",
+    "prompt": "Set the page orientation to Landscape for a worksheet with headers.",
     "workbook": "Headers: A1=X | B1=Y\nData:\nA2:val | B2:val",
     "mustHaveCode": true,
     "requiredPatterns": [
-      "charts.add"
+      "freezePanes"
     ],
     "forbiddenPatterns": []
   },
   {
-    "id": "gen-L2-Page-Layout-easy-084",
+    "id": "gen-L2-Page-Layout-easy-087",
     "level": 2,
     "category": "Page Layout",
-    "prompt": "Set the print area to A1:B1 for a blank worksheet.",
-    "workbook": "Headers: A1=X | B1=Y\nData:\nA2:val | B2:val",
-    "mustHaveCode": true,
-    "requiredPatterns": [
-      "conditionalFormats.add"
-    ],
-    "forbiddenPatterns": []
-  },
-  {
-    "id": "gen-L2-Page-Layout-easy-085",
-    "level": 2,
-    "category": "Page Layout",
-    "prompt": "Autofit columns A and B for a blank worksheet.",
+    "prompt": "Autofit columns A and B for a worksheet with a single row of data.",
     "workbook": "Headers: A1=X | B1=Y\nData:\nA2:val | B2:val",
     "mustHaveCode": true,
     "requiredPatterns": [
@@ -497,7 +481,19 @@
     "forbiddenPatterns": []
   },
   {
-    "id": "gen-L2-tables-easy-252",
+    "id": "gen-L2-Page-Layout-easy-088",
+    "level": 2,
+    "category": "Page Layout",
+    "prompt": "Set the print area to A1:B1 for a worksheet with headers.",
+    "workbook": "Headers: A1=X | B1=Y\nData:\nA2:val | B2:val",
+    "mustHaveCode": true,
+    "requiredPatterns": [
+      "dataValidation"
+    ],
+    "forbiddenPatterns": []
+  },
+  {
+    "id": "gen-L2-tables-easy-255",
     "level": 2,
     "category": "tables",
     "prompt": "Create a table with one column and one row of data",
@@ -509,73 +505,71 @@
     "forbiddenPatterns": []
   },
   {
-    "id": "gen-L2-tables-easy-253",
+    "id": "gen-L2-tables-easy-256",
     "level": 2,
     "category": "tables",
     "prompt": "Insert a table with a header into a new worksheet",
     "workbook": "Headers: A1=X | B1=Y\nData:\nA2:val | B2:val",
     "mustHaveCode": true,
     "requiredPatterns": [
-      "tables.add",
-      "autofitColumns"
+      "tables.add"
     ],
     "forbiddenPatterns": []
   },
   {
-    "id": "gen-L2-tables-easy-254",
+    "id": "gen-L2-tables-easy-257",
     "level": 2,
     "category": "tables",
-    "prompt": "Create a table with two columns and one row of data",
-    "workbook": "Headers: A1=X | B1=Y\nData:\nA2:val | B2:val",
+    "prompt": "Create a table with two columns and no data",
+    "workbook": "Headers: A1=X | B1=Y\nData:\nA2: | B2: ",
     "mustHaveCode": true,
     "requiredPatterns": [
-      "tables.add",
-      "autofitColumns"
+      "tables.add"
     ],
     "forbiddenPatterns": []
   },
   {
-    "id": "gen-L1-Shapes-easy-082",
+    "id": "gen-L1-Shapes-easy-085",
     "level": 1,
     "category": "Shapes",
-    "prompt": "Insert a circle shape in cell A1 of a worksheet with a header row",
+    "prompt": "Insert a rectangle shape in cell A1 of a worksheet with a header row",
     "workbook": "Headers: A1=X | B1=Y\nData:\nA2:val | B2:val",
     "mustHaveCode": true,
     "requiredPatterns": [
-      "shapes.add('circle', 'A1')"
+      "shapes.addRectangle"
     ],
     "forbiddenPatterns": []
   },
   {
-    "id": "gen-L1-Shapes-easy-083",
+    "id": "gen-L1-Shapes-easy-086",
     "level": 1,
     "category": "Shapes",
-    "prompt": "Insert a square shape in cell A1 of a worksheet with a header row",
+    "prompt": "Insert a line shape in cell A1 of a worksheet with a header row",
     "workbook": "Headers: A1=X | B1=Y\nData:\nA2:val | B2:val",
     "mustHaveCode": true,
     "requiredPatterns": [
-      "shapes.add('square', 'A1')"
+      "shapes.addLine"
     ],
     "forbiddenPatterns": []
   },
   {
-    "id": "gen-L1-Shapes-easy-084",
+    "id": "gen-L1-Shapes-easy-087",
     "level": 1,
     "category": "Shapes",
-    "prompt": "Insert a triangle shape in cell A1 of a worksheet with a header row",
+    "prompt": "Insert a free-form shape in cell A1 of a worksheet with a header row",
     "workbook": "Headers: A1=X | B1=Y\nData:\nA2:val | B2:val",
     "mustHaveCode": true,
     "requiredPatterns": [
-      "shapes.add('triangle', 'A1')"
+      "shapes.addFreeform"
     ],
     "forbiddenPatterns": []
   },
   {
-    "id": "gen-L2-named-ranges-easy-067",
+    "id": "gen-L2-named-ranges-easy-070",
     "level": 2,
     "category": "named ranges",
     "prompt": "Create a named range called SingleValue that covers the cell A1",
-    "workbook": "Headers: A1=X | B1=Y\nData:\nA1:val | B1:val",
+    "workbook": "Headers: A1=X | B1=Y\nData:\nA2:1 | B2:2",
     "mustHaveCode": true,
     "requiredPatterns": [
       "names.add"
@@ -583,11 +577,11 @@
     "forbiddenPatterns": []
   },
   {
-    "id": "gen-L2-named-ranges-easy-068",
+    "id": "gen-L2-named-ranges-easy-071",
     "level": 2,
     "category": "named ranges",
     "prompt": "Create a named range called MyRange that covers the cells A1 and A2",
-    "workbook": "Headers: A1=X | B1=Y\nData:\nA1:val | A2:val",
+    "workbook": "Headers: A1=X | B1=Y\nData:\nA2:1 | B2:2",
     "mustHaveCode": true,
     "requiredPatterns": [
       "names.add"
@@ -595,11 +589,11 @@
     "forbiddenPatterns": []
   },
   {
-    "id": "gen-L2-named-ranges-easy-069",
+    "id": "gen-L2-named-ranges-easy-072",
     "level": 2,
     "category": "named ranges",
     "prompt": "Create a named range called TopLeft that covers the cell A1",
-    "workbook": "Headers: A1=X | B1=Y\nData:\nA1:val | B1:val",
+    "workbook": "Headers: A1=X | B1=Y\nData:\nA2:1 | B2:2",
     "mustHaveCode": true,
     "requiredPatterns": [
       "names.add"
