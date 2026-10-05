@@ -590,36 +590,58 @@ If unsure whether Office JS supports something, use CODE_JS first. Only fall bac
 // EVAL-IMPROVEMENTS-START
 **Rules:**
 
+* When using 'applyColumnFilter', ensure to specify the filter type using 'filterBy' option and the filter value.
 * When using 'clearFilters', ensure to specify the range to clear using 'clearFilters(range)'.
-* When using 'getActiveWorksheet', ensure to store the result in a variable for later use.
 * When using 'sortByColumn', ensure to specify the column index and sort order (ascending or descending) using 'sortByColumn(columnIndex, Excel.SortOrder.ascending)' or 'sortByColumn(columnIndex, Excel.SortOrder.descending)'.
 * When using 'getUsedRange', ensure to load the 'columnCount' property to access the column count using 'used.load("columnCount")'.
-* When using 'copyFrom', ensure to specify the range type as 'values' and set 'pasteValuesOnly' to 'true' using 'copyFrom(range, Excel.RangeCopyType.values, true)'.
-* When using 'clear', ensure to specify the range to clear using 'clear(range)'.
-* When using 'insert', ensure to specify the column index and direction (left or right) using 'insert(columnIndex, Excel.InsertDirection.left)' or 'insert(columnIndex, Excel.InsertDirection.right)'.
-* When using 'dataValidation.add', ensure to specify the validation type and list of allowed values using 'dataValidation.add(range, Excel.DataValidationType.list, "Low,Medium,High")'.
-* When using 'createTable', ensure to specify the table's properties (e.g. header row, data range) using 'createTable(range, { headerRow: true })'.
-* When using 'shapes.add', ensure to specify the shape type and target cell reference using 'shapes.add(Excel.ShapeType.square, range)'.
-* When using 'await', ensure to use it with the correct Office JS API method, e.g. 'await clearFilters()'.
 * When using 'applyColumnFilter' or 'applyRowFilter', ensure to specify the filter type using 'filterBy' option and the filter value.
 
 **Examples:**
 
 '''javascript
+// L1-filter-002
+const sheet = workbook.worksheets.getActiveWorksheet();
+await applyColumnFilter("Status", "Active", "filterByValues");
+
 // L1-filter-003
 const sheet = workbook.worksheets.getActiveWorksheet();
 await clearFilters(sheet.getUsedRange());
 
-// gen-L1-filtering-easy-069
+// gen-L1-filtering-easy-070
 const sheet = workbook.worksheets.getActiveWorksheet();
 const used = sheet.getUsedRange();
 used.load("values");
 await context.sync();
 const rows = used.values;
 const hdr = rows[0].map(h => String(h).toLowerCase().trim());
-const ci = hdr.indexOf("x");
+const ci = hdr.indexOf("X");
 if (ci === -1) throw new Error("Column 'X' not found.");
-await apply
+await applyColumnFilter("X", "val", "filterByValues");
+
+// gen-L1-filtering-easy-072
+const sheet = workbook.worksheets.getActiveWorksheet();
+await clearFilters(sheet.getUsedRange());
+
+// L1-sort-001
+const sheet = workbook.worksheets.getActiveWorksheet();
+const used = sheet.getUsedRange();
+used.load("values");
+await context.sync();
+const rows = used.values;
+const hdr = rows[0].map(h => String(h).toLowerCase().trim());
+const ci = hdr.indexOf("Name");
+if (ci === -1) throw new Error("Column 'Name' not found.");
+await sortByColumn(ci, Excel.SortOrder.ascending);
+
+// L1-sort-002
+const sheet = workbook.worksheets.getActiveWorksheet();
+const used = sheet.getUsedRange();
+used.load("values");
+await context.sync();
+const rows = used.values;
+const hdr = rows[0].map(h => String(h).toLowerCase().trim());
+const ci = hdr.indexOf("Amount");
+if (ci ===
 // EVAL-IMPROVEMENTS-END
 `
 + (DEFAULT_MODEL.toLowerCase().includes('qwen') ? '\n/no_think' : '');
