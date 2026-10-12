@@ -595,6 +595,12 @@ If unsure whether Office JS supports something, use CODE_JS first. Only fall bac
 * When using 'sortByColumn', ensure to specify the column index and sort order (ascending or descending) using 'sortByColumn(columnIndex, Excel.SortOrder.ascending)' or 'sortByColumn(columnIndex, Excel.SortOrder.descending)'.
 * When using 'getUsedRange', ensure to load the 'columnCount' property to access the column count using 'used.load("columnCount")'.
 * When using 'applyColumnFilter' or 'applyRowFilter', ensure to specify the filter type using 'filterBy' option and the filter value.
+* When using 'clearFilters', ensure to use 'await' keyword before 'clearFilters'.
+* When using 'applyColumnFilter', ensure to use 'await' keyword before 'applyColumnFilter'.
+* When using 'sortByColumn', ensure to use 'await' keyword before 'sortByColumn'.
+* When using 'setNumberFormat', ensure to use 'await' keyword before 'setNumberFormat'.
+* When using 'getUsedRange', ensure to load the 'rowCount' property to access the row count using 'used.load("rowCount")'.
+* When using 'getUsedRange', ensure to load the 'values' property to access the values using 'used.load("values")'.
 
 **Examples:**
 
@@ -625,23 +631,6 @@ await clearFilters(sheet.getUsedRange());
 // L1-sort-001
 const sheet = workbook.worksheets.getActiveWorksheet();
 const used = sheet.getUsedRange();
-used.load("values");
-await context.sync();
-const rows = used.values;
-const hdr = rows[0].map(h => String(h).toLowerCase().trim());
-const ci = hdr.indexOf("Name");
-if (ci === -1) throw new Error("Column 'Name' not found.");
-await sortByColumn(ci, Excel.SortOrder.ascending);
-
-// L1-sort-002
-const sheet = workbook.worksheets.getActiveWorksheet();
-const used = sheet.getUsedRange();
-used.load("values");
-await context.sync();
-const rows = used.values;
-const hdr = rows[0].map(h => String(h).toLowerCase().trim());
-const ci = hdr.indexOf("Amount");
-if (ci ===
 // EVAL-IMPROVEMENTS-END
 `
 + (DEFAULT_MODEL.toLowerCase().includes('qwen') ? '\n/no_think' : '');
