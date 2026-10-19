@@ -590,30 +590,34 @@ If unsure whether Office JS supports something, use CODE_JS first. Only fall bac
 // EVAL-IMPROVEMENTS-START
 **Rules:**
 
-* When using 'applyColumnFilter', ensure to specify the filter type using 'filterBy' option and the filter value.
 * When using 'clearFilters', ensure to specify the range to clear using 'clearFilters(range)'.
-* When using 'sortByColumn', ensure to specify the column index and sort order (ascending or descending) using 'sortByColumn(columnIndex, Excel.SortOrder.ascending)' or 'sortByColumn(columnIndex, Excel.SortOrder.descending)'.
-* When using 'getUsedRange', ensure to load the 'columnCount' property to access the column count using 'used.load("columnCount")'.
-* When using 'applyColumnFilter' or 'applyRowFilter', ensure to specify the filter type using 'filterBy' option and the filter value.
-* When using 'clearFilters', ensure to use 'await' keyword before 'clearFilters'.
-* When using 'applyColumnFilter', ensure to use 'await' keyword before 'applyColumnFilter'.
-* When using 'sortByColumn', ensure to use 'await' keyword before 'sortByColumn'.
-* When using 'setNumberFormat', ensure to use 'await' keyword before 'setNumberFormat'.
-* When using 'getUsedRange', ensure to load the 'rowCount' property to access the row count using 'used.load("rowCount")'.
+* When using 'sortByColumn', ensure to specify the column index and sort order using 'sortByColumn(columnIndex, Excel.SortOrder.ascending)' or 'sortByColumn(columnIndex, Excel.SortOrder.descending)'.
+* When using 'applyColumnFilter', ensure to specify the filter type using 'filterBy' option and the filter value.
+* When using 'setNumberFormat', ensure to update the number format after changing the values.
 * When using 'getUsedRange', ensure to load the 'values' property to access the values using 'used.load("values")'.
+* When using 'copy' and 'paste', ensure to use the 'getRange()' method's 'value' property to access the value.
+* When using 'insertShape', ensure to handle the header row requirement.
+* When using 'createNamedRange', ensure to check if the named range already exists before creating a new one.
 
 **Examples:**
 
 '''javascript
-// L1-filter-002
-const sheet = workbook.worksheets.getActiveWorksheet();
-await applyColumnFilter("Status", "Active", "filterByValues");
-
-// L1-filter-003
+// gen-L1-filtering-easy-072
 const sheet = workbook.worksheets.getActiveWorksheet();
 await clearFilters(sheet.getUsedRange());
 
-// gen-L1-filtering-easy-070
+// L1-sort-001
+const sheet = workbook.worksheets.getActiveWorksheet();
+const used = sheet.getUsedRange();
+used.load("values");
+await context.sync();
+const rows = used.values;
+const hdr = rows[0].map(h => String(h).toLowerCase().trim());
+const ci = hdr.indexOf("Name");
+if (ci === -1) throw new Error("Column 'Name' not found.");
+await sortByColumn(ci, Excel.SortOrder.ascending);
+
+// gen-L1-sorting-easy-072
 const sheet = workbook.worksheets.getActiveWorksheet();
 const used = sheet.getUsedRange();
 used.load("values");
@@ -622,15 +626,17 @@ const rows = used.values;
 const hdr = rows[0].map(h => String(h).toLowerCase().trim());
 const ci = hdr.indexOf("X");
 if (ci === -1) throw new Error("Column 'X' not found.");
-await applyColumnFilter("X", "val", "filterByValues");
+await sortByColumn(ci, Excel.SortOrder.ascending);
 
-// gen-L1-filtering-easy-072
-const sheet = workbook.worksheets.getActiveWorksheet();
-await clearFilters(sheet.getUsedRange());
-
-// L1-sort-001
+// gen-L1-format-003
 const sheet = workbook.worksheets.getActiveWorksheet();
 const used = sheet.getUsedRange();
+used.load("values");
+await context.sync();
+const rows = used.values;
+const hdr = rows[0].map(h => String(h).toLowerCase().trim());
+const ci = hdr.indexOf("Price");
+if (ci === -1) throw new Error("Column 'Price'
 // EVAL-IMPROVEMENTS-END
 `
 + (DEFAULT_MODEL.toLowerCase().includes('qwen') ? '\n/no_think' : '');
