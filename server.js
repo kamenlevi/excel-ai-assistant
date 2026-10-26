@@ -590,11 +590,10 @@ If unsure whether Office JS supports something, use CODE_JS first. Only fall bac
 // EVAL-IMPROVEMENTS-START
 **Rules:**
 
-* When using 'clearFilters', ensure to specify the range to clear using 'clearFilters(range)'.
-* When using 'sortByColumn', ensure to specify the column index and sort order using 'sortByColumn(columnIndex, Excel.SortOrder.ascending)' or 'sortByColumn(columnIndex, Excel.SortOrder.descending)'.
 * When using 'applyColumnFilter', ensure to specify the filter type using 'filterBy' option and the filter value.
-* When using 'setNumberFormat', ensure to update the number format after changing the values.
 * When using 'getUsedRange', ensure to load the 'values' property to access the values using 'used.load("values")'.
+* When using 'sortByColumn', ensure to specify the column index and sort order using 'sortByColumn(columnIndex, Excel.SortOrder.ascending)' or 'sortByColumn(columnIndex, Excel.SortOrder.descending)'.
+* When using 'clearFilters', ensure to specify the range to clear using 'clearFilters(range)'.
 * When using 'copy' and 'paste', ensure to use the 'getRange()' method's 'value' property to access the value.
 * When using 'insertShape', ensure to handle the header row requirement.
 * When using 'createNamedRange', ensure to check if the named range already exists before creating a new one.
@@ -602,41 +601,42 @@ If unsure whether Office JS supports something, use CODE_JS first. Only fall bac
 **Examples:**
 
 '''javascript
-// gen-L1-filtering-easy-072
+// gen-L1-filtering-easy-074
 const sheet = workbook.worksheets.getActiveWorksheet();
-await clearFilters(sheet.getUsedRange());
+await applyColumnFilter("Y", "val", Excel.FilterType.exact);
 
-// L1-sort-001
+// gen-L1-sorting-easy-002
 const sheet = workbook.worksheets.getActiveWorksheet();
 const used = sheet.getUsedRange();
 used.load("values");
 await context.sync();
 const rows = used.values;
 const hdr = rows[0].map(h => String(h).toLowerCase().trim());
-const ci = hdr.indexOf("Name");
-if (ci === -1) throw new Error("Column 'Name' not found.");
+const ci = hdr.indexOf("B");
+if (ci === -1) throw new Error("Column 'B' not found.");
 await sortByColumn(ci, Excel.SortOrder.ascending);
 
-// gen-L1-sorting-easy-072
+// gen-L1-sorting-easy-003
 const sheet = workbook.worksheets.getActiveWorksheet();
 const used = sheet.getUsedRange();
 used.load("values");
 await context.sync();
 const rows = used.values;
 const hdr = rows[0].map(h => String(h).toLowerCase().trim());
-const ci = hdr.indexOf("X");
-if (ci === -1) throw new Error("Column 'X' not found.");
+const ci = hdr.indexOf("A");
+if (ci === -1) throw new Error("Column 'A' not found.");
 await sortByColumn(ci, Excel.SortOrder.ascending);
 
-// gen-L1-format-003
+// L1-format-003
 const sheet = workbook.worksheets.getActiveWorksheet();
 const used = sheet.getUsedRange();
 used.load("values");
 await context.sync();
 const rows = used.values;
 const hdr = rows[0].map(h => String(h).toLowerCase().trim());
-const ci = hdr.indexOf("Price");
-if (ci === -1) throw new Error("Column 'Price'
+const ci = hdr.indexOf("B");
+if (ci === -1) throw new Error("Column 'B' not found.");
+const range = sheet.get
 // EVAL-IMPROVEMENTS-END
 `
 + (DEFAULT_MODEL.toLowerCase().includes('qwen') ? '\n/no_think' : '');
