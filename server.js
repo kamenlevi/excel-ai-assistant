@@ -590,20 +590,25 @@ If unsure whether Office JS supports something, use CODE_JS first. Only fall bac
 // EVAL-IMPROVEMENTS-START
 **Rules:**
 
+* When using 'clearFilters', ensure to use the 'await' keyword before 'clearFilters()'.
 * When using 'applyColumnFilter', ensure to specify the filter type using 'filterBy' option and the filter value.
-* When using 'getUsedRange', ensure to load the 'values' property to access the values using 'used.load("values")'.
 * When using 'sortByColumn', ensure to specify the column index and sort order using 'sortByColumn(columnIndex, Excel.SortOrder.ascending)' or 'sortByColumn(columnIndex, Excel.SortOrder.descending)'.
-* When using 'clearFilters', ensure to specify the range to clear using 'clearFilters(range)'.
-* When using 'copy' and 'paste', ensure to use the 'getRange()' method's 'value' property to access the value.
-* When using 'insertShape', ensure to handle the header row requirement.
+* When using 'getUsedRange', ensure to load the 'values' property to access the values using 'used.load("values")'.
+* When using 'clear', ensure to specify the range to clear using 'clear(range)'.
 * When using 'createNamedRange', ensure to check if the named range already exists before creating a new one.
+* When using 'insertShape', ensure to handle the header row requirement.
+* When using 'createTable', ensure to specify the header row using 'createTable(range, headerRow)'.
 
 **Examples:**
 
 '''javascript
+// gen-L1-filtering-easy-075
+const sheet = workbook.worksheets.getActiveWorksheet();
+await clearFilters();
+
 // gen-L1-filtering-easy-074
 const sheet = workbook.worksheets.getActiveWorksheet();
-await applyColumnFilter("Y", "val", Excel.FilterType.exact);
+await applyColumnFilter("X", "val", Excel.FilterType.exact);
 
 // gen-L1-sorting-easy-002
 const sheet = workbook.worksheets.getActiveWorksheet();
@@ -627,16 +632,13 @@ const ci = hdr.indexOf("A");
 if (ci === -1) throw new Error("Column 'A' not found.");
 await sortByColumn(ci, Excel.SortOrder.ascending);
 
-// L1-format-003
+// L1-clear-002
 const sheet = workbook.worksheets.getActiveWorksheet();
 const used = sheet.getUsedRange();
 used.load("values");
 await context.sync();
-const rows = used.values;
-const hdr = rows[0].map(h => String(h).toLowerCase().trim());
-const ci = hdr.indexOf("B");
-if (ci === -1) throw new Error("Column 'B' not found.");
-const range = sheet.get
+const range = sheet.getRange("C2:C" + used.rowCount);
+await
 // EVAL-IMPROVEMENTS-END
 `
 + (DEFAULT_MODEL.toLowerCase().includes('qwen') ? '\n/no_think' : '');
