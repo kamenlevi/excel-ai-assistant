@@ -598,6 +598,9 @@ If unsure whether Office JS supports something, use CODE_JS first. Only fall bac
 * When using 'createNamedRange', ensure to check if the named range already exists before creating a new one.
 * When using 'insertShape', ensure to handle the header row requirement.
 * When using 'createTable', ensure to specify the header row using 'createTable(range, headerRow)'.
+* When using 'dataValidation', ensure to apply the validation using 'dataValidation.apply(range)'.
+* When using 'hyperlink', ensure to specify the display text using 'hyperlink.displayText'.
+* When using 'getRangeByIndexes', ensure to use the correct range object type.
 
 **Examples:**
 
@@ -630,15 +633,7 @@ const rows = used.values;
 const hdr = rows[0].map(h => String(h).toLowerCase().trim());
 const ci = hdr.indexOf("A");
 if (ci === -1) throw new Error("Column 'A' not found.");
-await sortByColumn(ci, Excel.SortOrder.ascending);
-
-// L1-clear-002
-const sheet = workbook.worksheets.getActiveWorksheet();
-const used = sheet.getUsedRange();
-used.load("values");
-await context.sync();
-const range = sheet.getRange("C2:C" + used.rowCount);
-await
+await sortByColumn
 // EVAL-IMPROVEMENTS-END
 `
 + (DEFAULT_MODEL.toLowerCase().includes('qwen') ? '\n/no_think' : '');
