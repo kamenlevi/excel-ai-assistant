@@ -590,29 +590,37 @@ If unsure whether Office JS supports something, use CODE_JS first. Only fall bac
 // EVAL-IMPROVEMENTS-START
 **Rules:**
 
-* When using 'clearFilters', ensure to use the correct method call 'clearFilters()' without the 'await' keyword.
+* When using 'clearFilters', ensure to specify the column index using 'clearFilters(columnIndex)'.
 * When using 'sortByColumn', ensure to specify the column index and sort order using 'sortByColumn(columnIndex, Excel.SortOrder.ascending)' or 'sortByColumn(columnIndex, Excel.SortOrder.descending)'.
 * When using 'getUsedRange', ensure to load the 'values' property to access the values using 'used.load("values")'.
-* When using 'dataValidation', ensure to apply the validation using 'dataValidation.apply(range)'.
+* When using 'createTable', ensure to specify the range and headers using 'createTable(range, headers)'.
+* When using 'insertShape', ensure to specify the worksheet using 'sheet.shapes.addExcelShape(Excel.ShapeType.shape, x, y, width, height, range)'.
 
 **Examples:**
 
 '''javascript
-// gen-L1-filtering-easy-077
+// gen-L1-filtering-easy-078
 const sheet = workbook.worksheets.getActiveWorksheet();
 const used = sheet.getUsedRange();
 used.load("values");
 await context.sync();
 const rows = used.values;
 const hdr = rows[0].map(h => String(h).toLowerCase().trim());
-const ci = hdr.indexOf("y");
-if (ci === -1) throw new Error("Column 'Y' not found.");
-const toShow = [];
-for (let i = 1; i < rows.length; i++) {
-  if (String(rows[i][ci]) === "val") toShow.push(i);
-}
-const newRows = rows.slice(0, 1).concat(rows.slice(toShow));
-sheet.getRangeByIndexes(0, 0, newRows.length, newRows[0].length).values = newRows;
+const ci = hdr.indexOf("x");
+if (ci === -1) throw new Error("Column 'X' not found.");
+await clearFilters(ci);
+await context.sync();
+
+// L1-sort-001
+const sheet = workbook.worksheets.getActiveWorksheet();
+const used = sheet.getUsedRange();
+used.load("values");
+await context.sync();
+const rows = used.values;
+const hdr = rows[0].map(h => String(h).toLowerCase().trim());
+const ci = hdr.indexOf("name");
+if (ci === -1) throw new Error("Column 'Name' not found.");
+await sortByColumn(ci, Excel.SortOrder.ascending);
 await context.sync();
 
 // gen-L1-sorting-easy-004
@@ -627,22 +635,13 @@ if (ci === -1) throw new Error("Column 'A' not found.");
 await sortByColumn(ci, Excel.SortOrder.ascending);
 await context.sync();
 
-// gen-L1-format-002
-const sheet = workbook.worksheets.getActiveWorksheet();
-const used = sheet.getUsedRange();
-used.load("rowCount");
-await context.sync();
-const range = used.getRange(1, 0, used.rowCount, used.columnCount);
-range.borders = Excel.BorderType.thick;
-await context.sync();
-'''
-
-'''javascript
-// gen-L1-formatting-easy-005
+// gen-L1-sorting-easy-005
 const sheet = workbook.worksheets.getActiveWorksheet();
 const used = sheet.getUsedRange();
 used.load("values");
-await context.sync
+await context.sync();
+const rows = used.values;
+const hdr = rows[0].map(h => String(h).toLowerCase
 // EVAL-IMPROVEMENTS-END
 `
 + (DEFAULT_MODEL.toLowerCase().includes('qwen') ? '\n/no_think' : '');
